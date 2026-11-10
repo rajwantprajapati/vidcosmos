@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Library</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}a:hover{color:var(--ink)}
+.search{font:inherit;font-size:15px;padding:10px 14px 10px 40px;min-height:44px;width:100%;box-sizing:border-box;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink)}
+.search:focus-visible,.iconbtn:focus-visible,.note:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+.iconbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink-secondary);cursor:pointer}
+.iconbtn:hover{background:var(--surface-hover)}
+.note{display:flex;gap:12px;padding:12px 14px;border-radius:12px;text-decoration:none;color:var(--ink)}
+.note:hover{background:var(--surface-hover);color:var(--ink)}
+@keyframes vc-spin-slow{to{transform:rotate(360deg)}}
+.orbit-spin{transform-origin:200px 160px;animation:vc-spin-slow 50s linear infinite}
+@media (prefers-reduced-motion: reduce){.orbit-spin{animation:none}}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1140px; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+<div style="flex: 1 1 248px; display: flex;"><dc-import name="AppSidebar" active="library" hint-size="100%,960px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 28px; padding: 28px 40px 48px; box-sizing: border-box; position: relative;">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px;">
+<h1 style="margin: 0; flex: 1; min-width: 200px; font-family: var(--font-display); font-size: 32px; line-height: 40px; font-weight: 800; letter-spacing: -0.025em;">Your library</h1>
+<div style="position: relative; flex: 0 1 320px; min-width: 200px;">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" style="position: absolute; left: 13px; top: 13px; color: var(--ink-muted);"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+<label for="lib-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search videos</label>
+<input id="lib-search" class="search" type="search" placeholder="Search videos">
+</div>
+<button type="button" class="iconbtn" aria-label="Notifications, 2 unread" aria-expanded="{{notesOpen}}" onClick="{{toggleNotes}}">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8zM10 20a2 2 0 0 0 4 0"></path></svg>
+<span style="position: absolute; top: 6px; right: 6px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--danger-fill); color: var(--on-danger); font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">2</span>
+</button>
+</header>
+
+<sc-if value="{{notesOpenBool}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-label="Notifications" style="position: absolute; right: 40px; top: 84px; z-index: 30; width: 380px; max-width: calc(100% - 32px); border-radius: 16px; background: var(--surface-raised); border: 1px solid var(--line); box-shadow: var(--shadow-md); padding: 8px; display: flex; flex-direction: column;">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px;"><span style="font-weight: 700;">Notifications</span><a href="#" style="font-size: 13px; font-weight: 600;">Mark all as read</a></div>
+<a class="note" href="Editor.dc.html"><span style="width: 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: var(--brand-text); flex: none;"></span><span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 14px;">Your video is ready</span><span style="font-size: 13px; color: var(--ink-muted);">How UPI moves your money · 2 min ago</span></span></a>
+<a class="note" href="Posts.dc.html"><span style="width: 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: var(--brand-text); flex: none;"></span><span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 14px;">A post didn’t go out</span><span style="font-size: 13px; color: var(--ink-muted);">Ladakh in 30 seconds · Instagram couldn’t process it · Sun</span></span></a>
+<a class="note" href="Posts.dc.html"><span style="width: 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: transparent; flex: none;"></span><span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 14px;">Posted to Instagram</span><span style="font-size: 13px; color: var(--ink-muted);">Monday motivation · Mon</span></span></a>
+</div>
+</sc-if>
+
+<sc-if value="{{filled}}" hint-placeholder-val="{{true}}">
+<section aria-labelledby="start-h" style="display: flex; flex-direction: column; gap: 12px;">
+<h2 id="start-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Start a new video</h2>
+<x-import component-from-global-scope="Vidcosmos.PromptComposer" id="lib-prompt" rows="{{two}}" placeholder="A 30-second reel that…"></x-import>
+</section>
+
+<section aria-labelledby="videos-h" style="display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+<h2 id="videos-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Videos</h2>
+<div role="group" aria-label="Filter videos" style="display: flex; flex-wrap: wrap; gap: 6px;">
+<x-import component-from-global-scope="Vidcosmos.Chip" selected="{{yes}}">All 7</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">Drafts 1</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">Ready 3</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">Scheduled 2</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">Failed 1</x-import>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 20px;">
+<x-import component-from-global-scope="Vidcosmos.VideoCard" title="How UPI moves your money" type="Explainer" duration="0:56" status="ready" theme="midnight" caption="{{capUpi}}" href="Editor.dc.html"></x-import>
+<x-import component-from-global-scope="Vidcosmos.VideoCard" title="Diwali gift guide" type="Product ad" status="generating" status-label="Generating 62%" progress="{{sixtyTwo}}" theme="sunset" href="Generating.dc.html"></x-import>
+<x-import component-from-global-scope="Vidcosmos.VideoCard" title="Ember &amp; Wick candle launch" headline="Ember &amp; Wick" type="Product ad" duration="0:20" status="scheduled" status-label="Fri 9:00 am" theme="sunset" href="Editor.dc.html"></x-import>
+<x-import component-from-global-scope="Vidcosmos.VideoCard" title="Ladakh in 30 seconds" headline="Sunrise over Pangong" type="Travel" duration="0:30" status="failed" status-label="Post failed" theme="ocean" href="Posts.dc.html"></x-import>
+<x-import component-from-global-scope="Vidcosmos.VideoCard" title="Monday motivation" headline="“Start before you are ready.”" type="Quote" duration="0:15" status="published" status-label="Published" theme="paper" href="Editor.dc.html"></x-import>
+<x-import component-from-global-scope="Vidcosmos.VideoCard" title="Sheru and the dark" headline="The tiger who was scared of the dark" type="Story" duration="1:20" status="published" status-label="Published" theme="midnight" href="Editor.dc.html"></x-import>
+<x-import component-from-global-scope="Vidcosmos.VideoCard" title="Photosynthesis in 60 seconds" type="Explainer" status="draft" status-label="Draft · script" theme="ocean" href="Script.dc.html"></x-import>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<section aria-labelledby="empty-h" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px; padding: 40px 0;">
+<svg aria-hidden="true" width="400" height="320" viewBox="0 0 400 320" style="max-width: 100%;">
+<circle cx="200" cy="160" r="86" fill="var(--brand)"></circle>
+<g class="orbit-spin"><g transform="rotate(-16 200 160)" fill="none"><ellipse cx="200" cy="160" rx="180" ry="52" stroke="var(--highlight)" stroke-width="2"></ellipse></g></g>
+<rect x="170" y="104" width="60" height="106" rx="12" fill="var(--stage)"></rect>
+<path d="M192 140l20 13-20 13z" fill="#FFFFFF"></path>
+</svg>
+<h2 id="empty-h" style="margin: 0; font-family: var(--font-display); font-size: 32px; line-height: 40px; font-weight: 800; letter-spacing: -0.025em;">Make your first video</h2>
+<p style="margin: 0; font-size: 17px; line-height: 27px; color: var(--ink-secondary); max-width: 520px;">Describe it in a sentence. In a few minutes you’ll have a narrated, animated video to watch, change by chatting, and post.</p>
+<div style="width: 100%; max-width: 640px; text-align: left;"><x-import component-from-global-scope="Vidcosmos.PromptComposer" id="lib-first" rows="{{two}}" placeholder="A 60-second explainer on…"></x-import></div>
+<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 640px;">
+<span style="width: 100%; font-size: 13px; color: var(--ink-muted);">Or try one of these</span>
+<x-import component-from-global-scope="Vidcosmos.Chip">How vaccines train your immune system</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">A reel for my bakery’s new menu</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">UPI पेमेंट कैसे काम करता है</x-import>
+</div>
+</section>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"empty":{"editor":"boolean","default":false},"notifications":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":1140}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this, st = this.state || {};
+    var empty = !!(this.props.empty ?? false);
+    var open = st.notes !== undefined ? st.notes : !!(this.props.notifications ?? false);
+    return {
+      empty: empty, filled: !empty,
+      notesOpenBool: open, notesOpen: open ? 'true' : 'false',
+      toggleNotes: function () { self.setState({ notes: !open }); },
+      capUpi: { before: 'your friend has the', word: 'money' },
+      sixtyTwo: 62, two: 2, yes: true
+    };
+  }
+}
+</script>
+</body>
+</html>

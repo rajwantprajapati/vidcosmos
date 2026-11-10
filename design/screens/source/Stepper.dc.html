@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create steps</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<nav aria-label="Steps to make a video" style="width: 100%; box-sizing: border-box; padding: 16px 0; font-family: var(--font-sans); color: var(--ink);">
+<ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+<li aria-current="{{s.current}}" style="display: flex; align-items: center; gap: 12px;">
+<sc-if value="{{s.notFirst}}" hint-placeholder-val="{{true}}"><span aria-hidden="true" style="width: 40px; height: 2px; border-radius: 2px; background: {{s.lineColor}};"></span></sc-if>
+<span style="width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; background: {{s.dotBg}}; color: {{s.dotFg}}; border: {{s.dotBorder}};">
+<sc-if value="{{s.done}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></sc-if>
+<sc-if value="{{s.showNum}}" hint-placeholder-val="{{true}}">{{s.num}}</sc-if>
+</span>
+<span style="font-size: 14px; font-weight: {{s.weight}}; color: {{s.labelColor}};">{{s.label}}</span>
+</li>
+</sc-for>
+</ol>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"step":{"editor":"int","min":1,"max":4,"default":1},"$preview":{"width":960,"height":80}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var step = Number(this.props.step ?? 1);
+    var labels = ['Idea', 'Script', 'Storyboard', 'Video'];
+    var steps = labels.map(function (l, i) {
+      var n = i + 1, done = n < step, cur = n === step;
+      return {
+        label: l, num: String(n), notFirst: i > 0, done: done, showNum: !done, current: cur ? 'step' : 'false',
+        lineColor: n <= step ? 'var(--brand)' : 'var(--line)',
+        dotBg: done ? 'var(--brand)' : (cur ? 'var(--brand-soft)' : 'var(--surface)'),
+        dotFg: done ? 'var(--on-brand)' : (cur ? 'var(--brand-text)' : 'var(--ink-muted)'),
+        dotBorder: cur ? '2px solid var(--brand-text)' : (done ? '0' : '1px solid var(--line-strong)'),
+        weight: cur ? '700' : '500',
+        labelColor: cur || done ? 'var(--ink)' : 'var(--ink-muted)'
+      };
+    });
+    return { steps: steps };
+  }
+}
+</script>
+</body>
+</html>

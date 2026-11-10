@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Editor on a phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}
+.ib{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;border:0;background:transparent;color:var(--ink-secondary);cursor:pointer;text-decoration:none}
+.ib:focus-visible,.tool:focus-visible,.thumb:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+.hscroll{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 16px}
+.hscroll::-webkit-scrollbar{display:none}
+.tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:56px;font:inherit;font-size:11px;font-weight:600;color:var(--ink-secondary);background:transparent;border:0;border-radius:12px;cursor:pointer;text-decoration:none}
+.thumb{padding:0;flex:none;cursor:pointer}
+.cap{display:inline-block;padding:1px 6px;border-radius:5px}
+.cap.on{background:var(--video-midnight-highlight);color:var(--video-midnight-bg)}
+</style>
+</helmet>
+<div data-theme="dark" style="width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+<header style="display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 12px 0 4px;">
+<a href="MobileLibrary.dc.html" class="ib" aria-label="Back to library"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-family: var(--font-display); font-weight: 800; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">How UPI moves your money</span>
+<span style="font-size: 12px; color: var(--ink-muted);">Saved · version 4</span>
+</span>
+<a href="MobileExport.dc.html" style="display: inline-flex; align-items: center; min-height: 36px; padding: 6px 14px; box-sizing: border-box; border-radius: 10px; background: var(--brand); color: var(--on-brand); font-weight: 600; font-size: 14px; text-decoration: none;">Export</a>
+</header>
+
+<div style="display: flex; justify-content: center; padding-top: 6px;">
+<div style="width: 262px; height: 466px; border-radius: 18px; background: var(--video-midnight-bg); color: var(--video-midnight-text); position: relative; overflow: hidden; padding: 22px 18px 70px; box-sizing: border-box; display: flex; flex-direction: column;">
+<span style="font-family: var(--font-display); font-size: 20px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em;">One payment, three hops</span>
+<div style="margin-top: 18px; display: flex; flex-direction: column;">
+<div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 11px; background: var(--video-midnight-panel);"><span style="width: 28px; height: 28px; border-radius: 8px; background: var(--video-midnight-accent);"></span><span style="font-weight: 700; font-size: 13px;">Your app</span></div>
+<div style="width: 2px; height: 14px; margin-left: 24px; background: var(--video-midnight-accent);"></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 11px; background: #1D2C5E; border: 1.5px solid var(--video-midnight-accent);"><span style="width: 28px; height: 28px; border-radius: 8px; background: var(--video-midnight-highlight);"></span><span style="font-weight: 700; font-size: 13px;">NPCI</span></div>
+<div style="width: 2px; height: 14px; margin-left: 24px; background: rgba(255,255,255,.18);"></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 11px; background: var(--video-midnight-panel); opacity: .35;"><span style="width: 28px; height: 28px; border-radius: 8px; background: #FFFFFF;"></span><span style="font-weight: 700; font-size: 13px;">Banks</span></div>
+</div>
+<div style="position: absolute; left: 10px; right: 10px; bottom: 24px; text-align: center; font-size: 13px; font-weight: 700;"><span class="cap">the request</span> <span class="cap">to</span> <span class="cap on">NPCI,</span></div>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px 6px;">
+<button type="button" aria-label="Play" style="width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--brand); color: var(--on-brand); display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"><x-import component-from-global-scope="Vidcosmos.Icon" name="play" size="{{eighteen}}"></x-import></button>
+<span style="font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-secondary);">0:19</span>
+<span style="flex: 1; position: relative; height: 4px; border-radius: 2px; background: var(--surface-raised);"><span style="position: absolute; left: 0; top: 0; height: 4px; width: 34%; border-radius: 2px; background: var(--brand);"></span></span>
+<span style="font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-muted);">0:56</span>
+</div>
+
+<div class="hscroll" role="list" aria-label="Scenes" style="padding-top: 10px; padding-bottom: 10px;">
+<sc-for list="{{thumbs}}" as="t" hint-placeholder-count="8">
+<button type="button" role="listitem" class="thumb" aria-label="{{t.label}}" aria-current="{{t.current}}" style="width: 52px; height: 92px; border-radius: 9px; border: {{t.border}}; background: var(--video-midnight-bg); display: flex; align-items: flex-end; justify-content: flex-start; padding: 5px; box-sizing: border-box; color: #FFFFFF; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">{{t.n}}</button>
+</sc-for>
+</div>
+
+<nav aria-label="Editor tools" style="position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 8px 8px 22px; background: var(--surface); border-top: 1px solid var(--line);">
+<button type="button" class="tool"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v4H4zM4 11h16v4H4zM4 17h10v3H4z"></path></svg>Scenes</button>
+<a href="MobileEditorChat.dc.html" class="tool" style="color: var(--brand-text);"><x-import component-from-global-scope="Vidcosmos.Icon" name="sparkles" size="{{twentyTwo}}"></x-import>Revise</a>
+<button type="button" class="tool"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.5-.8 1.5-1.5 0-1.2-1-1.5-1-2.5s.8-1.5 2-1.5H17a4 4 0 0 0 4-4c0-4.6-4-8.5-9-8.5zM7.5 11.5h.01M10 7.5h.01M15 7.5h.01"></path></svg>Style</button>
+<button type="button" class="tool"><x-import component-from-global-scope="Vidcosmos.Icon" name="clock" size="{{twentyTwo}}"></x-import>Versions</button>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var thumbs = [];
+    for (var i = 1; i <= 8; i++) thumbs.push({ n: String(i), label: 'Scene ' + i, current: i === 3 ? 'true' : 'false', border: i === 3 ? '2px solid var(--brand)' : '1px solid var(--line)' });
+    return { thumbs: thumbs, eighteen: 18, twentyTwo: 22 };
+  }
+}
+</script>
+</body>
+</html>

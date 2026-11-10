@@ -1,0 +1,12 @@
+# Docs and designs are exports; edit them at the source, not with Prettier
+docs/
+design/
+*.md
+pnpm-lock.yaml
+.next/
+.turbo/
+node_modules/
+playwright-report/
+test-results/
+coverage/
+next-env.d.ts

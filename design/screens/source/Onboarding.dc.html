@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Set up Vidcosmos</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}a:hover{color:var(--ink)}
+.persona{font:inherit;text-align:left;cursor:pointer;transition:border-color 120ms,background-color 120ms}
+.persona:hover{border-color:var(--line-strong)}
+.persona:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+</style>
+</helmet>
+<div style="min-height: 900px; background: var(--bg); color: var(--ink); font-family: var(--font-sans); display: flex; flex-direction: column;">
+<header style="display: flex; align-items: center; justify-content: space-between; padding: 20px max(16px, 40px); box-sizing: border-box;">
+<x-import component-from-global-scope="Vidcosmos.Logo" size="{{logoSize}}"></x-import>
+<span style="font-size: 14px; color: var(--ink-muted); font-variant-numeric: tabular-nums;">Step 1 of 1 · about a minute</span>
+</header>
+<main style="flex: 1; display: flex; justify-content: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)); box-sizing: border-box;">
+<form onSubmit="{{noSubmit}}" style="width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 36px;">
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<h1 style="margin: 0; font-family: var(--font-display); font-size: 40px; line-height: 46px; font-weight: 800; letter-spacing: -0.03em;">Hi Rajwant, let’s set up your studio</h1>
+<p style="margin: 0; font-size: 17px; line-height: 27px; color: var(--ink-secondary);">Three quick answers so your first video starts with the right voice and style. You can change all of this later in Settings.</p>
+</div>
+
+<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px;">
+<legend style="padding: 0; margin-bottom: 14px; font-family: var(--font-display); font-size: 20px; font-weight: 700;">What will you make most?</legend>
+<div role="radiogroup" aria-label="What will you make most?" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
+<sc-for list="{{personas}}" as="p" hint-placeholder-count="4">
+<button type="button" class="persona" role="radio" aria-checked="{{p.checked}}" onClick="{{p.pick}}" style="display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 16px; background: {{p.bg}}; border: {{p.border}}; color: var(--ink); min-height: 132px;">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: {{p.tileBg}}; color: {{p.tileFg}}; display: inline-flex; align-items: center; justify-content: center;">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{p.d}}"></path></svg>
+</span>
+<span style="font-weight: 700; font-size: 16px;">{{p.title}}</span>
+<span style="font-size: 13px; line-height: 19px; color: var(--ink-muted);">{{p.sub}}</span>
+</button>
+</sc-for>
+</div>
+</fieldset>
+
+<div style="display: flex; flex-direction: column; gap: 14px;">
+<h2 style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 700;">What are your videos usually about?</h2>
+<x-import component-from-global-scope="Vidcosmos.TextField" id="ob-topics" label="Topic area (optional)" placeholder="Science for school students, personal finance, handmade candles…" helper="We use this to suggest ideas and examples."></x-import>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 700;">Narration language</h2>
+<x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="Narration language" options="{{langs}}" default-value="en" style="align-self: flex-start;"></x-import>
+<span style="font-size: 13px; color: var(--ink-muted);">You can pick per video too.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 700;">Default narrator</h2>
+<x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="Default narrator" options="{{voices}}" default-value="female" style="align-self: flex-start;"></x-import>
+<span style="font-size: 13px; color: var(--ink-muted);">Both are Indian voices. <a href="#">Listen to samples</a></span>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding-top: 8px; border-top: 1px solid var(--line);">
+<x-import component-from-global-scope="Vidcosmos.Button" type="submit" size="lg" icon-end="arrow-right" style="margin-top: 16px;">Start making videos</x-import>
+<a href="Library.dc.html" style="margin-top: 16px; font-size: 15px; font-weight: 600;">Skip for now</a>
+</div>
+</form>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var picked = (this.state && this.state.persona) || 'creator';
+    var defs = [
+      { key: 'creator', title: 'Creator', sub: 'Reels and Shorts for my followers', d: 'M15 10l5-3v10l-5-3zM3 6h12v12H3z' },
+      { key: 'educator', title: 'Educator', sub: 'Lessons and explainers for students', d: 'M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5' },
+      { key: 'brand', title: 'Brand or business', sub: 'Product ads, launches and promos', d: 'M4 8h16l-1.5 12h-13zM9 8V6a3 3 0 0 1 6 0v2' },
+      { key: 'other', title: 'Something else', sub: 'Stories, quotes, travel, music', d: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z' }
+    ];
+    var personas = defs.map(function (d) {
+      var on = d.key === picked;
+      return { title: d.title, sub: d.sub, d: d.d, checked: on ? 'true' : 'false', pick: function () { self.setState({ persona: d.key }); },
+        bg: on ? 'var(--brand-soft)' : 'var(--surface)', border: on ? '2px solid var(--brand-text)' : '1px solid var(--line)',
+        tileBg: on ? 'var(--brand)' : 'var(--surface-sunken)', tileFg: on ? 'var(--on-brand)' : 'var(--ink-secondary)' };
+    });
+    return {
+      personas: personas,
+      langs: [{ value: 'en', label: 'English' }, { value: 'hi', label: 'हिंदी', lang: 'hi' }],
+      voices: [{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }],
+      noSubmit: function (e) { if (e && e.preventDefault) e.preventDefault(); },
+      logoSize: 28
+    };
+  }
+}
+</script>
+</body>
+</html>

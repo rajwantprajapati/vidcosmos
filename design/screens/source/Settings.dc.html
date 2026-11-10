@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}a:hover{color:var(--ink)}
+.select{font:inherit;font-size:15px;padding:10px 12px;min-height:44px;box-sizing:border-box;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);width:100%}
+.select:focus-visible,.subnav:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+.subnav{display:block;padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--ink-secondary);font-size:14px;font-weight:500}
+.subnav:hover{background:var(--surface-hover);color:var(--ink)}
+.card{display:flex;flex-direction:column;gap:20px;padding:28px;border-radius:20px;background:var(--surface);border:1px solid var(--line)}
+.lbl{font-size:14px;font-weight:600}
+.check{display:flex;align-items:flex-start;gap:12px;font-size:15px;line-height:22px}
+.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--brand-text)}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1960px; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+<div style="flex: 1 1 248px; display: flex;"><dc-import name="AppSidebar" active="settings" hint-size="100%,960px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 24px; padding: 32px 40px 64px; box-sizing: border-box;">
+<h1 style="margin: 0; font-family: var(--font-display); font-size: 32px; line-height: 40px; font-weight: 800; letter-spacing: -0.025em;">Settings</h1>
+
+<div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+<nav aria-label="Settings sections" style="flex: 0 0 200px; display: flex; flex-direction: column; gap: 2px;">
+<a class="subnav" href="#account" style="background: var(--brand-soft); color: var(--brand-text); font-weight: 600;">Account</a>
+<a class="subnav" href="#defaults">Video defaults</a>
+<a class="subnav" href="#instagram">Instagram</a>
+<a class="subnav" href="#usage">Usage</a>
+<a class="subnav" href="#notifications">Notifications</a>
+<a class="subnav" href="#delete" style="color: var(--danger);">Delete account</a>
+</nav>
+
+<div style="flex: 999 1 520px; min-width: 0; max-width: 760px; display: flex; flex-direction: column; gap: 24px;">
+
+<section id="account" aria-labelledby="acc-h" class="card">
+<h2 id="acc-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Account</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px;">
+<x-import component-from-global-scope="Vidcosmos.TextField" id="st-name" label="Name" default-value="Rajwant"></x-import>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span class="lbl">Email</span>
+<span style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px;">you@example.com <x-import component-from-global-scope="Vidcosmos.Badge" tone="success" icon="check">Verified</x-import></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;"><label for="st-tz" class="lbl">Time zone</label><select id="st-tz" class="select"><option>India (Asia/Kolkata)</option><option>Dubai (Asia/Dubai)</option><option>London (Europe/London)</option></select><span style="font-size: 13px; color: var(--ink-muted);">Used for scheduled posts.</span></div>
+<div style="display: flex; flex-direction: column; gap: 6px;"><span class="lbl">App language</span><x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="App language" options="{{langs}}" default-value="en" style="align-self: flex-start;"></x-import></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; padding-top: 16px; border-top: 1px solid var(--line);">
+<x-import component-from-global-scope="Vidcosmos.Button">Save changes</x-import>
+<x-import component-from-global-scope="Vidcosmos.Button" variant="secondary">Change password</x-import>
+<x-import component-from-global-scope="Vidcosmos.Button" variant="ghost">Sign out of other devices</x-import>
+</div>
+</section>
+
+<section id="defaults" aria-labelledby="def-h" class="card">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<h2 id="def-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Video defaults</h2>
+<span style="font-size: 14px; color: var(--ink-muted);">New videos start with these. You can change them for any video.</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+<div style="display: flex; flex-direction: column; gap: 8px;"><span class="lbl">Narration language</span><x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="Narration language" options="{{langs}}" default-value="en"></x-import></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><span class="lbl">Narrator</span><x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="Narrator" options="{{voices}}" default-value="female"></x-import></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><span class="lbl">Length</span><x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="Length" options="{{lengths}}" default-value="60"></x-import></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><span class="lbl">Captions</span><x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="Captions" options="{{caps}}" default-value="highlight"></x-import></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><label for="st-tone" class="lbl">Tone</label><select id="st-tone" class="select"><option>Friendly</option><option>Professional</option><option>Energetic</option><option>Calm</option></select></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><label for="st-aud" class="lbl">Audience</label><select id="st-aud" class="select"><option>Beginners</option><option>Kids</option><option>Intermediate</option><option>Experts</option></select></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<span class="lbl">Video theme</span>
+<div style="display: flex; flex-wrap: wrap; gap: 12px;">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="4">
+<span style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+<span style="width: 92px; height: 60px; border-radius: 12px; background: {{t.bg}}; border: {{t.border}}; box-sizing: border-box; padding: 8px; display: flex; align-items: flex-end; gap: 6px;"><span style="width: 18px; height: 18px; border-radius: 5px; background: {{t.accent}};"></span><span style="width: 18px; height: 18px; border-radius: 5px; background: {{t.hl}};"></span></span>
+<span style="font-size: 13px; font-weight: {{t.weight}};">{{t.name}}</span>
+</span>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section id="instagram" aria-labelledby="ig-h" class="card">
+<h2 id="ig-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Instagram</h2>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line);">
+<span style="width: 48px; height: 48px; border-radius: 50%; background: var(--highlight-soft); color: var(--highlight-text); display: inline-flex; align-items: center; justify-content: center; font-weight: 700;">YB</span>
+<span style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 700;">@yourbrand</span><span style="font-size: 13px; color: var(--ink-muted);">Creator account · connected on 18 Sep</span></span>
+<x-import component-from-global-scope="Vidcosmos.Badge" tone="warning" icon="clock">Ends 16 Nov</x-import>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 22px; color: var(--ink-secondary);">Instagram connections last about 60 days. Vidcosmos renews yours automatically while you use it; if renewing fails, reconnect here so scheduled posts keep going out.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px;">
+<x-import component-from-global-scope="Vidcosmos.Button" variant="secondary">Reconnect Instagram</x-import>
+<x-import component-from-global-scope="Vidcosmos.Button" variant="ghost">Disconnect</x-import>
+</div>
+</section>
+
+<section id="usage" aria-labelledby="use-h" class="card">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<h2 id="use-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Usage</h2>
+<span style="font-size: 14px; color: var(--ink-muted);">Free while Vidcosmos is in beta. Limits reset on the 1st of each month (India time).</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px;">
+<x-import component-from-global-scope="Vidcosmos.UsageMeter" used="{{twelve}}" max="{{twenty}}" resets-on="1 Dec"></x-import>
+<x-import component-from-global-scope="Vidcosmos.UsageMeter" used="{{three}}" max="{{twenty}}" label="Exports today" resets-on="midnight"></x-import>
+</div>
+<ul style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 22px; color: var(--ink-secondary);">
+<li>Each video can have up to 30 revisions and 50 AI requests (ideas, script, storyboard, chat).</li>
+<li>Up to 2 videos can be generating or exporting at the same time.</li>
+<li>A video counts once, when it’s first generated. Revising it doesn’t use another.</li>
+</ul>
+</section>
+
+<section id="notifications" aria-labelledby="not-h" class="card">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<h2 id="not-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Email notifications</h2>
+<span style="font-size: 14px; color: var(--ink-muted);">You always get in-app notifications. Security emails are always sent.</span>
+</div>
+<label class="check"><input type="checkbox" checked="{{yes}}"><span><strong>Videos ready</strong><br><span style="color: var(--ink-muted); font-size: 14px;">When a video or export finishes and you’re not on the page</span></span></label>
+<label class="check"><input type="checkbox" checked="{{yes}}"><span><strong>Posts</strong><br><span style="color: var(--ink-muted); font-size: 14px;">Published, failed or missed Instagram posts</span></span></label>
+<label class="check"><input type="checkbox" checked="{{yes}}"><span><strong>Account</strong><br><span style="color: var(--ink-muted); font-size: 14px;">Instagram connection ending, usage limits close to full</span></span></label>
+</section>
+
+<section id="delete" aria-labelledby="del-h" class="card" style="border-color: var(--danger-soft);">
+<h2 id="del-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Delete account</h2>
+<p style="margin: 0; font-size: 14px; line-height: 22px; color: var(--ink-secondary);">Deletes your videos, exports, scheduled posts and Instagram connection for good. Published Instagram posts stay on Instagram. This can’t be undone.</p>
+<x-import component-from-global-scope="Vidcosmos.Button" variant="danger" style="align-self: flex-start;">Delete my account</x-import>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1960}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var T = [['Midnight', 'var(--video-midnight-bg)', 'var(--video-midnight-accent)', 'var(--video-midnight-highlight)', true], ['Paper', 'var(--video-paper-bg)', 'var(--video-paper-accent)', 'var(--video-paper-highlight)'], ['Ocean', 'var(--video-ocean-bg)', 'var(--video-ocean-accent)', 'var(--video-ocean-highlight)'], ['Sunset', 'var(--video-sunset-bg)', 'var(--video-sunset-accent)', 'var(--video-sunset-highlight)']];
+    var themes = T.map(function (t) { return { name: t[0] + (t[4] ? ' (default)' : ''), bg: t[1], accent: t[2], hl: t[3], border: t[4] ? '3px solid var(--brand-text)' : '1px solid var(--line)', weight: t[4] ? '700' : '500' }; });
+    return {
+      themes: themes, yes: true, twelve: 12, twenty: 20, three: 3,
+      langs: [{ value: 'en', label: 'English' }, { value: 'hi', label: 'हिंदी', lang: 'hi' }],
+      voices: [{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }],
+      lengths: [{ value: '30', label: '30 s' }, { value: '60', label: '60 s' }, { value: '90', label: '90 s' }],
+      caps: [{ value: 'highlight', label: 'Highlight' }, { value: 'classic', label: 'Classic' }, { value: 'none', label: 'Off' }]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mobile tab bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<nav aria-label="App" style="width: 100%; height: 84px; box-sizing: border-box; padding: 8px 8px 20px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; background: var(--surface); border-top: 1px solid var(--line); font-family: var(--font-sans);">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+<a href="{{t.href}}" aria-current="{{t.current}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 52px; text-decoration: none; font-size: 11px; font-weight: {{t.weight}}; color: {{t.color}};">
+<span style="display: inline-flex; align-items: center; justify-content: center; width: {{t.size}}; height: 32px; border-radius: 16px; background: {{t.bg}}; color: {{t.iconColor}};">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{t.d}}"></path></svg>
+</span>
+{{t.label}}
+</a>
+</sc-for>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["library","posts","new","settings"],"default":"library"},"$preview":{"width":390,"height":84}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var active = this.props.active ?? 'library';
+    var defs = [
+      { key: 'library', label: 'Library', href: 'MobileLibrary.dc.html', d: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+      { key: 'new', label: 'New video', href: 'MobileNewVideo.dc.html', d: 'M12 5v14M5 12h14' },
+      { key: 'posts', label: 'Posts', href: 'MobilePosts.dc.html', d: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' },
+      { key: 'settings', label: 'Settings', href: 'MobileSettings.dc.html', d: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 4v6M9 14v6' }
+    ];
+    var tabs = defs.map(function (d) {
+      var on = d.key === active, isNew = d.key === 'new';
+      return { label: d.label, href: d.href, d: d.d, current: on ? 'page' : 'false',
+        weight: on ? '700' : '500', color: on ? 'var(--brand-text)' : 'var(--ink-muted)',
+        bg: isNew ? 'var(--brand)' : (on ? 'var(--brand-soft)' : 'transparent'),
+        iconColor: isNew ? 'var(--on-brand)' : 'currentColor', size: isNew ? '52px' : '56px' };
+    });
+    return { tabs: tabs };
+  }
+}
+</script>
+</body>
+</html>

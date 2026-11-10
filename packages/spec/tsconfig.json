@@ -1,0 +1,4 @@
+{
+  "extends": "@vidcosmos/config/tsconfig.base.json",
+  "include": ["src"]
+}

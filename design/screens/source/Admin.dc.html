@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin console</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}a:hover{color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);padding:10px 12px;border-bottom:1px solid var(--line)}
+.tbl td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.num{text-align:right!important;font-variant-numeric:tabular-nums}
+.adm-nav{padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--ink-secondary);font-size:14px;font-weight:500}
+.adm-nav:hover{background:var(--surface-hover);color:var(--ink)}
+.adm-nav:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+</style>
+</helmet>
+<div style="min-height: 1160px; background: var(--bg); color: var(--ink); font-family: var(--font-sans); display: flex; flex-direction: column;">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 20px; padding: 14px 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+<x-import component-from-global-scope="Vidcosmos.Logo" size="{{logoSize}}"></x-import>
+<span style="font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted);">Admin</span>
+<nav aria-label="Admin" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1;">
+<a class="adm-nav" href="#" style="background: var(--brand-soft); color: var(--brand-text); font-weight: 600;">Overview</a>
+<a class="adm-nav" href="#">Users</a>
+<a class="adm-nav" href="#">Jobs</a>
+<a class="adm-nav" href="#">Posts</a>
+<a class="adm-nav" href="#">Moderation</a>
+<a class="adm-nav" href="#">Costs</a>
+<a class="adm-nav" href="#">Audit log</a>
+</nav>
+<x-import component-from-global-scope="Vidcosmos.Badge" tone="info">Sample data</x-import>
+</header>
+
+<main style="display: flex; flex-direction: column; gap: 24px; padding: 28px 32px 48px; max-width: 1360px; width: 100%; box-sizing: border-box; margin: 0 auto;">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px;">
+<h1 style="margin: 0; font-family: var(--font-display); font-size: 28px; font-weight: 800; letter-spacing: -0.02em;">Overview</h1>
+<span style="font-size: 14px; color: var(--ink-muted);">November 2026, so far · India time</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line);">
+<span style="font-size: 13px; color: var(--ink-muted);">{{k.label}}</span>
+<span style="font-family: var(--font-display); font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; color: {{k.color}};">{{k.value}}</span>
+<span style="font-size: 13px; color: var(--ink-muted);">{{k.sub}}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px;">
+<section aria-labelledby="cost-h" style="padding: 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+<h2 id="cost-h" style="margin: 0; font-family: var(--font-display); font-size: 17px; font-weight: 700;">Cost this month by provider</h2>
+<div style="overflow-x: auto;">
+<table class="tbl">
+<thead><tr><th>Provider</th><th>Usage</th><th class="num">Cost</th><th class="num">Per video</th></tr></thead>
+<tbody>
+<tr><td>Gemini (free tier)</td><td>1.8 M tokens</td><td class="num">$0.00</td><td class="num">$0.000</td></tr>
+<tr><td>ElevenLabs</td><td>96 k characters, 31% from cache</td><td class="num">$9.60</td><td class="num">$0.073</td></tr>
+<tr><td>Vercel Sandbox</td><td>6.4 hours of rendering</td><td class="num">$4.10</td><td class="num">$0.031</td></tr>
+<tr><td>Cloudflare R2</td><td>14 GB stored</td><td class="num">$0.00</td><td class="num">$0.000</td></tr>
+<tr><td style="font-weight: 700;">Total</td><td></td><td class="num" style="font-weight: 700;">$13.70</td><td class="num" style="font-weight: 700;">$0.104</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="health-h" style="padding: 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+<h2 id="health-h" style="margin: 0; font-family: var(--font-display); font-size: 17px; font-weight: 700;">Providers, last 24 hours</h2>
+<sc-for list="{{health}}" as="p" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+<span style="flex: 1; min-width: 140px; font-weight: 600;">{{p.name}}</span>
+<span style="font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums; min-width: 150px;">{{p.detail}}</span>
+<x-import component-from-global-scope="Vidcosmos.Badge" tone="{{p.tone}}" icon="{{p.icon}}">{{p.status}}</x-import>
+</div>
+</sc-for>
+</section>
+</div>
+
+<section aria-labelledby="jobs-h" style="padding: 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+<h2 id="jobs-h" style="margin: 0; font-family: var(--font-display); font-size: 17px; font-weight: 700;">Jobs that need attention</h2>
+<a href="#" style="font-size: 14px; font-weight: 600;">All jobs</a>
+</div>
+<div style="overflow-x: auto;">
+<table class="tbl" style="min-width: 820px;">
+<thead><tr><th>Job</th><th>User</th><th>Video</th><th>Error</th><th>When</th><th></th></tr></thead>
+<tbody>
+<sc-for list="{{jobs}}" as="j" hint-placeholder-count="3">
+<tr>
+<td><span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600;">{{j.type}}</span><span style="font-size: 12px; color: var(--ink-muted);">{{j.stage}}</span></span></td>
+<td>{{j.user}}</td>
+<td>{{j.video}}</td>
+<td><x-import component-from-global-scope="Vidcosmos.Badge" tone="danger">{{j.code}}</x-import></td>
+<td style="color: var(--ink-muted); font-variant-numeric: tabular-nums;">{{j.when}}</td>
+<td style="text-align: right;"><span style="display: inline-flex; gap: 6px;"><x-import component-from-global-scope="Vidcosmos.Button" size="sm" variant="secondary">Retry</x-import><x-import component-from-global-scope="Vidcosmos.Button" size="sm" variant="ghost">Details</x-import></span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="mod-h" style="padding: 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
+<h2 id="mod-h" style="margin: 0; font-family: var(--font-display); font-size: 17px; font-weight: 700;">Workspaces flagged by moderation</h2>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line);">
+<span style="flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600;">Workspace of user #1042</span><span style="font-size: 13px; color: var(--ink-muted);">3 topics blocked in 24 hours · category: misinformation</span></span>
+<x-import component-from-global-scope="Vidcosmos.Button" size="sm" variant="secondary">Review</x-import>
+<x-import component-from-global-scope="Vidcosmos.Button" size="sm" variant="ghost">Clear flag</x-import>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      logoSize: 26,
+      kpis: [
+        { label: 'Users', value: '48', sub: '+6 this week', color: 'var(--ink)' },
+        { label: 'Active in the last 7 days', value: '21', sub: '44% of users', color: 'var(--ink)' },
+        { label: 'Videos generated this month', value: '132', sub: '9 Hindi · 123 English', color: 'var(--ink)' },
+        { label: 'Failed jobs, last 24 hours', value: '3', sub: 'of 61 jobs', color: 'var(--danger)' }
+      ],
+      health: [
+        { name: 'Gemini', detail: '212 calls · 4 rate-limited', status: 'Busy', tone: 'warning', icon: 'clock' },
+        { name: 'ElevenLabs', detail: '486 calls · 0 errors', status: 'Healthy', tone: 'success', icon: 'check' },
+        { name: 'Vercel Sandbox', detail: '27 renders · median 2 min 18 s', status: 'Healthy', tone: 'success', icon: 'check' },
+        { name: 'Instagram', detail: '14 posts · 1 failed', status: 'Healthy', tone: 'success', icon: 'check' }
+      ],
+      jobs: [
+        { type: 'Generate', stage: 'Narration · scene 6', user: '#1031', video: 'Monsoon safety tips', code: 'TTS_FAILED', when: '18 min ago' },
+        { type: 'Publish', stage: 'Instagram processing', user: '#1007', video: 'Ladakh in 30 seconds', code: 'IG_MEDIA_REJECTED', when: 'Sun, 7:04 pm' },
+        { type: 'Storyboard', stage: 'Validation', user: '#1022', video: 'Photosynthesis in 60 s', code: 'LLM_RATE_LIMITED', when: '2 h ago' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

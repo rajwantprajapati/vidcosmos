@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Export and post</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}a:hover{color:var(--ink)}
+.input{font:inherit;font-size:15px;padding:10px 12px;min-height:44px;box-sizing:border-box;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink)}
+.input:focus-visible,.frame:focus-visible,.dl:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+.frame{padding:0;cursor:pointer;border-radius:8px;overflow:hidden}
+.dl{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:14px;color:var(--brand-text);text-decoration:none;padding:8px 10px;border-radius:8px}
+.dl:hover{background:var(--surface-hover);color:var(--brand-text)}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1100px; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+<div style="flex: 1 1 248px; display: flex;"><dc-import name="AppSidebar" active="none" hint-size="100%,960px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 40px; border-bottom: 1px solid var(--line); background: var(--surface);">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+<a href="Editor.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none;">← Editor</a>
+<h1 style="margin: 0; font-family: var(--font-display); font-size: 24px; line-height: 30px; font-weight: 800; letter-spacing: -0.02em;">Export and post</h1>
+</div>
+<span style="font-size: 14px; color: var(--ink-muted);">How UPI moves your money · version 4</span>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 32px; padding: 32px 40px 48px; align-items: flex-start;">
+
+<div style="flex: 0 1 280px; min-width: 220px; display: flex; flex-direction: column; gap: 12px;">
+<div aria-label="Preview of How UPI moves your money" role="img" style="aspect-ratio: 9 / 16; border-radius: 18px; background: var(--video-midnight-bg); color: var(--video-midnight-text); padding: 22px 18px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-md);">
+<span style="font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--video-midnight-highlight);">EXPLAINER</span>
+<span style="font-family: var(--font-display); font-size: 28px; line-height: 1.05; font-weight: 800; letter-spacing: -0.03em;">Where does your money go?</span>
+<span style="display: flex; gap: 8px;"><span style="width: 40px; height: 40px; border-radius: 12px; background: var(--video-midnight-accent);"></span><span style="width: 40px; height: 40px; border-radius: 12px; background: var(--video-midnight-highlight);"></span></span>
+<span style="text-align: center; font-size: 13px; font-weight: 700;">your friend has the <span style="background: var(--video-midnight-highlight); color: var(--video-midnight-bg); padding: 1px 5px; border-radius: 5px;">money</span></span>
+</div>
+<span style="font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums;">0:56 · 1080 × 1920 · 9:16</span>
+</div>
+
+<div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 24px; max-width: 760px;">
+
+<section aria-labelledby="export-h" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line);">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+<h2 id="export-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Download</h2>
+<x-import component-from-global-scope="Vidcosmos.Badge" tone="success" icon="check">Ready</x-import>
+</div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; overflow: hidden;">
+<li style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--line);">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: var(--brand-soft); color: var(--brand-text); display: inline-flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Vidcosmos.Icon" name="film" size="{{eighteen}}"></x-import></span>
+<span style="flex: 1; display: flex; flex-direction: column;"><span style="font-weight: 600;">Video (MP4)</span><span style="font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums;">1080p · 18.4 MB</span></span>
+<a class="dl" href="#">Download</a>
+</li>
+<li style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--line);">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: var(--surface-sunken); color: var(--ink-secondary); display: inline-flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Vidcosmos.Icon" name="mic" size="{{eighteen}}"></x-import></span>
+<span style="flex: 1; display: flex; flex-direction: column;"><span style="font-weight: 600;">Narration (MP3)</span><span style="font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums;">0.9 MB</span></span>
+<a class="dl" href="#">Download</a>
+</li>
+<li style="display: flex; align-items: center; gap: 14px; padding: 12px 14px;">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: var(--surface-sunken); color: var(--ink-secondary); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">CC</span>
+<span style="flex: 1; display: flex; flex-direction: column;"><span style="font-weight: 600;">Captions (SRT)</span><span style="font-size: 13px; color: var(--ink-muted);">For YouTube and other players</span></span>
+<a class="dl" href="#">Download</a>
+</li>
+</ul>
+<span style="font-size: 13px; color: var(--ink-muted);">Files are kept for 30 days, until 10 Dec. You can export again any time; nothing is lost.</span>
+</section>
+
+<section aria-labelledby="ig-h" style="display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line);">
+<h2 id="ig-h" style="margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800;">Post to Instagram as a Reel</h2>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line);">
+<span style="width: 40px; height: 40px; border-radius: 50%; background: var(--highlight-soft); color: var(--highlight-text); display: inline-flex; align-items: center; justify-content: center; font-weight: 700;">YB</span>
+<span style="flex: 1; display: flex; flex-direction: column;"><span style="font-weight: 600;">@yourbrand</span><span style="font-size: 13px; color: var(--ink-muted);">Creator account</span></span>
+<x-import component-from-global-scope="Vidcosmos.Badge" tone="success">Connected</x-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<x-import component-from-global-scope="Vidcosmos.TextField" id="ep-caption" label="Caption" multiline="{{yes}}" rows="{{five}}" default-value="You tap Pay. Two seconds later, your friend has the money. Here’s where it goes in between 👇 3 hops, 1 PIN that only you know.&#10;&#10;Save this for the next time someone asks how UPI works.&#10;&#10;#UPI #DigitalPayments #FinanceBasics #LearnOnInstagram #MoneyTips #India"></x-import>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+<x-import component-from-global-scope="Vidcosmos.Button" variant="ghost" size="sm" icon="sparkles">Write a new caption</x-import>
+<span style="font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums;">256 of 2,200 characters · 6 of 30 hashtags</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<span style="font-size: 14px; font-weight: 600;">Cover frame</span>
+<div role="radiogroup" aria-label="Cover frame" style="display: flex; flex-wrap: wrap; gap: 10px;">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="5">
+<button type="button" class="frame" role="radio" aria-checked="{{f.checked}}" aria-label="{{f.label}}" onClick="{{f.pick}}" style="width: 60px; height: 107px; border: {{f.border}}; background: var(--video-midnight-bg); display: flex; flex-direction: column; justify-content: space-between; padding: 6px; box-sizing: border-box;">
+<span style="font-family: var(--font-display); font-size: 7px; font-weight: 800; color: #FFFFFF; text-align: left;">{{f.text}}</span>
+<span style="width: 14px; height: 14px; border-radius: 4px; background: {{f.tile}};"></span>
+</button>
+</sc-for>
+</div>
+</div>
+<label style="display: flex; align-items: center; gap: 10px; font-size: 15px;"><input type="checkbox" checked="{{yes}}" style="width: 18px; height: 18px; accent-color: var(--brand-text);">Also show it on my profile grid</label>
+<div style="display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--line);">
+<span style="font-size: 14px; font-weight: 600;">When</span>
+<x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="When to post" options="{{whenOpts}}" value="{{when}}" on-change="{{setWhen}}" style="align-self: flex-start;"></x-import>
+<sc-if value="{{scheduled}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600;">Date<input class="input" type="date" value="2026-11-11" readonly="{{yes}}"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600;">Time<input class="input" type="time" value="18:30" readonly="{{yes}}"></label>
+<span style="font-size: 13px; color: var(--ink-muted); padding-bottom: 12px;">India time (IST)</span>
+</div>
+</sc-if>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 4px;">
+<x-import component-from-global-scope="Vidcosmos.Button" size="lg">{{postLabel}}</x-import>
+<span style="font-size: 13px; color: var(--ink-muted); max-width: 360px;">Instagram takes a minute or two to process a Reel. We’ll notify you when it’s live.</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this, st = this.state || {};
+    var when = st.when || 'schedule';
+    var pick = st.frame || 0;
+    var F = [['Where does your money go?', 'var(--video-midnight-accent)'], ['One payment, three hops', 'var(--video-midnight-highlight)'], ['NPCI finds their bank', 'var(--video-midnight-accent)'], ['Your PIN stays private', 'var(--video-midnight-highlight)'], ['Three hops, two seconds', 'var(--video-midnight-accent)']];
+    var frames = F.map(function (f, i) { var on = i === pick; return { text: f[0], tile: f[1], label: 'Frame from scene ' + (i + 1), checked: on ? 'true' : 'false', border: on ? '3px solid var(--brand-text)' : '1px solid var(--line)', pick: function () { self.setState({ frame: i }); } }; });
+    return {
+      frames: frames, when: when, scheduled: when === 'schedule',
+      whenOpts: [{ value: 'now', label: 'Post now' }, { value: 'schedule', label: 'Schedule' }],
+      setWhen: function (v) { self.setState({ when: v }); },
+      postLabel: when === 'schedule' ? 'Schedule for Wed 11 Nov, 6:30 pm' : 'Post now',
+      yes: true, five: 6, eighteen: 18
+    };
+  }
+}
+</script>
+</body>
+</html>

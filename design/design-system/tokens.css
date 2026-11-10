@@ -1,0 +1,202 @@
+/* Vidcosmos Design System — generated from tokens.json */
+:root, [data-theme="light"] {
+  --teal-50: #EFFBF9;
+  --teal-100: #D2F4EE;
+  --teal-200: #A6E9DE;
+  --teal-300: #6ED8C8;
+  --teal-400: #2DD4BF;
+  --teal-500: #14B8A6;
+  --teal-600: #0E9384;
+  --teal-700: #0B7A6C;
+  --teal-800: #0C5F55;
+  --teal-900: #0D4A44;
+  --coral-50: #FFF2EF;
+  --coral-100: #FFE0D9;
+  --coral-200: #FFC3B7;
+  --coral-300: #FFA493;
+  --coral-400: #FF8873;
+  --coral-500: #FF6F59;
+  --coral-600: #EC5640;
+  --coral-700: #C73A26;
+  --coral-800: #A12E1D;
+  --coral-900: #7D2517;
+  --slate-0: #FFFFFF;
+  --slate-50: #F4F8F7;
+  --slate-100: #E9F0EF;
+  --slate-200: #DDE7E5;
+  --slate-300: #C3D1CF;
+  --slate-400: #8494A0;
+  --slate-500: #6B7C86;
+  --slate-600: #536371;
+  --slate-700: #34444F;
+  --slate-800: #24343F;
+  --slate-900: #0E1F2B;
+  --night-50: #E8F3F2;
+  --night-200: #C2D3D6;
+  --night-300: #9DB4BB;
+  --night-400: #6F8C97;
+  --night-500: #4A6875;
+  --night-600: #2E4E5C;
+  --night-700: #21424F;
+  --night-800: #163240;
+  --night-850: #10242D;
+  --night-900: #0A1A22;
+  --night-950: #061117;
+  --bg: var(--slate-50);
+  --surface: var(--slate-0);
+  --surface-raised: var(--slate-0);
+  --surface-sunken: var(--slate-100);
+  --surface-hover: var(--slate-100);
+  --surface-inverse: var(--slate-900);
+  --stage: #0E1F2B;
+  --scrim: rgba(6,17,23,0.56);
+  --line: var(--slate-200);
+  --line-strong: var(--slate-400);
+  --ink: var(--slate-900);
+  --ink-secondary: var(--slate-700);
+  --ink-muted: var(--slate-600);
+  --ink-disabled: var(--slate-400);
+  --ink-inverse: var(--slate-0);
+  --brand: var(--teal-500);
+  --brand-hover: var(--teal-400);
+  --on-brand: var(--slate-900);
+  --brand-text: var(--teal-700);
+  --brand-soft: var(--teal-50);
+  --brand-soft-line: var(--teal-200);
+  --focus-ring: var(--teal-700);
+  --highlight: var(--coral-500);
+  --on-highlight: var(--slate-900);
+  --highlight-soft: var(--coral-50);
+  --highlight-text: var(--coral-700);
+  --success: #0F7A3D;
+  --success-soft: #E3F6EA;
+  --warning: #9A5B00;
+  --warning-soft: #FFF1DB;
+  --danger: #B42328;
+  --danger-soft: #FDE7E8;
+  --danger-fill: #C7362B;
+  --on-danger: #FFFFFF;
+  --info: #1D5FB8;
+  --info-soft: #E3EEFC;
+  --video-midnight-bg: #0B1430;
+  --video-midnight-panel: #16224A;
+  --video-midnight-text: #FFFFFF;
+  --video-midnight-accent: #5F7DFF;
+  --video-midnight-highlight: #FFD338;
+  --video-paper-bg: #FAF8F3;
+  --video-paper-panel: #FFFFFF;
+  --video-paper-text: #1A1A1A;
+  --video-paper-accent: #2B59FF;
+  --video-paper-highlight: #FF6F59;
+  --video-ocean-bg: #06343A;
+  --video-ocean-panel: #0B4A52;
+  --video-ocean-text: #F2FFFD;
+  --video-ocean-accent: #2DD4BF;
+  --video-ocean-highlight: #FFC94F;
+  --video-sunset-bg: #2A1033;
+  --video-sunset-panel: #3D1A47;
+  --video-sunset-text: #FFF4EC;
+  --video-sunset-accent: #FF8873;
+  --video-sunset-highlight: #FFD45A;
+  --shadow-sm: 0 1px 2px rgba(14,31,43,0.06), 0 1px 1px rgba(14,31,43,0.04);
+  --shadow-md: 0 8px 24px rgba(14,31,43,0.10), 0 2px 6px rgba(14,31,43,0.06);
+  --shadow-lg: 0 24px 48px rgba(14,31,43,0.16), 0 4px 12px rgba(14,31,43,0.08);
+}
+[data-theme="dark"] {
+  --bg: var(--night-900);
+  --surface: var(--night-850);
+  --surface-raised: var(--night-800);
+  --surface-sunken: var(--night-950);
+  --surface-hover: var(--night-800);
+  --surface-inverse: var(--night-50);
+  --stage: #061117;
+  --scrim: rgba(0,0,0,0.64);
+  --line: var(--night-700);
+  --line-strong: var(--night-400);
+  --ink: var(--night-50);
+  --ink-secondary: var(--night-200);
+  --ink-muted: var(--night-300);
+  --ink-disabled: var(--night-500);
+  --ink-inverse: var(--night-950);
+  --brand: var(--teal-400);
+  --brand-hover: var(--teal-300);
+  --on-brand: var(--night-950);
+  --brand-text: var(--teal-300);
+  --brand-soft: var(--teal-900);
+  --brand-soft-line: var(--teal-700);
+  --focus-ring: var(--teal-300);
+  --highlight: var(--coral-400);
+  --on-highlight: var(--night-950);
+  --highlight-soft: var(--coral-900);
+  --highlight-text: var(--coral-300);
+  --success: #6EE7A8;
+  --success-soft: #0F3B2A;
+  --warning: #FCD34D;
+  --warning-soft: #3B2D0B;
+  --danger: #FCA5A5;
+  --danger-soft: #3D1618;
+  --danger-fill: #F87171;
+  --on-danger: #061117;
+  --info: #93C5FD;
+  --info-soft: #102A4C;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.40);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.50), 0 0 0 1px rgba(232,243,242,0.06);
+  --shadow-lg: 0 24px 48px rgba(0,0,0,0.60), 0 0 0 1px rgba(232,243,242,0.08);
+  color-scheme: dark;
+}
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+  --container-max: 1200px;
+  --reading-max: 680px;
+  --sidebar-width: 248px;
+  --topbar-height: 64px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1200px;
+  --z-sticky: 10;
+  --z-popover: 30;
+  --z-dialog: 40;
+  --z-toast: 50;
+  --font-display: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-deva: "Noto Sans Devanagari", Inter, sans-serif;
+}
+.display-xl { font-family: var(--font-display); font-size: 56px; line-height: 60px; font-weight: 800; letter-spacing: -0.035em; }
+.display { font-family: var(--font-display); font-size: 44px; line-height: 48px; font-weight: 800; letter-spacing: -0.03em; }
+.h1 { font-family: var(--font-display); font-size: 32px; line-height: 40px; font-weight: 800; letter-spacing: -0.025em; }
+.h2 { font-family: var(--font-display); font-size: 24px; line-height: 30px; font-weight: 700; letter-spacing: -0.015em; }
+.h3 { font-family: var(--font-display); font-size: 18px; line-height: 24px; font-weight: 700; letter-spacing: -0.01em; }
+.body-lg { font-family: var(--font-sans); font-size: 18px; line-height: 28px; font-weight: 400; }
+.body { font-family: var(--font-sans); font-size: 16px; line-height: 26px; font-weight: 400; }
+.body-sm { font-family: var(--font-sans); font-size: 14px; line-height: 22px; font-weight: 400; }
+.label { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; }
+.small { font-family: var(--font-sans); font-size: 13px; line-height: 20px; font-weight: 500; }
+.overline { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; }
+.hi-heading { font-family: var(--font-deva); font-size: 26px; line-height: 38px; font-weight: 700; }
+.hi-body { font-family: var(--font-deva); font-size: 17px; line-height: 30px; font-weight: 400; }
+.hi-label { font-family: var(--font-deva); font-size: 15px; line-height: 24px; font-weight: 500; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/PlusJakartaSans-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/PlusJakartaSans-700.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/PlusJakartaSans-800.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("fonts/Inter-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("fonts/Inter-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("fonts/Inter-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("fonts/Inter-700.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Devanagari"; src: url("fonts/NotoSansDevanagari-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Devanagari"; src: url("fonts/NotoSansDevanagari-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Sans Devanagari"; src: url("fonts/NotoSansDevanagari-700.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }

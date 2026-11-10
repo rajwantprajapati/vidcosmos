@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Export and post on a phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}
+.ib{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;border:0;background:transparent;color:var(--ink-secondary);cursor:pointer;text-decoration:none}
+.ib:focus-visible,.frame:focus-visible,.row:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+.hscroll{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 16px}
+.hscroll::-webkit-scrollbar{display:none}
+.frame{padding:0;cursor:pointer;border-radius:8px;flex:none}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;font:inherit;font-size:15px;color:var(--ink);background:transparent;border:0;width:100%;text-align:left;cursor:pointer;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+<header style="display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 12px 0 4px;">
+<a href="MobileEditor.dc.html" class="ib" aria-label="Back to editor"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<span style="flex: 1; font-family: var(--font-display); font-weight: 800; font-size: 17px;">Export and post</span>
+</header>
+<div style="display: flex; flex-direction: column; gap: 18px; padding: 6px 0 150px;">
+<div style="margin: 0 16px; display: flex; gap: 14px; align-items: center; padding: 12px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line);">
+<span aria-hidden="true" style="width: 54px; height: 96px; border-radius: 9px; background: var(--video-midnight-bg); flex: none;"></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+<span style="font-weight: 600;">How UPI moves your money</span>
+<span style="font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums;">0:56 · 1080p · 18.4 MB</span>
+<span style="display: flex; gap: 8px; align-items: center;"><x-import component-from-global-scope="Vidcosmos.Button" size="sm" variant="secondary">Download MP4</x-import><a href="#" style="font-size: 13px; font-weight: 600;">More files</a></span>
+</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<span style="padding: 0 16px; font-family: var(--font-display); font-size: 17px; font-weight: 800;">Post to Instagram</span>
+<div style="margin: 0 16px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line);">
+<span style="width: 34px; height: 34px; border-radius: 50%; background: var(--highlight-soft); color: var(--highlight-text); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">YB</span>
+<span style="flex: 1; font-weight: 600;">@yourbrand</span>
+<x-import component-from-global-scope="Vidcosmos.Badge" tone="success">Connected</x-import>
+</div>
+<div style="padding: 0 16px;">
+<x-import component-from-global-scope="Vidcosmos.TextField" id="me-caption" label="Caption" multiline="{{yes}}" rows="{{four}}" default-value="You tap Pay. Two seconds later, your friend has the money. Here’s where it goes in between. Save this for the next time someone asks how UPI works. #UPI #FinanceBasics" helper="164 of 2,200 · 2 hashtags"></x-import>
+</div>
+<x-import component-from-global-scope="Vidcosmos.Button" variant="ghost" size="sm" icon="sparkles" style="align-self: flex-start; margin-left: 8px;">Write a new caption</x-import>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<span style="padding: 0 16px; font-size: 14px; font-weight: 600;">Cover frame</span>
+<div class="hscroll" role="radiogroup" aria-label="Cover frame">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="5">
+<button type="button" class="frame" role="radio" aria-checked="{{f.checked}}" aria-label="{{f.label}}" style="width: 54px; height: 96px; border: {{f.border}}; background: var(--video-midnight-bg);"></button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 0 16px;">
+<span style="font-size: 14px; font-weight: 600;">When</span>
+<x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="When to post" options="{{whenOpts}}" value="{{when}}" on-change="{{setWhen}}"></x-import>
+<sc-if value="{{scheduled}}" hint-placeholder-val="{{true}}">
+<div style="border-radius: 14px; background: var(--surface); border: 1px solid var(--line); overflow: hidden;">
+<button type="button" class="row"><span style="flex: 1; color: var(--ink-secondary);">Date</span><span style="font-weight: 600;">Wed 11 Nov</span></button>
+<button type="button" class="row"><span style="flex: 1; color: var(--ink-secondary);">Time (IST)</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">6:30 pm</span></button>
+</div>
+</sc-if>
+</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 28px; background: var(--surface); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+<x-import component-from-global-scope="Vidcosmos.Button" size="lg" full-width="{{yes}}">{{postLabel}}</x-import>
+<span style="text-align: center; font-size: 12px; color: var(--ink-muted);">We’ll notify you when it’s live on Instagram.</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this, st = this.state || {};
+    var when = st.when || 'schedule';
+    var frames = [0, 1, 2, 3, 4].map(function (i) { return { label: 'Frame from scene ' + (i + 1), checked: i === 0 ? 'true' : 'false', border: i === 0 ? '3px solid var(--brand-text)' : '1px solid var(--line)' }; });
+    return {
+      frames: frames, when: when, scheduled: when === 'schedule',
+      whenOpts: [{ value: 'now', label: 'Post now' }, { value: 'schedule', label: 'Schedule' }],
+      setWhen: function (v) { self.setState({ when: v }); },
+      postLabel: when === 'schedule' ? 'Schedule post' : 'Post now',
+      yes: true, four: 4
+    };
+  }
+}
+</script>
+</body>
+</html>

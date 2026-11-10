@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Storyboard on a phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}
+.ib{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;border:0;background:transparent;color:var(--ink-secondary);cursor:pointer;text-decoration:none}
+.ib:focus-visible,.cta:focus-visible,.scene:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+.trig{background:var(--brand-soft);color:var(--brand-text);font-weight:600;border-radius:4px;padding:0 3px}
+.scene{font:inherit;text-align:left;width:100%;cursor:pointer;color:var(--ink)}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+<header style="display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 12px 0 4px;">
+<a href="MobileScript.dc.html" class="ib" aria-label="Back"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<span style="flex: 1; font-family: var(--font-display); font-weight: 800; font-size: 17px;">Storyboard</span>
+<span style="font-size: 13px; color: var(--ink-muted);">Step 3 of 4</span>
+</header>
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 0 16px;">
+<span style="height: 4px; border-radius: 2px; background: var(--brand);"></span><span style="height: 4px; border-radius: 2px; background: var(--brand);"></span><span style="height: 4px; border-radius: 2px; background: var(--brand);"></span><span style="height: 4px; border-radius: 2px; background: var(--line);"></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 150px;">
+<div role="status" style="display: flex; gap: 10px; padding: 12px; border-radius: 12px; background: var(--warning-soft); color: var(--warning); font-size: 14px; line-height: 20px;">
+<x-import component-from-global-scope="Vidcosmos.Icon" name="alert" size="{{eighteen}}"></x-import>
+<span><strong>Scene 6 needs a fix.</strong> Tap it to see what’s wrong.</span>
+</div>
+<span style="font-size: 13px; color: var(--ink-muted);">8 scenes · about 56 s · tap a scene to edit it</span>
+<sc-for list="{{scenes}}" as="s" hint-placeholder-count="4">
+<button type="button" class="scene" style="display: flex; gap: 12px; padding: 12px; border-radius: 16px; background: var(--surface); border: {{s.border}};">
+<span aria-hidden="true" style="width: 64px; height: 114px; flex: none; border-radius: 10px; background: var(--video-midnight-bg); padding: 7px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;"><span style="font-family: var(--font-display); font-size: 8px; line-height: 1.15; font-weight: 800; color: #FFFFFF;">{{s.heading}}</span><span style="display: flex; gap: 3px;"><span style="width: 12px; height: 12px; border-radius: 3px; background: var(--video-midnight-accent);"></span><span style="width: 12px; height: 12px; border-radius: 3px; background: var(--video-midnight-highlight);"></span></span></span>
+<span style="display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1;">
+<span style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px;"><span style="font-weight: 700;">Scene {{s.n}} · {{s.tpl}}</span><span style="color: var(--ink-muted); font-variant-numeric: tabular-nums;">~{{s.sec}} s</span></span>
+<span style="font-size: 14px; line-height: 21px;"><sc-for list="{{s.parts}}" as="pt" hint-placeholder-count="3"><span class="{{pt.cls}}">{{pt.text}}</span></sc-for></span>
+<span style="font-size: 12px; color: var(--ink-muted);">{{s.els}}</span>
+</span>
+</button>
+</sc-for>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 28px; background: var(--surface); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+<a href="MobileEditor.dc.html" class="cta" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border-radius: 12px; background: var(--brand); color: var(--on-brand); font-weight: 600; font-size: 16px; text-decoration: none;"><x-import component-from-global-scope="Vidcosmos.Icon" name="sparkles" size="{{eighteen}}"></x-import>Generate video</a>
+<span style="text-align: center; font-size: 12px; color: var(--ink-muted);">Uses 1 of your 20 videos this month · 8 left</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function parts(text, trig) {
+      var out = [], rest = text;
+      trig.forEach(function (w) { var i = rest.indexOf(w); if (i < 0) return; if (i > 0) out.push({ text: rest.slice(0, i), cls: '' }); out.push({ text: w, cls: 'trig' }); rest = rest.slice(i + w.length); });
+      if (rest) out.push({ text: rest, cls: '' });
+      return out;
+    }
+    var S = [
+      { n: 1, sec: 5, tpl: 'Title', heading: 'Where does your money go?', text: 'You tap Pay, and in about two seconds your friend has the money.', trig: ['Pay', 'money'], els: 'Phone icon · Title' },
+      { n: 2, sec: 5, tpl: 'Key term', heading: 'UPI', text: 'But where does it actually go? Let’s follow one UPI payment.', trig: ['UPI'], els: 'Term “UPI”' },
+      { n: 3, sec: 8, tpl: 'Flowchart', heading: 'One payment, three hops', text: 'First, your app sends the request to NPCI, the network that connects banks across India.', trig: ['app', 'NPCI', 'banks'], els: 'Your app · NPCI · Banks' },
+      { n: 4, sec: 7, tpl: 'Flowchart', heading: 'NPCI finds their bank', text: 'NPCI checks which bank your friend uses and asks that bank to accept the money.', trig: ['checks', 'bank'], els: 'Search · Their bank' }
+    ];
+    return { eighteen: 18, scenes: S.map(function (s) { return { n: s.n, sec: s.sec, tpl: s.tpl, heading: s.heading, els: 'On screen: ' + s.els, parts: parts(s.text, s.trig), border: '1px solid var(--line)' }; }) };
+  }
+}
+</script>
+</body>
+</html>

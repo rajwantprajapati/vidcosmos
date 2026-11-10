@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in to Vidcosmos</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}a:hover{color:var(--ink)}
+@keyframes vc-spin-slow{to{transform:rotate(360deg)}}
+.orbit-spin{transform-origin:260px 260px;animation:vc-spin-slow 60s linear infinite}
+@media (prefers-reduced-motion: reduce){.orbit-spin{animation:none}}
+@media (max-width: 720px){.si-art{position:static !important;width:240px;height:240px;align-self:center;margin:-8px 0 -16px}}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 900px; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+
+<section data-theme="dark" aria-label="About Vidcosmos" style="flex: 1 1 520px; min-width: 0; background: var(--bg); color: var(--ink); position: relative; overflow: hidden; padding: 40px max(16px, 48px) 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 32px;">
+<a href="Main.dc.html" aria-label="Vidcosmos home" style="display: inline-flex; align-self: flex-start;"><x-import component-from-global-scope="Vidcosmos.Logo" size="{{logoSize}}"></x-import></a>
+<svg class="si-art" aria-hidden="true" width="520" height="520" viewBox="0 0 520 520" style="position: absolute; right: -120px; top: 120px; opacity: .95;">
+<circle cx="260" cy="260" r="130" fill="var(--brand)"></circle>
+<g class="orbit-spin"><g transform="rotate(-16 260 260)" fill="none">
+<ellipse cx="260" cy="260" rx="230" ry="70" stroke="var(--highlight)" stroke-width="2"></ellipse>
+<ellipse cx="260" cy="260" rx="250" ry="110" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 8"></ellipse>
+</g></g>
+<rect x="215" y="180" width="90" height="160" rx="14" fill="var(--video-midnight-bg)"></rect>
+<rect x="229" y="198" width="50" height="10" rx="3" fill="#FFFFFF"></rect>
+<rect x="229" y="290" width="26" height="26" rx="7" fill="var(--video-midnight-accent)"></rect>
+<rect x="261" y="290" width="26" height="26" rx="7" fill="var(--video-midnight-highlight)"></rect>
+</svg>
+<div style="margin-top: auto; position: relative; display: flex; flex-direction: column; gap: 20px; max-width: 440px;">
+<h1 style="margin: 0; font-family: var(--font-display); font-size: 44px; line-height: 48px; font-weight: 800; letter-spacing: -0.03em; text-wrap: balance;">Your next video is <span style="background: var(--highlight); color: var(--on-highlight); padding: 0 .12em; border-radius: .16em;">one sentence</span> away.</h1>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; font-size: 16px; line-height: 24px; color: var(--ink-secondary);">
+<li style="display: flex; gap: 12px;"><x-import component-from-global-scope="Vidcosmos.Icon" name="check" style="color: var(--brand-text);"></x-import>Explainers, ads, stories and reels from one prompt</li>
+<li style="display: flex; gap: 12px;"><x-import component-from-global-scope="Vidcosmos.Icon" name="check" style="color: var(--brand-text);"></x-import>Indian narrators in English and Hindi</li>
+<li style="display: flex; gap: 12px;"><x-import component-from-global-scope="Vidcosmos.Icon" name="check" style="color: var(--brand-text);"></x-import>Change anything by chatting, then post to Instagram</li>
+</ul>
+</div>
+</section>
+
+<main style="flex: 1 1 520px; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 48px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); box-sizing: border-box;">
+<div style="width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h2 style="margin: 0; font-family: var(--font-display); font-size: 32px; line-height: 40px; font-weight: 800; letter-spacing: -0.025em;">{{heading}}</h2>
+<p style="margin: 0; font-size: 15px; line-height: 24px; color: var(--ink-muted);">{{subheading}}</p>
+</div>
+<x-import component-from-global-scope="Vidcosmos.SegmentedControl" label="Sign in or create an account" options="{{modes}}" value="{{mode}}" on-change="{{setMode}}" style="align-self: flex-start;"></x-import>
+<x-import component-from-global-scope="Vidcosmos.Button" variant="secondary" size="lg" full-width="{{yes}}">Continue with Google</x-import>
+<div aria-hidden="true" style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-muted);"><span style="flex: 1; height: 1px; background: var(--line);"></span>or with email<span style="flex: 1; height: 1px; background: var(--line);"></span></div>
+<form style="display: flex; flex-direction: column; gap: 16px;" onSubmit="{{noSubmit}}">
+<sc-if value="{{isSignup}}" hint-placeholder-val="{{false}}">
+<x-import component-from-global-scope="Vidcosmos.TextField" id="su-name" label="Your name" autocomplete="name" placeholder="Rajwant Prajapati"></x-import>
+</sc-if>
+<x-import component-from-global-scope="Vidcosmos.TextField" id="si-email" label="Email" type="email" autocomplete="email" placeholder="you@example.com"></x-import>
+<x-import component-from-global-scope="Vidcosmos.TextField" id="si-password" label="Password" type="password" autocomplete="current-password" helper="{{pwHelp}}"></x-import>
+<sc-if value="{{isSignin}}" hint-placeholder-val="{{true}}">
+<a href="#" style="align-self: flex-end; font-size: 14px; font-weight: 600; margin-top: -8px;">Forgot password?</a>
+</sc-if>
+<x-import component-from-global-scope="Vidcosmos.Button" type="submit" size="lg" full-width="{{yes}}">{{submitLabel}}</x-import>
+</form>
+<p style="margin: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted);">By continuing you agree to the <a href="#">Terms</a> and <a href="#">Privacy policy</a>. We send a link to confirm new email addresses.</p>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["signin","signup"],"default":"signin"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var mode = (this.state && this.state.mode) || this.props.mode || 'signin';
+    var signup = mode === 'signup';
+    return {
+      mode: mode, isSignup: signup, isSignin: !signup,
+      modes: [{ value: 'signin', label: 'Sign in' }, { value: 'signup', label: 'Create account' }],
+      setMode: function (m) { self.setState({ mode: m }); },
+      heading: signup ? 'Create your account' : 'Welcome back',
+      subheading: signup ? 'Free while Vidcosmos is in beta. No credit card.' : 'Sign in to pick up where you left off.',
+      submitLabel: signup ? 'Create account' : 'Sign in',
+      pwHelp: signup ? 'At least 10 characters.' : '',
+      noSubmit: function (e) { if (e && e.preventDefault) e.preventDefault(); },
+      logoSize: 30, yes: true
+    };
+  }
+}
+</script>
+</body>
+</html>

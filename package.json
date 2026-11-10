@@ -1,0 +1,22 @@
+{
+  "name": "vidcosmos",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@vidcosmos/web",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "prettier --check . && turbo run lint",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "3.9.10",
+    "turbo": "2.11.10",
+    "typescript": "6.0.3"
+  }
+}

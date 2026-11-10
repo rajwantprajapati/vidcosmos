@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Script on a phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--brand-text)}
+.ib{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;border:0;background:transparent;color:var(--ink-secondary);cursor:pointer;text-decoration:none}
+.ib:focus-visible,.cta:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus-ring)}
+.hscroll{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 16px}
+.hscroll::-webkit-scrollbar{display:none}
+.m-script{font:inherit;font-size:17px;line-height:29px;color:var(--ink);background:transparent;border:0;resize:none;width:100%;height:440px;padding:0;box-sizing:border-box}
+.m-script:focus{outline:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+<header style="display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 12px 0 4px;">
+<a href="MobileNewVideo.dc.html" class="ib" aria-label="Back"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<span style="flex: 1; font-family: var(--font-display); font-weight: 800; font-size: 17px;">Script</span>
+<span style="font-size: 13px; color: var(--ink-muted);">Step 2 of 4</span>
+</header>
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 0 16px;">
+<span style="height: 4px; border-radius: 2px; background: var(--brand);"></span><span style="height: 4px; border-radius: 2px; background: var(--brand);"></span><span style="height: 4px; border-radius: 2px; background: var(--line);"></span><span style="height: 4px; border-radius: 2px; background: var(--line);"></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 14px; padding-top: 16px;">
+<div class="hscroll" role="toolbar" aria-label="Rewrite the script">
+<x-import component-from-global-scope="Vidcosmos.Chip" icon="sparkles">Shorter</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">Longer</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">Simpler</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">More engaging</x-import>
+<x-import component-from-global-scope="Vidcosmos.Chip">Custom…</x-import>
+</div>
+<div style="margin: 0 16px; padding: 18px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line);">
+<label for="ms-text" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Script text</label>
+<textarea id="ms-text" class="m-script">You tap Pay, and in about two seconds your friend has the money. But where does it actually go? Let’s follow one UPI payment.
+
+First, your app sends the request to NPCI, the network that connects banks across India. NPCI checks which bank your friend uses and asks that bank to accept the money. Their bank says yes, your bank sends the money, and both of you get a message.
+
+Your UPI PIN is what keeps this safe. It is encrypted on your phone, and nobody at the shop can see it.</textarea>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 16px; font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums;">
+<span>139 words · about 56 s</span>
+<x-import component-from-global-scope="Vidcosmos.Badge" tone="success" icon="check">Fits 60 s</x-import>
+</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 28px; background: var(--surface); border-top: 1px solid var(--line);">
+<a href="MobileStoryboard.dc.html" class="cta" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border-radius: 12px; background: var(--brand); color: var(--on-brand); font-weight: 600; font-size: 16px; text-decoration: none;">Build the storyboard<x-import component-from-global-scope="Vidcosmos.Icon" name="arrow-right" size="{{eighteen}}"></x-import></a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return { eighteen: 18 }; }
+}
+</script>
+</body>
+</html>

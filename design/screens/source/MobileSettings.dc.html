@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings on a phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/vidcosmos/tokens.css">
+<link rel="stylesheet" href="ds/vidcosmos/components/bundle.css">
+<script src="ds/vidcosmos/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.row{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 14px;font:inherit;font-size:15px;color:var(--ink);background:transparent;border:0;width:100%;text-align:left;cursor:pointer;border-bottom:1px solid var(--line);box-sizing:border-box}
+.row:last-child{border-bottom:0}
+.row:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--focus-ring)}
+.grp{border-radius:14px;background:var(--surface);border:1px solid var(--line);overflow:hidden}
+.gt{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);padding:0 4px}
+.val{color:var(--ink-muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.chev{color:var(--ink-disabled);flex:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font-sans);">
+<header style="display: flex; align-items: center; height: 56px; padding: 0 16px;">
+<span style="font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -0.01em;">Settings</span>
+</header>
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 4px 16px 110px;">
+<div class="grp" style="padding: 14px;">
+<x-import component-from-global-scope="Vidcosmos.UsageMeter" used="{{twelve}}" max="{{twenty}}" label="Videos this month" resets-on="1 Dec"></x-import>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px;">
+<span style="color: var(--ink-muted);">Free plan</span>
+<a href="#" style="font-weight: 600; color: var(--brand-text);">See plans</a>
+</div>
+</div>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<span class="gt" style="margin-top: 8px;">{{g.title}}</span>
+<div class="grp">
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+<button type="button" class="row"><span style="flex: 1;">{{r.label}}</span><span class="val">{{r.value}}</span><svg class="chev" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+</sc-for>
+</div>
+</sc-for>
+<div class="grp" style="margin-top: 8px;">
+<button type="button" class="row">Sign out</button>
+<button type="button" class="row" style="color: var(--danger);">Delete account</button>
+</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0;"><dc-import name="MobileTabBar" active="settings" hint-size="390px,84px"></dc-import></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      twelve: 12, twenty: 20,
+      groups: [
+        { title: 'Account', rows: [{ label: 'Name', value: 'Rajwant P.' }, { label: 'Email', value: 'you@example.com' }, { label: 'Time zone', value: 'India (IST)' }] },
+        { title: 'Video defaults', rows: [{ label: 'Language', value: 'English' }, { label: 'Narrator', value: 'Indian female' }, { label: 'Length', value: '60 s' }, { label: 'Theme', value: 'Midnight' }] },
+        { title: 'Instagram', rows: [{ label: '@yourbrand', value: 'Ends 16 Nov' }] },
+        { title: 'Notifications', rows: [{ label: 'Video ready', value: 'Email + push' }, { label: 'Post published', value: 'Push' }] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
