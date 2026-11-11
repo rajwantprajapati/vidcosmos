@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F04 UI component library** (next)
+Last updated: 11 Nov 2026 · Current focus: **F05 Database and migrations** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -10,7 +10,7 @@ This file is the single place that says where the build stands. Update it at the
 
 | Milestone | Done | Total |
 | --- | --- | --- |
-| M0 Foundations | 3 | 7 |
+| M0 Foundations | 4 | 7 |
 | M1 Projects and library | 0 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
@@ -18,7 +18,7 @@ This file is the single place that says where the build stands. Update it at the
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **3** | **36** |
+| **Total** | **4** | **36** |
 
 ## Features
 
@@ -27,7 +27,7 @@ This file is the single place that says where the build stands. Update it at the
 | F01 | Monorepo scaffold | M0 | — | Done | 10 Nov 2026 | TypeScript pinned to 6.0 (see Known issues) |
 | F02 | Environment and configuration | M0 | F01 | Done | 11 Nov 2026 | Per-provider overrides; versioned token keys |
 | F03 | Design tokens, fonts and themes | M0 | F01 | Done | 11 Nov 2026 | Tailwind 4; `/dev/tokens` |
-| F04 | UI component library | M0 | F03 | Not started | | |
+| F04 | UI component library | M0 | F03 | Done | 11 Nov 2026 | 16 components; `/dev/components` |
 | F05 | Database and migrations | M0 | F02 | Not started | | |
 | F06 | Sign up, sign in and workspaces | M0 | F04, F05 | Not started | | |
 | F07 | App shell and onboarding | M0 | F06 | Not started | | |
@@ -64,6 +64,20 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F04 UI component library · 11 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (web 92, config 19) and `pnpm build` pass; `pnpm test:e2e` 51 passed, 33 skipped (the preview comparisons run on the desktop project only; the phone layout test on the mobile project only).
+- Render tests: one per component in `apps/web/components/ui/*.test.tsx` (Testing Library + jsdom): roles and names, variants, states (loading, invalid, selected, edited, failed, applied, stale, near limit), keyboard (arrow keys in SegmentedControl), callbacks.
+- `apps/web/e2e/dev-components.spec.ts`:
+  - all 16 components in both themes;
+  - axe reports no violations (desktop and phone);
+  - keyboard: every interactive part in the gallery (60+ stops: buttons, inputs, textarea, radios, chips, toast actions, link, scene rows, interactive card) shows the focus ring;
+  - each component in each theme, alone at 960 px (`?frame=Name-theme`), compared with `design/design-system/previews/Name_theme.png` (pixelmatch): all under 0.5% different, Icon about 1% (Lucide glyphs);
+  - no sideways scroll at 390 px.
+- Looked at the phone layout (390 px): composer, toasts and video cards wrap without overflow.
+- Production: `/dev/components` and `/dev/tokens` return 404.
+- Fixed on the way: the focus ring now sits outside Tailwind's layers, so shadow utilities (selected segment, lifted card) no longer hide it; under reduced motion, transitions are switched off (`0s`) instead of shortened, which had made every element transition.
 
 ### F03 Design tokens, fonts and themes · 11 Nov 2026
 
@@ -144,7 +158,9 @@ Decisions already made, newest first. Details are in the docs.
 - **Root `.env` changes need a restart.** Next.js reloads only `apps/web/.env*` while `pnpm dev` runs; after editing the root `.env`, restart the dev server.
 - **Claude.ai originals of the docs.** SDD §18's variable table was edited here (provider overrides, token keys). The editable original on claude.ai needs the same change.
 - **Fonts are not preloaded.** They load through `@font-face` in `tokens.css`, so the first paint may use the fallback for a moment. Consider `next/font/local` or preload links in F36 (performance).
-- **Reduced motion is a global reset.** With `prefers-reduced-motion: reduce`, every animation and transition becomes instant (`globals.css`, `!important`). The design asks spinners to slow to a pulse and movement to become fades: F04 components that need that must define their own reduced-motion rule.
+- **Reduced motion is a global reset.** With `prefers-reduced-motion: reduce`, animations run once instantly and transitions are off (`globals.css`, `!important`); the loading spinner pulses instead. A component that needs a fade under reduced motion must opt out with a more specific rule, as `.vc-spin` does.
 - **Theme choice is per browser.** It is stored in `localStorage` (`vc-theme`); the designs have no appearance setting, so there is no account-level choice yet.
-- **Logo uses primitive tokens.** `components/brand/logo.tsx` uses `--teal-500`, `--coral-500`, `--slate-900` and `--night-50` because the logo must not change colour with the theme. It is the only place primitives are used.
+- **Toast has no queue yet.** `Toast` is the visual part only. Placement (bottom-left on desktop, bottom-centre on phones), the 5 s / 10 s timing and stacking come with the first screen that shows a toast.
+- **Icons are Lucide glyphs.** The design README names Lucide; the reference bundle drew its own paths, so icons differ slightly from the previews (about 1% of pixels).
+- **`cn()` and font sizes.** `tailwind-merge` drops an earlier `leading-*` when a later class sets the font size; restate the line height after the size (as `PromptComposer` does).
 - **Playwright browser.** Each machine needs `pnpm --filter @vidcosmos/web exec playwright install chromium` once; CI will need the same step when the e2e job is added (SDD §18 runs e2e against Vercel previews).

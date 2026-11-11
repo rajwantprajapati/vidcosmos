@@ -81,4 +81,6 @@ Settings: one `.env` at the repository root (copy `.env.example`). `apps/web/env
 
 Styling: Tailwind 4 with the design tokens only. Colours are semantic classes (`bg-surface`, `text-ink-muted`, `border-line`, `bg-brand text-on-brand`); type uses the design classes (`h1`, `body`, `label`, `overline`, `hi-body`, …); radii `rounded-md`/`lg`/`xl`; shadows `shadow-sm`/`md`/`lg`; `max-w-content`, `max-w-reading`; breakpoints `md` (768) and `lg` (1200). Tailwind's default palette is removed. `/dev/tokens` shows everything in both themes (dev only). Theme: `data-theme` on `<html>`, set by `lib/theme.ts`.
 
+Components: the 16 design-system components are in `apps/web/components/ui` (import from `@/components/ui`; merge classes with `cn()`). Build screens from them, not from raw elements. `/dev/components` shows each with its preview examples in both themes; `/dev/components?frame=Button-light` shows one frame alone for comparison with `design/design-system/previews`.
+
 Added by later features: `pnpm db:migrate` (F05), `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).

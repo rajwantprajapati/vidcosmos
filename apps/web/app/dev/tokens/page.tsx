@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
 import { designTokens as tokens, isSemanticColor, type ColorToken } from "@vidcosmos/config/tokens";
-import { LogoFull, LogoMark } from "@/components/brand/logo";
+import { Logo } from "@/components/ui/logo";
 import type { Theme } from "@/lib/theme";
 import { ThemeSwitcher } from "./theme-switcher";
 
@@ -80,8 +80,8 @@ function ThemePanel({ theme }: { theme: Theme }) {
 
       <Section title="Logo">
         <div className="flex flex-wrap items-center gap-6 rounded-lg border border-line bg-surface p-6">
-          <LogoFull reversed={theme === "dark"} width={196} height={33} />
-          <LogoMark width={44} height={44} title="" />
+          <Logo size={33} />
+          <Logo variant="mark" size={44} title="" />
         </div>
       </Section>
 

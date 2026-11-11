@@ -10,6 +10,7 @@
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font-sans);
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -18,18 +19,19 @@
     min-height: 100dvh;
   }
 
-  /* Focus ring on keyboard focus only (design system: States). */
-  :focus-visible {
-    outline: none;
-    box-shadow:
-      0 0 0 2px var(--bg),
-      0 0 0 4px var(--focus-ring);
-  }
-
   /* Hindi text: the deva family with Inter for Latin product words. */
   :lang(hi) {
     font-family: var(--font-deva);
   }
+}
+
+/* Focus ring on keyboard focus only (design system: States). Outside any layer on purpose, so it
+   wins over shadow utilities (a selected segment, a lifted card) while the element has focus. */
+:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--focus-ring);
 }
 
 /* `.overline` is the design system's eyebrow type style (tokens.css), but Tailwind also has an
@@ -39,14 +41,38 @@
   text-decoration-line: none;
 }
 
-/* The interface stays still for people who ask it to (design system: Motion). */
+/* The loading spinner (Icon name="loader"). With reduced motion it slows to a pulse instead
+   (design system: Motion); the class beats the global reset below by specificity. */
+@keyframes vc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes vc-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+.vc-spin {
+  animation: vc-spin 900ms linear infinite;
+}
+
+/* The interface stays still for people who ask it to (design system: Motion). Transitions are
+   switched off (0s, not a tiny duration: with the default `transition-property: all` a tiny
+   duration would make every element transition). The spinner pulses instead (below). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0s !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-spin {
+    animation: vc-pulse 1600ms ease-in-out infinite !important;
   }
 }

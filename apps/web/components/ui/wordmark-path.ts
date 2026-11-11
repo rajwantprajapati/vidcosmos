@@ -1,5 +1,5 @@
 // Path data copied from design/design-system/logos/vidcosmos-logo.svg (the "vidcosmos" wordmark,
-// Plus Jakarta Sans 800 outlined). The reversed logo uses the same path in a light colour.
+// Plus Jakarta Sans 800 outlined).
 export const wordmarkPath = [
   "M9 21.8 0.4 0H6.9L11.6 13.1L16.4 0H22.8L14.2 21.8Z",
   "M24.3 21.8V0H30.3V21.8ZM24.3 -2V-8H30.3V-2Z",
