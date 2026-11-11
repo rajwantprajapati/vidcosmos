@@ -1,0 +1,90 @@
+/* Generated from design/design-system/tokens.json by `pnpm tokens`. Do not edit. */
+
+@theme {
+  /* Only design tokens: remove Tailwind's defaults for these namespaces. */
+  --color-*: initial;
+  --font-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-*: initial;
+  --breakpoint-*: initial;
+  --container-*: initial;
+
+  /* Breakpoints must be literal values: media queries cannot read variables. */
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1200px;
+
+  /* The 4 px base: p-1 = space-1, p-6 = space-6, … */
+  --spacing: 4px;
+}
+
+@theme inline {
+  /* Semantic colours: bg-surface, text-ink-muted, border-line, … */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-stage: var(--stage);
+  --color-scrim: var(--scrim);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-disabled: var(--ink-disabled);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+  --color-brand-text: var(--brand-text);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-line: var(--brand-soft-line);
+  --color-focus-ring: var(--focus-ring);
+  --color-highlight: var(--highlight);
+  --color-on-highlight: var(--on-highlight);
+  --color-highlight-soft: var(--highlight-soft);
+  --color-highlight-text: var(--highlight-text);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-fill: var(--danger-fill);
+  --color-on-danger: var(--on-danger);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* Fonts: font-display, font-sans, font-deva */
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+  --font-deva: var(--font-deva);
+
+  /* Radii: rounded-md, rounded-lg, … */
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  /* Layout: max-w-content, max-w-reading, w-sidebar, h-topbar */
+  --container-content: var(--container-max);
+  --container-reading: var(--reading-max);
+  --spacing-sidebar: var(--sidebar-width);
+  --spacing-topbar: var(--topbar-height);
+}
+
+@utility shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+@utility shadow-md {
+  box-shadow: var(--shadow-md);
+}
+@utility shadow-lg {
+  box-shadow: var(--shadow-lg);
+}

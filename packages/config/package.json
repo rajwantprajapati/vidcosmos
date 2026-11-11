@@ -5,9 +5,12 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./tokens": "./src/tokens.ts",
+    "./tailwind/theme.css": "./tailwind/theme.css",
     "./eslint": "./eslint.js",
     "./tsconfig.base.json": "./tsconfig.base.json",
-    "./tsconfig.next.json": "./tsconfig.next.json"
+    "./tsconfig.next.json": "./tsconfig.next.json",
+    "./check-no-hex": "./src/check-no-hex.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -21,6 +24,7 @@
     "typescript-eslint": "8.72.2"
   },
   "devDependencies": {
+    "@types/node": "24.19.2",
     "eslint": "9.39.5",
     "typescript": "6.0.3",
     "vitest": "5.1.0"

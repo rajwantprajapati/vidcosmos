@@ -9,10 +9,11 @@
     "dev": "turbo run dev --filter=@vidcosmos/web",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
-    "lint": "prettier --check . && turbo run lint",
+    "lint": "prettier --check . && node --disable-warning=ExperimentalWarning packages/config/src/check-no-hex.ts && node --disable-warning=ExperimentalWarning packages/config/src/tailwind-theme.ts --check && turbo run lint",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "tokens": "node --disable-warning=ExperimentalWarning packages/config/src/tailwind-theme.ts"
   },
   "devDependencies": {
     "prettier": "3.9.10",
