@@ -2,7 +2,7 @@
 
 A universe of videos, made by AI. Describe a video; Vidcosmos writes the script, plans the scenes, records an Indian narrator in English or Hindi, animates every scene to the spoken word, and posts it to Instagram.
 
-**Status:** building M0 Foundations (F01 monorepo scaffold done). See [`STATUS.md`](STATUS.md).
+**Status:** building M0 Foundations (F01 and F02 done). See [`STATUS.md`](STATUS.md).
 
 ## Start here
 
@@ -19,7 +19,7 @@ A universe of videos, made by AI. Describe a video; Vidcosmos writes the script,
 
 1. Open this folder in Claude Code (`cd /Users/rajwant/Developer/namaste-ai/vidcosmos && claude`).
 2. Ask Claude Code to install the two project commands: move `tools/claude-commands/*.md` to `.claude/commands/` and delete the empty `.claude/commands/x`. Then `/next-feature` builds the next feature and `/status` summarises progress.
-3. Copy `.env.example` to `.env` (only `MONGODB_URI`, `BETTER_AUTH_SECRET` and `PROVIDERS=stub` are needed to start).
+3. Copy `.env.example` to `.env` (only `MONGODB_URI`, `BETTER_AUTH_SECRET` and `PROVIDERS=stub` are needed to start). For a local database run `docker compose up -d` (MongoDB 8 on port 27017; stop any other MongoDB on that port first).
 4. Run `/next-feature` to start F01.
 
 ## Stack

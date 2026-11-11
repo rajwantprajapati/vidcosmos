@@ -21,13 +21,17 @@ When documents disagree: the PRD's "Revised 10 Nov" notes and the decision log i
 
 ## How we work: one feature at a time
 
+**Branches:** all work happens on `dev`. Nobody commits to `main` directly; `main` only changes through a pull request from `dev`, opened once a feature is built and tested.
+
+0. Switch to `dev` and bring it up to date (`git switch dev && git pull`).
 1. Open `STATUS.md` and take the first feature that is `Not started` and whose dependencies are `Done`, unless told otherwise. Set it to `In progress`.
 2. Read its entry in `docs/05-feature-plan.md`, the doc sections it lists, and its design screens.
 3. Write a short plan (files, tests, questions). If a decision is missing (see "Decisions needed" in `STATUS.md`), stop and ask.
 4. Build only that feature. Nothing from later features, no speculative abstractions.
 5. Add the tests the feature names. Run `pnpm typecheck`, `pnpm lint`, `pnpm test` (and `pnpm test:e2e` for UI features). All must pass.
 6. For UI: screenshot the page with Playwright at 1440×900 and 390×844 and compare with the PNGs in `design/screens/`. Fix differences in layout, spacing, type and colour.
-7. Update `STATUS.md`: status `Done`, date, a "Verified" entry listing what was run and checked, follow-ups under "Known issues". Commit with a message starting with the feature ID, e.g. `F06: sign up, sign in and workspaces`.
+7. Update `STATUS.md`: status `Done`, date, a "Verified" entry listing what was run and checked, follow-ups under "Known issues". Commit on `dev` with a message starting with the feature ID, e.g. `F06: sign up, sign in and workspaces`, and push `dev`.
+8. Once the feature is tested and CI passes on `dev`, open a pull request from `dev` to `main` titled with the same message (ask first). Merge only after its checks pass.
 
 Never mark a feature `Done` with failing checks. If something blocks it, set `Blocked` and say why in Notes.
 
@@ -66,6 +70,9 @@ Node 24 (`.nvmrc`), pnpm 10 (`packageManager` in `package.json`). Run from the r
 | `pnpm lint` | `prettier --check .`, then ESLint in every package |
 | `pnpm format` | Rewrite files with Prettier |
 | `pnpm test` | Vitest unit tests in every package |
+| `docker compose up -d` | Local MongoDB 8 as a single-node replica set on port 27017 (`compose.yaml`); `docker compose down` stops it |
 | `pnpm test:e2e` | Playwright in `apps/web/e2e` at 1440×900 and 390×844; starts `pnpm dev` if nothing is on port 3000. First run: `pnpm --filter @vidcosmos/web exec playwright install chromium` |
+
+Settings: one `.env` at the repository root (copy `.env.example`). `apps/web/env.ts` validates it at start-up; server code imports `env` from `@/env` and never reads `process.env` directly. A new variable goes in `lib/env-schema.ts`, `.env.example` and `globalEnv` in `turbo.json` (a test checks all three). External services are picked with `selectProvider` in `apps/web/lib/providers.ts`.
 
 Added by later features: `pnpm db:migrate` (F05), `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).

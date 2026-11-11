@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 10 Nov 2026 · Current focus: **F02 Environment and configuration** (next)
+Last updated: 11 Nov 2026 · Current focus: **F03 Design tokens, fonts and themes** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -10,7 +10,7 @@ This file is the single place that says where the build stands. Update it at the
 
 | Milestone | Done | Total |
 | --- | --- | --- |
-| M0 Foundations | 1 | 7 |
+| M0 Foundations | 2 | 7 |
 | M1 Projects and library | 0 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
@@ -18,14 +18,14 @@ This file is the single place that says where the build stands. Update it at the
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **1** | **36** |
+| **Total** | **2** | **36** |
 
 ## Features
 
 | ID | Feature | Milestone | Depends on | Status | Updated | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | F01 | Monorepo scaffold | M0 | — | Done | 10 Nov 2026 | TypeScript pinned to 6.0 (see Known issues) |
-| F02 | Environment and configuration | M0 | F01 | Not started | | |
+| F02 | Environment and configuration | M0 | F01 | Done | 11 Nov 2026 | Per-provider overrides; versioned token keys |
 | F03 | Design tokens, fonts and themes | M0 | F01 | Not started | | |
 | F04 | UI component library | M0 | F03 | Not started | | |
 | F05 | Database and migrations | M0 | F02 | Not started | | |
@@ -65,6 +65,17 @@ This file is the single place that says where the build stands. Update it at the
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
 
+### F02 Environment and configuration · 11 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (42 tests; 37 in `apps/web`), `pnpm test:e2e` (2) and `pnpm build` pass.
+- Tests added in `apps/web/lib/`:
+  - `env-schema.test.ts`: the three-variable stub setup starts; each missing required variable fails with "is required but not set" and points to `.env.example`; every problem is listed at once; bad values fail with the rule (11 cases); values never appear in messages; defaults; empty means unset; live keys per provider, overrides both ways, Claude needs key and model; Google pair; renamed `TOKEN_ENCRYPTION_KEY`; versioned token keys.
+  - `providers.test.ts`: in stub mode the live factory is never called; a live override picks the live factory and passes the env.
+  - `env-sync.test.ts`: the schema, `.env.example` and `turbo.json` `globalEnv` list the same variables; `.env.example` parses; `.env` and `apps/web/.env` are ignored by git.
+- Done-when, by hand in a clean copy with a `.env` of only `PROVIDERS`, `MONGODB_URI`, `BETTER_AUTH_SECRET`: `pnpm dev` starts, serves `/`, and a temporary route handler read the root `.env` values and defaults through `env`. With `MONGODB_URI` removed, `next dev` exited with code 1 and the message named the variable.
+- CI-style run in a clean copy with no `.env` and settings only as shell variables: typecheck, lint, test and build pass; without the variables the build fails with the list of problems.
+- `docker compose config` validates `compose.yaml`. Not started here: Docker Desktop was not running (see Known issues).
+
 ### F01 Monorepo scaffold · 10 Nov 2026
 
 - From a clean export of the git index: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` all pass.
@@ -88,6 +99,9 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 11 Nov 2026 | `PROVIDERS` sets every provider; optional `PROVIDERS_LLM`, `_TTS`, `_RENDER`, `_STORAGE`, `_INSTAGRAM`, `_EMAIL` override one. A provider's keys are required only when it is live (SDD §18 updated). |
+| 11 Nov 2026 | Instagram token keys are `TOKEN_ENC_KEY_V1`, `_V2`, … as in DB §security; new tokens use the highest version. Replaces `TOKEN_ENCRYPTION_KEY` and `TOKEN_ENCRYPTION_KEY_VERSION` (SDD §18 updated). |
+| 11 Nov 2026 | Work happens on `dev`; `main` changes only through a pull request from `dev` after a feature is tested. |
 | 10 Nov 2026 | Three video formats in V1: 9:16 (default), 16:9, 1:1. Stored in the spec; `setFormat` keeps narration (DB §6). |
 | 10 Nov 2026 | Vidcosmos is for any kind of AI video; explainers ship first. |
 | 10 Nov 2026 | Brand: Lagoon Classic (light) and Lagoon Night (dark); Plus Jakarta Sans, Inter, Noto Sans Devanagari. |
@@ -112,6 +126,9 @@ Decisions already made, newest first. Details are in the docs.
 
 - **TypeScript 6.0, not 7.** `typescript-eslint` 8.72 supports TypeScript `<6.1`, so the repo pins `typescript@6.0.3`. Move to 7 when typescript-eslint supports it.
 - **ESLint 9.** ESLint 9.39 is marked deprecated in favour of 10; kept on 9 because `eslint-config-next` 16 pulls in React plugins that are tested on 9. Revisit with the next Next.js upgrade.
-- **No git remote.** The CI workflow has not run on GitHub yet. Add the remote and check the first run.
+- **First CI run not confirmed.** `main` is pushed to `github.com/rajwantprajapati/vidcosmos`, but no Actions run had appeared when last checked, and the GitHub CLI is not signed in on this machine. Check the Actions tab, and run `gh auth login` so pull requests can be opened from here.
 - **Prototype folder is empty.** `/Users/rajwant/Developer/namaste-ai/season-2/vidcosmos-prototype` has no files, but F13, F16, F18 and F20 are meant to port from it. Restore it before F13.
+- **Compose MongoDB not started yet.** `compose.yaml` (mongo:8, single-node replica set `rs0`) is valid but was not run: Docker Desktop was off, and the Homebrew `mongod` already uses port 27017. Before F05, start it once and check a transaction works. The Homebrew `mongod` is probably standalone, and standalone MongoDB cannot run the transactions DB §11 needs.
+- **Root `.env` changes need a restart.** Next.js reloads only `apps/web/.env*` while `pnpm dev` runs; after editing the root `.env`, restart the dev server.
+- **Claude.ai originals of the docs.** SDD §18's variable table was edited here (provider overrides, token keys). The editable original on claude.ai needs the same change.
 - **Playwright browser.** Each machine needs `pnpm --filter @vidcosmos/web exec playwright install chromium` once; CI will need the same step when the e2e job is added (SDD §18 runs e2e against Vercel previews).
