@@ -6,7 +6,7 @@ export {
   defaultDatabaseName,
   mongoClientOptions,
 } from "./client.ts";
-export { type IndexSpec, indexCatalogue } from "./indexes.ts";
+export { type BetterAuthCollection, type IndexSpec, indexCatalogue } from "./indexes.ts";
 export { migrate, type MigrateOptions, type MigrateResult, MigrationError } from "./migrate.ts";
 export { isEmptyPlan, planSchemaSync, type SchemaSyncPlan, syncSchema } from "./schema-sync.ts";
 export {
@@ -19,4 +19,12 @@ export {
   WorkspaceScopeError,
 } from "./scoped.ts";
 export { toMongoJsonSchema, validatorFor } from "./validators.ts";
+export {
+  defaultLimits,
+  defaultVideoDefaults,
+  ensureWorkspace,
+  istPeriod,
+  newWorkspace,
+  workspaceName,
+} from "./workspaces.ts";
 export { type Db, type MongoClient, ObjectId } from "mongodb";

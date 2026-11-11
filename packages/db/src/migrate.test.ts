@@ -32,7 +32,14 @@ describe("pnpm db:migrate", () => {
 
     const names = (await db.listCollections().toArray()).map((c) => c.name);
     expect(names).toEqual(
-      expect.arrayContaining([...collectionNames, "session", "verification", "rateLimit"]),
+      expect.arrayContaining([
+        ...collectionNames,
+        "user",
+        "session",
+        "account",
+        "verification",
+        "rateLimit",
+      ]),
     );
 
     const plan = await planSchemaSync(db);

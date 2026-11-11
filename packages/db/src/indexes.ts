@@ -1,14 +1,17 @@
 // The index catalogue (DB §10). Every index exists for a named query; migrations create them,
 // never the app at start-up. A test checks that the database has exactly these after migrating.
 //
+// Better Auth's collections are included too: its MongoDB adapter creates no indexes, and the
+// unique ones (email, session token, provider account) are what keep duplicates out.
+//
 // Not here: the Atlas Search index `projects_search`, which only Atlas can build (added with
-// library search), and Better Auth's own indexes, which Better Auth creates.
+// library search).
 import type { CollectionName } from "@vidcosmos/spec/collections";
 import type { CreateIndexesOptions, IndexDirection } from "mongodb";
 
 export type IndexSpec = {
   /** App collections, or a Better Auth collection that gets an app TTL index. */
-  collection: CollectionName | "session" | "verification" | "rateLimit";
+  collection: CollectionName | BetterAuthCollection;
   keys: Record<string, IndexDirection>;
   options?: Pick<
     CreateIndexesOptions,
@@ -17,6 +20,9 @@ export type IndexSpec = {
   /** The query this index serves (DB §10). */
   serves: string;
 };
+
+/** Collections owned by Better Auth (DB §3). */
+export type BetterAuthCollection = "user" | "session" | "account" | "verification" | "rateLimit";
 
 const days = (n: number) => n * 24 * 60 * 60;
 
@@ -251,23 +257,50 @@ export const indexCatalogue: readonly IndexSpec[] = [
     serves: "Keep 2 years",
   },
 
-  // Better Auth collections: TTL indexes added by the app (DB §3)
+  // Better Auth collections (DB §3)
   {
-    collection: "rateLimit",
-    keys: { expiresAt: 1 },
-    options: { expireAfterSeconds: 0 },
-    serves: "Old app rate-limit windows",
+    collection: "user",
+    keys: { email: 1 },
+    options: { unique: true },
+    serves: "One account per email",
   },
+  {
+    collection: "session",
+    keys: { token: 1 },
+    options: { unique: true },
+    serves: "Session lookup",
+  },
+  { collection: "session", keys: { userId: 1 }, serves: "A user's sessions" },
   {
     collection: "session",
     keys: { expiresAt: 1 },
     options: { expireAfterSeconds: 0 },
     serves: "Expired sessions",
   },
+  { collection: "account", keys: { userId: 1 }, serves: "A user's sign-in methods" },
+  {
+    collection: "account",
+    keys: { providerId: 1, accountId: 1 },
+    options: { unique: true },
+    serves: "One user per Google account",
+  },
+  { collection: "verification", keys: { identifier: 1 }, serves: "Verification and reset tokens" },
   {
     collection: "verification",
     keys: { expiresAt: 1 },
     options: { expireAfterSeconds: 0 },
     serves: "Expired verification tokens",
+  },
+  {
+    collection: "rateLimit",
+    keys: { key: 1 },
+    options: { unique: true },
+    serves: "Rate-limit windows",
+  },
+  {
+    collection: "rateLimit",
+    keys: { expiresAt: 1 },
+    options: { expireAfterSeconds: 0 },
+    serves: "Old app rate-limit windows",
   },
 ];

@@ -27,6 +27,26 @@ const sizes = {
   lg: "min-h-12 rounded-[12px] px-6 py-3 text-[16px] leading-6",
 };
 
+/**
+ * The button look for something that is not a `<button>`, such as a link that leads to the
+ * next step. Disabled styles don't apply: a link is never disabled.
+ */
+export function buttonClassName({
+  variant = "primary",
+  size = "md",
+  fullWidth = false,
+  className,
+}: Pick<ButtonProps, "variant" | "size" | "fullWidth" | "className"> = {}) {
+  return cn(
+    "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border border-transparent font-semibold no-underline",
+    "transition-[background-color,transform] duration-[120ms,80ms] ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.98]",
+    variants[variant].replaceAll("hover:not-disabled:", "hover:"),
+    sizes[size],
+    fullWidth && "w-full",
+    className,
+  );
+}
+
 export function Button({
   variant = "primary",
   size = "md",

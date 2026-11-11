@@ -57,6 +57,13 @@
   animation: vc-spin 900ms linear infinite;
 }
 
+/* The slow orbit around the phone on the sign-in page; still under reduced motion (the reset
+   below runs it once, instantly, which leaves it where it started). */
+.vc-orbit {
+  transform-origin: 260px 260px;
+  animation: vc-spin 60s linear infinite;
+}
+
 /* The interface stays still for people who ask it to (design system: Motion). Transitions are
    switched off (0s, not a tiny duration: with the default `transition-property: all` a tiny
    duration would make every element transition). The spinner pulses instead (below). */

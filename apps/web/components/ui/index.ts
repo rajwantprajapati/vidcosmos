@@ -1,6 +1,6 @@
 // The Vidcosmos component library (design/design-system/components), styled with the tokens.
 export { Badge, type BadgeProps, type BadgeTone } from "./badge";
-export { Button, type ButtonProps } from "./button";
+export { Button, buttonClassName, type ButtonProps } from "./button";
 export { Card, type CardProps } from "./card";
 export { ChatMessage, type ChatMessageProps } from "./chat-message";
 export { Chip, type ChipProps } from "./chip";
