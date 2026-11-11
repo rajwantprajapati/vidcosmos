@@ -89,6 +89,6 @@ test.describe("design tokens page", () => {
       document.body.append(probe);
       return getComputedStyle(probe).transitionDuration;
     });
-    expect(duration).toBe("1e-05s");
+    expect(duration).toBe("0s");
   });
 });
