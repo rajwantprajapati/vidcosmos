@@ -70,6 +70,9 @@ Node 24 (`.nvmrc`), pnpm 10 (`packageManager` in `package.json`). Run from the r
 | `pnpm lint` | `prettier --check .`, then ESLint in every package |
 | `pnpm format` | Rewrite files with Prettier |
 | `pnpm test` | Vitest unit tests in every package |
+| `docker compose up -d` | Local MongoDB 8 as a single-node replica set on port 27017 (`compose.yaml`); `docker compose down` stops it |
 | `pnpm test:e2e` | Playwright in `apps/web/e2e` at 1440×900 and 390×844; starts `pnpm dev` if nothing is on port 3000. First run: `pnpm --filter @vidcosmos/web exec playwright install chromium` |
+
+Settings: one `.env` at the repository root (copy `.env.example`). `apps/web/env.ts` validates it at start-up; server code imports `env` from `@/env` and never reads `process.env` directly. A new variable goes in `lib/env-schema.ts`, `.env.example` and `globalEnv` in `turbo.json` (a test checks all three). External services are picked with `selectProvider` in `apps/web/lib/providers.ts`.
 
 Added by later features: `pnpm db:migrate` (F05), `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).

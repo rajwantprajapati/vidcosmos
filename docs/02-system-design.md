@@ -938,12 +938,13 @@ There are three environments: local, preview (one per pull request), and product
 | `VERCEL_OIDC_TOKEN` (provided by Vercel) | Vercel Sandbox SDK |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Storage |
 | `IG_APP_ID`, `IG_APP_SECRET`, `IG_REDIRECT_URI`, `IG_API_VERSION` | Instagram |
-| `TOKEN_ENCRYPTION_KEY`, `TOKEN_ENCRYPTION_KEY_VERSION` | Encrypting Instagram tokens |
+| `TOKEN_ENC_KEY_V1`, `TOKEN_ENC_KEY_V2`, … | Encrypting Instagram tokens; one variable per key version, new tokens use the highest (DB §security; decided 11 Nov) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Email |
 | `SENTRY_DSN`, `SENTRY_AUTH_TOKEN` | Errors, source maps |
 | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` | Analytics |
 | `REMOTION_LICENSE_KEY` (later) | Render calls once the team exceeds 3 people |
-| `PROVIDERS` | `live` or `stub` |
+| `PROVIDERS` | `live` or `stub`: the default for every provider |
+| `PROVIDERS_LLM`, `PROVIDERS_TTS`, `PROVIDERS_RENDER`, `PROVIDERS_STORAGE`, `PROVIDERS_INSTAGRAM`, `PROVIDERS_EMAIL` | Optional per-provider override of `PROVIDERS`; a provider's keys are required only when it is live (decided 11 Nov) |
 
 Vercel Cron routes also require a `CRON_SECRET` header, so only Vercel can call them. All variables are validated at start-up with a zod schema (`env.ts`), so a missing key fails the deploy instead of a user's job.
 

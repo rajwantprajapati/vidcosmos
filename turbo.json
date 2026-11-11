@@ -1,6 +1,52 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
+  "globalDependencies": [".env", ".env.local"],
+  "globalEnv": [
+    "PROVIDERS",
+    "PROVIDERS_LLM",
+    "PROVIDERS_TTS",
+    "PROVIDERS_RENDER",
+    "PROVIDERS_STORAGE",
+    "PROVIDERS_INSTAGRAM",
+    "PROVIDERS_EMAIL",
+    "MONGODB_URI",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "INNGEST_EVENT_KEY",
+    "INNGEST_SIGNING_KEY",
+    "LLM_PROVIDER",
+    "GEMINI_API_KEY",
+    "GEMINI_MODEL",
+    "GEMINI_MODEL_SMALL",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_MODEL",
+    "ANTHROPIC_MODEL_SMALL",
+    "ELEVENLABS_API_KEY",
+    "ELEVENLABS_MODEL",
+    "ELEVENLABS_VOICE_ID_MALE",
+    "ELEVENLABS_VOICE_ID_FEMALE",
+    "VERCEL_OIDC_TOKEN",
+    "R2_ACCOUNT_ID",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_BUCKET",
+    "IG_APP_ID",
+    "IG_APP_SECRET",
+    "IG_REDIRECT_URI",
+    "IG_API_VERSION",
+    "RESEND_API_KEY",
+    "EMAIL_FROM",
+    "SENTRY_DSN",
+    "SENTRY_AUTH_TOKEN",
+    "NEXT_PUBLIC_POSTHOG_KEY",
+    "NEXT_PUBLIC_POSTHOG_HOST",
+    "CRON_SECRET",
+    "REMOTION_LICENSE_KEY",
+    "TOKEN_ENC_KEY_V*"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -14,7 +60,8 @@
       "outputs": ["coverage/**"]
     },
     "test:e2e": {
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["CI", "PORT"]
     },
     "dev": {
       "cache": false,

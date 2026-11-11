@@ -13,13 +13,15 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@next/env": "16.4.6",
     "@vidcosmos/integrations": "workspace:*",
     "@vidcosmos/pipeline": "workspace:*",
     "@vidcosmos/spec": "workspace:*",
     "@vidcosmos/video": "workspace:*",
     "next": "16.4.6",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
