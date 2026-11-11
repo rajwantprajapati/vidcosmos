@@ -74,6 +74,7 @@ Node 24 (`.nvmrc`), pnpm 10 (`packageManager` in `package.json`). Run from the r
 | `pnpm tokens` | Regenerate `packages/config/tailwind/theme.css` from `design/design-system/tokens.json` |
 | `pnpm format` | Rewrite files with Prettier |
 | `pnpm test` | Vitest unit tests in every package |
+| `pnpm db:migrate` | Run migrations and sync validators and indexes on `MONGODB_URI` (root `.env`); safe to run again |
 | `docker compose up -d` | Local MongoDB 8 as a single-node replica set on port 27017 (`compose.yaml`); `docker compose down` stops it |
 | `pnpm test:e2e` | Playwright in `apps/web/e2e` at 1440×900 and 390×844; starts `pnpm dev` if nothing is on port 3000. First run: `pnpm --filter @vidcosmos/web exec playwright install chromium` |
 
@@ -81,6 +82,8 @@ Settings: one `.env` at the repository root (copy `.env.example`). `apps/web/env
 
 Styling: Tailwind 4 with the design tokens only. Colours are semantic classes (`bg-surface`, `text-ink-muted`, `border-line`, `bg-brand text-on-brand`); type uses the design classes (`h1`, `body`, `label`, `overline`, `hi-body`, …); radii `rounded-md`/`lg`/`xl`; shadows `shadow-sm`/`md`/`lg`; `max-w-content`, `max-w-reading`; breakpoints `md` (768) and `lg` (1200). Tailwind's default palette is removed. `/dev/tokens` shows everything in both themes (dev only). Theme: `data-theme` on `<html>`, set by `lib/theme.ts`.
 
+Database: collection schemas are in `@vidcosmos/spec/collections`; `@vidcosmos/db` has the client settings, the index catalogue and migrations. App code gets the database from `getDb()` in `lib/db.ts` and queries through `workspaceCollection(db, name)`, which refuses any filter without the session's `workspaceId`; `systemCollection` is only for crons, sweepers, admin and migrations. Create ids with `ObjectId` from `@vidcosmos/db`. A new field or index needs no migration file (`db:migrate` syncs them); backfills and drops do (`packages/db/src/migrations`).
+
 Components: the 16 design-system components are in `apps/web/components/ui` (import from `@/components/ui`; merge classes with `cn()`). Build screens from them, not from raw elements. `/dev/components` shows each with its preview examples in both themes; `/dev/components?frame=Button-light` shows one frame alone for comparison with `design/design-system/previews`.
 
-Added by later features: `pnpm db:migrate` (F05), `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).
+Added by later features: `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).

@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F05 Database and migrations** (next)
+Last updated: 11 Nov 2026 · Current focus: **F06 Sign up, sign in and workspaces** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -10,7 +10,7 @@ This file is the single place that says where the build stands. Update it at the
 
 | Milestone | Done | Total |
 | --- | --- | --- |
-| M0 Foundations | 4 | 7 |
+| M0 Foundations | 5 | 7 |
 | M1 Projects and library | 0 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
@@ -18,7 +18,7 @@ This file is the single place that says where the build stands. Update it at the
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **4** | **36** |
+| **Total** | **5** | **36** |
 
 ## Features
 
@@ -28,7 +28,7 @@ This file is the single place that says where the build stands. Update it at the
 | F02 | Environment and configuration | M0 | F01 | Done | 11 Nov 2026 | Per-provider overrides; versioned token keys |
 | F03 | Design tokens, fonts and themes | M0 | F01 | Done | 11 Nov 2026 | Tailwind 4; `/dev/tokens` |
 | F04 | UI component library | M0 | F03 | Done | 11 Nov 2026 | 16 components; `/dev/components` |
-| F05 | Database and migrations | M0 | F02 | Not started | | |
+| F05 | Database and migrations | M0 | F02 | Done | 11 Nov 2026 | `packages/db`; `pnpm db:migrate` |
 | F06 | Sign up, sign in and workspaces | M0 | F04, F05 | Not started | | |
 | F07 | App shell and onboarding | M0 | F06 | Not started | | |
 | F08 | Projects API | M1 | F05, F06 | Not started | | |
@@ -64,6 +64,18 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F05 Database and migrations · 11 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (db 90, web 95, config 19, spec 6) and `pnpm build` pass. No UI, so no e2e or screenshots.
+- Database tests run on `mongodb-memory-server` (a single-node MongoDB 8.2 replica set, one fresh database per test file):
+  - **Idempotent:** `migrate` on an empty database runs `0001-initial-schema`; a second run applies nothing, the schema sync plans nothing, and collections, validators, indexes and run records are unchanged (`packages/db/src/migrate.test.ts`).
+  - **Recorded:** each run is stored in `migrations` with a sha256 checksum; a changed file that already ran stops the run; a lock held by another run refuses it, an expired lock is taken over, and the lock is released afterwards; new files run in order after recorded ones.
+  - **Indexes:** every index in the catalogue (DB §10) exists with its options; a dropped one is recreated by the next run; an index outside the catalogue is reported, not dropped.
+  - **Workspace scope** (`scoped.test.ts`): `workspaceCollection` refuses find, findOne, count, update, findOneAndUpdate, delete and aggregate when the filter has no `workspaceId` ObjectId (missing, `undefined`, a string, an operator, inside `$or` only); another workspace's ids return nothing and cannot be updated or deleted; updates may not change `workspaceId`; inserts are parsed with zod.
+  - **Round trip** (`collections.test.ts`): a sample document for each of the 15 collections parses unchanged with zod, is accepted by the generated MongoDB validator, and reads back equal. The validators reject a missing required field, a wrong BSON type and a value outside an enum, and allow unknown fields.
+- `pnpm db:migrate` against the local MongoDB 8.2.2: the first run applied `0001-initial-schema` (18 collections: 15 app plus Better Auth's `session`, `verification` and `rateLimit` for their TTL indexes); the second printed "nothing to change".
+- Fixed on the way: `instanceof ObjectId` fails across bson's CommonJS build (loaded by the driver) and its ESM build, so ids are recognised by their BSON type (`isObjectId`), and server code takes `ObjectId` from `@vidcosmos/db`.
 
 ### F04 UI component library · 11 Nov 2026
 
@@ -125,6 +137,9 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 11 Nov 2026 | Collection schemas live in `packages/spec/src/collections` (`@vidcosmos/spec/collections`), as the feature plan and SDD §6 say; MongoDB code (client settings, `workspaceCollection`, index catalogue, validators, migrations) is in a new `packages/db`. DB §1/§10/§13 say `packages/db` for all of it. |
+| 11 Nov 2026 | `pnpm db:migrate` runs the migration files, then syncs validators and catalogue indexes from the code, so a new field or index needs no migration file. Files are for backfills and drops; dropping an index stays a migration (DB §13). |
+| 11 Nov 2026 | `social_accounts.token` is optional: DB §8 deletes the ciphertext on disconnect and keeps the row. |
 | 11 Nov 2026 | `PROVIDERS` sets every provider; optional `PROVIDERS_LLM`, `_TTS`, `_RENDER`, `_STORAGE`, `_INSTAGRAM`, `_EMAIL` override one. A provider's keys are required only when it is live (SDD §18 updated). |
 | 11 Nov 2026 | Instagram token keys are `TOKEN_ENC_KEY_V1`, `_V2`, … as in DB §security; new tokens use the highest version. Replaces `TOKEN_ENCRYPTION_KEY` and `TOKEN_ENCRYPTION_KEY_VERSION` (SDD §18 updated). |
 | 11 Nov 2026 | Work happens on `dev`; `main` changes only through a pull request from `dev` after a feature is tested. |
@@ -154,7 +169,7 @@ Decisions already made, newest first. Details are in the docs.
 - **ESLint 9.** ESLint 9.39 is marked deprecated in favour of 10; kept on 9 because `eslint-config-next` 16 pulls in React plugins that are tested on 9. Revisit with the next Next.js upgrade.
 - **First CI run not confirmed.** `main` is pushed to `github.com/rajwantprajapati/vidcosmos`, but no Actions run had appeared when last checked, and the GitHub CLI is not signed in on this machine. Check the Actions tab, and run `gh auth login` so pull requests can be opened from here.
 - **Prototype folder is empty.** `/Users/rajwant/Developer/namaste-ai/season-2/vidcosmos-prototype` has no files, but F13, F16, F18 and F20 are meant to port from it. Restore it before F13.
-- **Compose MongoDB not started yet.** `compose.yaml` (mongo:8, single-node replica set `rs0`) is valid but was not run: Docker Desktop was off, and the Homebrew `mongod` already uses port 27017. Before F05, start it once and check a transaction works. The Homebrew `mongod` is probably standalone, and standalone MongoDB cannot run the transactions DB §11 needs.
+- **Local MongoDB is standalone.** `.env` points at the Homebrew `mongod` 8.2.2 on port 27017, which is not a replica set, so the transactions in DB §11 (first needed in F20/F24) will fail there. Before then, stop it and use `docker compose up -d` (replica set `rs0`), or turn the Homebrew one into a single-node replica set. Unit tests are not affected: they use `mongodb-memory-server`.
 - **Root `.env` changes need a restart.** Next.js reloads only `apps/web/.env*` while `pnpm dev` runs; after editing the root `.env`, restart the dev server.
 - **Claude.ai originals of the docs.** SDD §18's variable table was edited here (provider overrides, token keys). The editable original on claude.ai needs the same change.
 - **Fonts are not preloaded.** They load through `@font-face` in `tokens.css`, so the first paint may use the fallback for a moment. Consider `next/font/local` or preload links in F36 (performance).
@@ -164,3 +179,7 @@ Decisions already made, newest first. Details are in the docs.
 - **Icons are Lucide glyphs.** The design README names Lucide; the reference bundle drew its own paths, so icons differ slightly from the previews (about 1% of pixels).
 - **`cn()` and font sizes.** `tailwind-merge` drops an earlier `leading-*` when a later class sets the font size; restate the line height after the size (as `PromptComposer` does).
 - **Playwright browser.** Each machine needs `pnpm --filter @vidcosmos/web exec playwright install chromium` once; CI will need the same step when the e2e job is added (SDD §18 runs e2e against Vercel previews).
+- **Atlas Search index not created.** `projects_search` (DB §10) can only be built on Atlas, so the index catalogue leaves it out; add it with library search (`createSearchIndex` in a migration that runs on Atlas only).
+- **VideoSpec and revision operations are placeholders.** `projects.draft.spec`, `project_versions.spec` and chat proposal `operations` use top-level schemas until F16 (VideoSpec) and F25 (revisions) define them in `packages/spec`.
+- **MongoDB binary download.** The first `pnpm test` on a machine downloads MongoDB (about 70 MB) into `~/.cache/mongodb-binaries`; CI caches that folder.
+- **Database users not set up.** DB §13's `app`, `migrator` and `analyst` users (with no update or delete on `admin_audit`) are Atlas configuration, to do before production; CI's deploy job will run `pnpm db:migrate` with the `migrator` user.

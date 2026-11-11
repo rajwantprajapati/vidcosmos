@@ -13,6 +13,7 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "format": "prettier --write .",
+    "db:migrate": "pnpm --filter @vidcosmos/db migrate",
     "tokens": "node --disable-warning=ExperimentalWarning packages/config/src/tailwind-theme.ts"
   },
   "devDependencies": {
