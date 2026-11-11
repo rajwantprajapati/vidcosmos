@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F03 Design tokens, fonts and themes** (next)
+Last updated: 11 Nov 2026 · Current focus: **F04 UI component library** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -10,7 +10,7 @@ This file is the single place that says where the build stands. Update it at the
 
 | Milestone | Done | Total |
 | --- | --- | --- |
-| M0 Foundations | 2 | 7 |
+| M0 Foundations | 3 | 7 |
 | M1 Projects and library | 0 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
@@ -18,7 +18,7 @@ This file is the single place that says where the build stands. Update it at the
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **2** | **36** |
+| **Total** | **3** | **36** |
 
 ## Features
 
@@ -26,7 +26,7 @@ This file is the single place that says where the build stands. Update it at the
 | --- | --- | --- | --- | --- | --- | --- |
 | F01 | Monorepo scaffold | M0 | — | Done | 10 Nov 2026 | TypeScript pinned to 6.0 (see Known issues) |
 | F02 | Environment and configuration | M0 | F01 | Done | 11 Nov 2026 | Per-provider overrides; versioned token keys |
-| F03 | Design tokens, fonts and themes | M0 | F01 | Not started | | |
+| F03 | Design tokens, fonts and themes | M0 | F01 | Done | 11 Nov 2026 | Tailwind 4; `/dev/tokens` |
 | F04 | UI component library | M0 | F03 | Not started | | |
 | F05 | Database and migrations | M0 | F02 | Not started | | |
 | F06 | Sign up, sign in and workspaces | M0 | F04, F05 | Not started | | |
@@ -64,6 +64,18 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F03 Design tokens, fonts and themes · 11 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` (now includes the colour-literal check and the theme freshness check), `pnpm test`, `pnpm test:e2e` (12: 6 tests × 1440×900 and 390×844) and `pnpm build` pass.
+- Tests added:
+  - `packages/config/src/tailwind-theme.test.ts`: `theme.css` matches `tokens.json`; every semantic colour is mapped; no primitives or video colours are exposed; defaults removed; breakpoints 768/1200; every radius and shadow available.
+  - `packages/config/src/check-no-hex.test.ts`: finds hex, `rgb()` and `hsl()` literals; ignores ids, entities, tokens and opted-out lines; the whole repository is clean.
+  - `apps/web/lib/theme.test.ts`: the inline theme script follows the system, a stored choice wins, bad values and blocked storage fall back.
+  - `apps/web/components/brand/logo.test.tsx`: accessible name or hidden, brand tokens only, reversed wordmark, unique valid clip ids.
+  - `apps/web/e2e/dev-tokens.spec.ts`: both theme panels with different computed grounds (slate-50, night-900) and every section; Plus Jakarta Sans, Inter and Noto Sans Devanagari load from the app's origin; system theme, then a stored choice survives reload; keyboard focus ring; reduced motion.
+- Checked by hand in the browser at 1440 and 390 px, light and dark: colours, type (including Hindi), spacing, radii, per-theme shadows, logos; no horizontal scroll at 390 px. No design PNG exists for this page; checked against the design system README.
+- Production: `next start` returns 404 for `/dev/tokens`; the CSS loads fonts from `/_next/static/media`.
 
 ### F02 Environment and configuration · 11 Nov 2026
 
@@ -131,4 +143,8 @@ Decisions already made, newest first. Details are in the docs.
 - **Compose MongoDB not started yet.** `compose.yaml` (mongo:8, single-node replica set `rs0`) is valid but was not run: Docker Desktop was off, and the Homebrew `mongod` already uses port 27017. Before F05, start it once and check a transaction works. The Homebrew `mongod` is probably standalone, and standalone MongoDB cannot run the transactions DB §11 needs.
 - **Root `.env` changes need a restart.** Next.js reloads only `apps/web/.env*` while `pnpm dev` runs; after editing the root `.env`, restart the dev server.
 - **Claude.ai originals of the docs.** SDD §18's variable table was edited here (provider overrides, token keys). The editable original on claude.ai needs the same change.
+- **Fonts are not preloaded.** They load through `@font-face` in `tokens.css`, so the first paint may use the fallback for a moment. Consider `next/font/local` or preload links in F36 (performance).
+- **Reduced motion is a global reset.** With `prefers-reduced-motion: reduce`, every animation and transition becomes instant (`globals.css`, `!important`). The design asks spinners to slow to a pulse and movement to become fades: F04 components that need that must define their own reduced-motion rule.
+- **Theme choice is per browser.** It is stored in `localStorage` (`vc-theme`); the designs have no appearance setting, so there is no account-level choice yet.
+- **Logo uses primitive tokens.** `components/brand/logo.tsx` uses `--teal-500`, `--coral-500`, `--slate-900` and `--night-50` because the logo must not change colour with the theme. It is the only place primitives are used.
 - **Playwright browser.** Each machine needs `pnpm --filter @vidcosmos/web exec playwright install chromium` once; CI will need the same step when the e2e job is added (SDD §18 runs e2e against Vercel previews).

@@ -18,6 +18,7 @@ try {
 const nextConfig: NextConfig = {
   // Workspace packages ship TypeScript source; Next compiles them.
   transpilePackages: [
+    "@vidcosmos/config",
     "@vidcosmos/spec",
     "@vidcosmos/video",
     "@vidcosmos/pipeline",

@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@next/env": "16.4.6",
+    "@tailwindcss/postcss": "4.3.5",
+    "@vidcosmos/config": "workspace:*",
     "@vidcosmos/integrations": "workspace:*",
     "@vidcosmos/pipeline": "workspace:*",
     "@vidcosmos/spec": "workspace:*",
@@ -21,6 +23,7 @@
     "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "tailwindcss": "4.3.5",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -28,7 +31,6 @@
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@vidcosmos/config": "workspace:*",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.6",
     "typescript": "6.0.3",

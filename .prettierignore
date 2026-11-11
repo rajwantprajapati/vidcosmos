@@ -10,3 +10,4 @@ playwright-report/
 test-results/
 coverage/
 next-env.d.ts
+packages/config/tailwind/theme.css

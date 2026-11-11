@@ -13,5 +13,5 @@ Build one feature of Vidcosmos, following "How we work" in CLAUDE.md.
 5. Build only this feature, stub providers first.
 6. Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm test:e2e` for UI work. Fix until all pass.
 7. For UI, take Playwright screenshots at 1440×900 and 390×844, compare with the design PNGs, and fix visible differences.
-8. Update `STATUS.md`: status `Done`, date, the progress counts, a "Verified" entry (commands run, tests added, screenshots compared), and any follow-ups. Commit on `dev` as `<ID>: <feature name>` and push `dev`.
-9. Tell me what was built, how it was verified, and what is next, and ask whether to open the pull request from `dev` to `main` (title `<ID>: <feature name>`, body listing what was verified).
+8. Update `STATUS.md`: status `Done`, date, the progress counts, a "Verified" entry (commands run, tests added, screenshots compared), and any follow-ups. Do not commit or push: leave the changes uncommitted on `dev`.
+9. Tell me what was built, how it was verified, which files changed, and what is next, and ask me to review. Only after I approve: commit on `dev` as `<ID>: <feature name>`, push `dev`, and then ask whether to open the pull request from `dev` to `main` (title `<ID>: <feature name>`, body listing what was verified).
