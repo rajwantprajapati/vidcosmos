@@ -11,6 +11,7 @@ export * from "./job.ts";
 export * from "./project.ts";
 export * from "./publishing.ts";
 export * from "./system.ts";
+export * from "./user.ts";
 export * from "./workspace.ts";
 
 export const collectionSchemas = {

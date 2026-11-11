@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F06 Sign up, sign in and workspaces** (next)
+Last updated: 11 Nov 2026 · Current focus: **F07 App shell and onboarding** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -10,7 +10,7 @@ This file is the single place that says where the build stands. Update it at the
 
 | Milestone | Done | Total |
 | --- | --- | --- |
-| M0 Foundations | 5 | 7 |
+| M0 Foundations | 6 | 7 |
 | M1 Projects and library | 0 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
@@ -18,7 +18,7 @@ This file is the single place that says where the build stands. Update it at the
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **5** | **36** |
+| **Total** | **6** | **36** |
 
 ## Features
 
@@ -29,7 +29,7 @@ This file is the single place that says where the build stands. Update it at the
 | F03 | Design tokens, fonts and themes | M0 | F01 | Done | 11 Nov 2026 | Tailwind 4; `/dev/tokens` |
 | F04 | UI component library | M0 | F03 | Done | 11 Nov 2026 | 16 components; `/dev/components` |
 | F05 | Database and migrations | M0 | F02 | Done | 11 Nov 2026 | `packages/db`; `pnpm db:migrate` |
-| F06 | Sign up, sign in and workspaces | M0 | F04, F05 | Not started | | |
+| F06 | Sign up, sign in and workspaces | M0 | F04, F05 | Done | 11 Nov 2026 | Better Auth; `/sign-in`, `/sign-up`, `/verify`, `/reset-password` |
 | F07 | App shell and onboarding | M0 | F06 | Not started | | |
 | F08 | Projects API | M1 | F05, F06 | Not started | | |
 | F09 | Library screen | M1 | F07, F08 | Not started | | |
@@ -64,6 +64,29 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F06 Sign up, sign in and workspaces · 11 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (web 134, db 100, config 19, spec 6, integrations 5) and `pnpm build` pass; `pnpm test:e2e` 81 passed, 33 skipped.
+- `apps/web/e2e/auth.spec.ts` (desktop and phone):
+  - **Done-when flow:** sign up → "Check your email" → open the verification link from the stub outbox → "Email confirmed" → library (showing the new "Asha's workspace") → sign out → `/library` goes to sign-in → sign in → library → sign out.
+  - **Signed out:** `/library` redirects to `/sign-in`; a deeper page returns after signing in (`?next=`); a forged session cookie gets no further than sign-in; a signed-in visit to `/sign-in` goes to the library.
+  - **Duplicate email:** a second account with the same email shows "An account with this email already exists. Sign in instead, or reset your password." on the email field.
+  - **Form checks:** a wrong password gets a clear message; a short password is refused before sending; the switch moves between `/sign-in` and `/sign-up`.
+  - **Reset password:** request a link → open it → set a new password → sign in with it; an invalid link shows the error and offers a new one.
+  - **Accessibility and layout:** axe finds no violations on `/sign-in` and `/sign-up`; no sideways scroll.
+- Unit tests:
+  - workspace creation (`packages/db/src/workspaces.test.ts`): IST month and day keys across month and year boundaries, workspace names, default limits and defaults, one workspace under 5 racing requests;
+  - the email stub and Resend sender (`packages/integrations/src/email.test.ts`);
+  - safe return paths (rejects `//host`, full URLs, backslashes), error messages and account emails (`apps/web/lib/*.test.ts`).
+- Checked against the local MongoDB:
+  - the user gets `role`, `timeZone`, `locale`, `status` and `notificationPrefs` (as an object);
+  - ids and `session.userId` are ObjectIds;
+  - the duplicate sign-up returns `422 USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`;
+  - `pnpm db:migrate` added Better Auth's indexes (unique email, session token, provider account).
+- Screenshots compared with Playwright, pixelmatch against `SignIn.png` (1440×900) and `MobileSignIn.png` (390 px, 2×, full page, same 1469 px height): 0.23% and 0.27% of pixels differ. The remaining difference is the slowly rotating orbit (a different moment) and text anti-aliasing. Fixed from the comparison: the segmented control's track spans the form width, the check marks use the list colour, and links keep the default underline offset.
+- Production build: `/api/dev/outbox` and `/dev/components` return 404; `/library` redirects to sign-in.
+- Fixed after manual QA (another session): the forms showed only the first validation error and never moved focus, so screen readers announced nothing. All field errors now show at once and focus moves to the first invalid field, for client checks and server field errors (duplicate email); form-wide errors stay in a live region. Same in the reset password forms, where an expired link is now a form message with "Ask for a new link" instead of a password error. Covered by render tests (`components/auth/*.test.tsx`: empty sign-up shows three errors and focuses the name; duplicate email focuses the email field) and two e2e checks.
 
 ### F05 Database and migrations · 11 Nov 2026
 
@@ -137,6 +160,11 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 11 Nov 2026 | Sessions last 30 days, extended at most once a day (DB §3), not 7 days (SDD §14). |
+| 11 Nov 2026 | Sign-up signs the person in and sends a verification link; unverified users can use the app but not generate or post (SDD §14). Better Auth only reports a duplicate email when sign-up signs in (otherwise it returns a fake success to hide which emails exist), so F06's duplicate-email message needs this; the 3-a-minute sign-up limit guards against probing. |
+| 11 Nov 2026 | The duplicate-email message (no design copy): "An account with this email already exists. Sign in instead, or reset your password." |
+| 11 Nov 2026 | The breach check (`haveIBeenPwned`) calls an outside service, so it runs only when email is live, never in stub mode or tests. |
+| 11 Nov 2026 | `role`, `timeZone`, `locale` and `status` are Better Auth user fields; `onboarding` and `notificationPrefs` are objects the app writes itself (Better Auth would store them as JSON text). Better Auth's indexes are in the index catalogue, because its MongoDB adapter creates none. |
 | 11 Nov 2026 | Collection schemas live in `packages/spec/src/collections` (`@vidcosmos/spec/collections`), as the feature plan and SDD §6 say; MongoDB code (client settings, `workspaceCollection`, index catalogue, validators, migrations) is in a new `packages/db`. DB §1/§10/§13 say `packages/db` for all of it. |
 | 11 Nov 2026 | `pnpm db:migrate` runs the migration files, then syncs validators and catalogue indexes from the code, so a new field or index needs no migration file. Files are for backfills and drops; dropping an index stays a migration (DB §13). |
 | 11 Nov 2026 | `social_accounts.token` is optional: DB §8 deletes the ciphertext on disconnect and keeps the row. |
@@ -183,3 +211,9 @@ Decisions already made, newest first. Details are in the docs.
 - **VideoSpec and revision operations are placeholders.** `projects.draft.spec`, `project_versions.spec` and chat proposal `operations` use top-level schemas until F16 (VideoSpec) and F25 (revisions) define them in `packages/spec`.
 - **MongoDB binary download.** The first `pnpm test` on a machine downloads MongoDB (about 70 MB) into `~/.cache/mongodb-binaries`; CI caches that folder.
 - **Database users not set up.** DB §13's `app`, `migrator` and `analyst` users (with no update or delete on `admin_audit`) are Atlas configuration, to do before production; CI's deploy job will run `pnpm db:migrate` with the `migrator` user.
+- **Google sign-in not tried yet.** The button and Better Auth's Google provider are in place, but no `GOOGLE_CLIENT_ID` is set, so the button says Google isn't available. To try it, create an OAuth client with the redirect URI `http://localhost:3000/api/auth/callback/google` (and the production one) and set both Google variables. Linking Google to an existing password account is done from Settings (F30).
+- **Terms and Privacy policy pages don't exist yet.** The sign-in page links to `/terms` and `/privacy`; write them before beta (F32/F36), together with the DPDP consent notice in SDD §14.
+- **Rate limits are per IP and production-only.** Better Auth enforces sign-in 5/min, sign-up 3/min and reset 3/hour per IP (API §16 asks for reset per email) and only in production builds, so e2e doesn't exercise them. Check them on a preview deployment.
+- **Live email not tried.** The Resend sender is unit-tested only; set `PROVIDERS_EMAIL=live`, `RESEND_API_KEY` and `EMAIL_FROM` (a verified domain) to try it. The designed email templates come in F31.
+- **Verify and reset screens have no design.** They reuse the SignIn layout and its type. Check them with the designer.
+- **E2E accounts in the local database.** Each e2e run creates a few `e2e+…@example.com` users and workspaces in the database in `.env`. They are harmless; delete them with `db.user.deleteMany({ email: /^e2e\+/ })` (and their workspaces) if they get in the way.
