@@ -1,7 +1,7 @@
 // The library (Library design): start a new video, search, filter by stage, and the videos,
 // newest first. Rendered on the server from the database; actions go through the projects API.
 import { activeJobs, countProjects, listProjects, ObjectId } from "@vidcosmos/db";
-import { listProjectsQuery, stripControlCharacters } from "@vidcosmos/spec/api";
+import { listProjectsQuery, stripControlCharacters, toUsageDto } from "@vidcosmos/spec/api";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyLibrary } from "@/components/library/empty-library";
@@ -14,6 +14,7 @@ import { buttonClassName } from "@/components/ui";
 import { getDb } from "@/lib/db";
 import { libraryCard } from "@/lib/library";
 import { requireSession } from "@/lib/session";
+import { usageView } from "@/lib/usage";
 
 export const metadata: Metadata = { title: "Library · Vidcosmos" };
 
@@ -52,6 +53,11 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
     libraryCard(project, project.activeJobId ? jobs.get(project.activeJobId.toHexString()) : null),
   );
   const defaultFormat = workspace.defaults.format;
+  // At the monthly limit, Generate is off until the reset (PRD FR-10.5).
+  const usage = usageView(toUsageDto(workspace, new Date()), user.timeZone);
+  const videoLimit = usage.allowance.reached
+    ? { max: usage.usage.videos.max, resetsOn: usage.resetsOn }
+    : undefined;
 
   const moreHref = (() => {
     const next = new URLSearchParams();
@@ -94,7 +100,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
     return (
       <>
         <PageHeader title="Your library" />
-        <EmptyLibrary defaultFormat={defaultFormat} />
+        <EmptyLibrary defaultFormat={defaultFormat} limit={videoLimit} />
         {counts.trash > 0 ? <TrashLink count={counts.trash} /> : null}
       </>
     );
@@ -105,7 +111,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
       <PageHeader title="Your library">
         <SearchBox defaultValue={q} />
       </PageHeader>
-      <NewVideoSection defaultFormat={defaultFormat} />
+      <NewVideoSection defaultFormat={defaultFormat} limit={videoLimit} />
       <section aria-labelledby="videos-h" className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2

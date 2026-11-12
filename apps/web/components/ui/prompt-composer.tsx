@@ -42,6 +42,8 @@ export type PromptComposerProps = {
   loading?: boolean;
   /** Shown under the prompt, which is marked invalid. */
   error?: string;
+  /** Turns the generate button off, e.g. when the monthly allowance is used up. */
+  generateDisabled?: boolean;
   submitLabel?: string;
   className?: string;
 };
@@ -64,6 +66,7 @@ export function PromptComposer({
   onGenerate,
   loading = false,
   error,
+  generateDisabled = false,
   submitLabel = "Generate video",
   className,
 }: PromptComposerProps) {
@@ -112,7 +115,7 @@ export function PromptComposer({
           defaultValue={defaultFormat ?? formats[0]?.value}
           onChange={onFormatChange}
         />
-        <Button type="submit" icon="sparkles" loading={loading}>
+        <Button type="submit" icon="sparkles" loading={loading} disabled={generateDisabled}>
           {loading ? "Generating…" : submitLabel}
         </Button>
       </div>

@@ -20,4 +20,11 @@ describe("UsageMeter", () => {
     rerender(<UsageMeter used={16} max={20} label="Exports today" />);
     expect(container.querySelector(".bg-warning")).not.toBeNull();
   });
+
+  it("keeps the progress value within its range when over the limit", () => {
+    render(<UsageMeter used={25} max={20} />);
+    expect(screen.getByText(/of 20/)).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "20");
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "20");
+  });
 });

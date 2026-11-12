@@ -39,7 +39,8 @@ export function UsageMeter({
       <ProgressTrack
         percent={percent}
         label={label}
-        valueNow={used}
+        // ARIA wants the value within its range; the text still says "25 of 20".
+        valueNow={Math.min(used, max)}
         valueMax={max}
         fillClassName={near ? "bg-warning" : undefined}
       />
