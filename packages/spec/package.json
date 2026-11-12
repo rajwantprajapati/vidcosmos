@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./collections": "./src/collections/index.ts"
+    "./api": "./src/api/index.ts",
+    "./collections": "./src/collections/index.ts",
+    "./time": "./src/time.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

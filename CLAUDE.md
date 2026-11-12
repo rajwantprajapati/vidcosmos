@@ -86,6 +86,8 @@ Database: collection schemas are in `@vidcosmos/spec/collections`; `@vidcosmos/d
 
 Auth: Better Auth in `lib/auth.ts` (server only), `authClient` from `lib/auth-client.ts` in the browser. Server pages call `requireSession(path)` from `lib/session.ts`, which returns the user and their workspace or redirects to sign-in; `proxy.ts` sends visitors without a session cookie away from the app routes listed in `lib/auth-routes.ts`. With the stub email provider, verification and reset links appear in the server log and at `/api/dev/outbox?to=<email>` (development only).
 
+App pages live in `app/(app)/`, whose layout adds the shell (sidebar on desktop, top bar and tab bar under 768 px), checks the session and sends users who haven't finished or skipped onboarding to `/onboarding`. `/api/v1` route handlers are wrapped in `apiRoute` from `lib/api.ts` (session, Origin check, error envelope) and read bodies with `readJson(request, schema)`; request and response schemas and their mappers are in `@vidcosmos/spec/api`.
+
 Components: the 16 design-system components are in `apps/web/components/ui` (import from `@/components/ui`; merge classes with `cn()`). Build screens from them, not from raw elements. `/dev/components` shows each with its preview examples in both themes; `/dev/components?frame=Button-light` shows one frame alone for comparison with `design/design-system/previews`.
 
 Added by later features: `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).

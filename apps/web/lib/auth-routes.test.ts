@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isProtectedPath, safeReturnTo, signInPath } from "./auth-routes";
+import { isProtectedPath, onboardingPath, safeReturnTo, signInPath } from "./auth-routes";
 
 describe("isProtectedPath", () => {
   it.each([
@@ -43,5 +43,18 @@ describe("signInPath", () => {
 
   it("encodes the page to come back to", () => {
     expect(signInPath("/settings/profile?x=1")).toBe("/sign-in?next=%2Fsettings%2Fprofile%3Fx%3D1");
+  });
+});
+
+describe("onboardingPath", () => {
+  it("comes back to the page that was asked for", () => {
+    expect(onboardingPath("/posts")).toBe("/onboarding?next=%2Fposts");
+    expect(onboardingPath("/library")).toBe("/onboarding");
+    expect(onboardingPath(null)).toBe("/onboarding");
+  });
+
+  it("never sends anyone off the site", () => {
+    expect(onboardingPath("//evil.example")).toBe("/onboarding");
+    expect(onboardingPath("https://evil.example")).toBe("/onboarding");
   });
 });

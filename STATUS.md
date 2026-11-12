@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F07 App shell and onboarding** (next)
+Last updated: 11 Nov 2026 · Current focus: **F08 Projects API** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -10,7 +10,7 @@ This file is the single place that says where the build stands. Update it at the
 
 | Milestone | Done | Total |
 | --- | --- | --- |
-| M0 Foundations | 6 | 7 |
+| M0 Foundations | 7 | 7 |
 | M1 Projects and library | 0 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
@@ -18,7 +18,7 @@ This file is the single place that says where the build stands. Update it at the
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **6** | **36** |
+| **Total** | **7** | **36** |
 
 ## Features
 
@@ -30,7 +30,7 @@ This file is the single place that says where the build stands. Update it at the
 | F04 | UI component library | M0 | F03 | Done | 11 Nov 2026 | 16 components; `/dev/components` |
 | F05 | Database and migrations | M0 | F02 | Done | 11 Nov 2026 | `packages/db`; `pnpm db:migrate` |
 | F06 | Sign up, sign in and workspaces | M0 | F04, F05 | Done | 11 Nov 2026 | Better Auth; `/sign-in`, `/sign-up`, `/verify`, `/reset-password` |
-| F07 | App shell and onboarding | M0 | F06 | Not started | | |
+| F07 | App shell and onboarding | M0 | F06 | Done | 11 Nov 2026 | Sidebar, tab bar, placeholders, `/onboarding` |
 | F08 | Projects API | M1 | F05, F06 | Not started | | |
 | F09 | Library screen | M1 | F07, F08 | Not started | | |
 | F10 | Usage and limits (read side) | M1 | F08 | Not started | | |
@@ -64,6 +64,31 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F07 App shell and onboarding · 11 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (web 151, db 102, config 19, spec 14, integrations 5) and `pnpm build` pass; `pnpm test:e2e` 113 passed, 35 skipped.
+- `apps/web/e2e/shell.spec.ts` (desktop and phone):
+  - every route in the route map loads its placeholder (`/library`, `/posts`, `/settings`, `/projects/new`, `/projects/[id]` and its `idea`, `script`, `storyboard`, `generating`, `export`);
+  - an id that isn't an ObjectId is a 404; `/admin` is a 404 for non-admins;
+  - desktop: the sidebar has New video, Library/Posts/Settings with `aria-current` following the page, the usage meter ("of 20 · resets …") and the profile; no tab bar;
+  - phone: no sidebar; the tab bar has Library, New video, Posts, Settings, sits at the bottom of the screen and navigates;
+  - project pages count as Library; axe finds no violations; no sideways scroll.
+- `apps/web/e2e/onboarding.spec.ts`:
+  - a new account is sent to `/onboarding` ("Hi Asha, let’s set up your studio");
+  - saving persona, topic area, हिंदी and Male returns `Me` with the onboarding and workspace defaults `hi`/`male`, then lands in the library, and the screen doesn't come back;
+  - "Skip for now" lands in the library and the screen doesn't come back;
+  - arrow keys move the persona choice; axe finds no violations; no sideways scroll;
+  - `PUT /api/v1/me/onboarding` returns 401 without a session, `403 CSRF_ORIGIN` from another origin, and `400 VALIDATION_FAILED` with field paths for a bad body or a `$` key; it sends `X-Request-Id` and `Cache-Control: private, no-store`.
+- `auth.spec.ts` updated: after confirming the email, the first visit goes to onboarding, then the library; sign out is in Settings; later sign-ins go straight to the library.
+- Unit tests: onboarding save, skip and workspace isolation against MongoDB (`packages/db/src/users.test.ts`); IST month and day resets (`packages/spec/src/time.test.ts`); the workspace and usage mappers, including counters from an earlier month reading as zero (`packages/spec/src/api/me.test.ts`); the API body reader: invalid JSON, field errors, operator keys, the 256 KB limit (`apps/web/lib/api.test.ts`); nav state and initials.
+- Screenshots compared with Playwright, pixelmatch on a production build: sidebar at 2× against `AppSidebar.png` (both 496×1920) 1.6% different; tab bar at 2× against `MobileTabBar.png` (both 780×168) 1.8%; onboarding at 1440 against `Onboarding.png` (both 1440×957) 2.0%. What remains: Lucide icon shapes, the Posts count badge (no posts yet), the "Listen to samples" link (no voice samples yet), and the onboarding cards sitting 2 px lower and 3 px shorter in the design. Fixed from the comparison: the New video button's height (the `cn()` line-height issue), the tab bar's rounded pills (`rounded-2xl` isn't a design radius), section heading line heights and the footer spacing.
+- Library and Settings placeholders checked at 1440 and 390 px.
+- Fixed after manual QA (another session):
+  - **404s:** a 404 inside the app (bad project id, `/projects/new/idea`, `/admin` for non-admins) shows an app-styled "Page not found" in the shell, with "Go to your library", the tab title "Page not found · Vidcosmos", and no section marked current. An address that matches no route gets the same page outside the shell.
+  - **Deep links:** a link opened before onboarding now survives it. The proxy passes the requested path to the app layout, which sends the user to `/onboarding?next=…` (checked with the same safe-return-path rule as sign-in), and saving or skipping goes back there.
+  - **Docs:** `onboardingSkippedAt` is in DB §3; `POST /me/onboarding/skip` and the `voiceGender` field are in API §4.
+  - Covered by e2e checks (404 pages and titles; `/posts` and a project page coming back after skip and save; an off-site `next` ignored) and unit tests (`onboardingPath`, nav state on 404 paths).
 
 ### F06 Sign up, sign in and workspaces · 11 Nov 2026
 
@@ -160,6 +185,9 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 11 Nov 2026 | Every app page sends a user to `/onboarding` until it is completed or skipped, so "first sign-in goes to onboarding, later sign-ins go to the library" holds for email and Google alike. "Skip for now" stores `user.onboardingSkippedAt` through `POST /api/v1/me/onboarding/skip` (new endpoint); `Me.onboarding` stays null when skipped. |
+| 11 Nov 2026 | `PUT /me/onboarding` also takes `voiceGender` (the default narrator on the onboarding screen), which API §4's type predates; it sets `workspace.defaults.voiceGender` beside `language`. |
+| 11 Nov 2026 | "New video" goes to `/projects/new` (not in the route map) until F14 makes it create the project and open `/projects/[id]/idea`. Sign out lives in Settings, as in the MobileSettings design. |
 | 11 Nov 2026 | Sessions last 30 days, extended at most once a day (DB §3), not 7 days (SDD §14). |
 | 11 Nov 2026 | Sign-up signs the person in and sends a verification link; unverified users can use the app but not generate or post (SDD §14). Better Auth only reports a duplicate email when sign-up signs in (otherwise it returns a fake success to hide which emails exist), so F06's duplicate-email message needs this; the 3-a-minute sign-up limit guards against probing. |
 | 11 Nov 2026 | The duplicate-email message (no design copy): "An account with this email already exists. Sign in instead, or reset your password." |
@@ -217,3 +245,7 @@ Decisions already made, newest first. Details are in the docs.
 - **Live email not tried.** The Resend sender is unit-tested only; set `PROVIDERS_EMAIL=live`, `RESEND_API_KEY` and `EMAIL_FROM` (a verified domain) to try it. The designed email templates come in F31.
 - **Verify and reset screens have no design.** They reuse the SignIn layout and its type. Check them with the designer.
 - **E2E accounts in the local database.** Each e2e run creates a few `e2e+…@example.com` users and workspaces in the database in `.env`. They are harmless; delete them with `db.user.deleteMany({ email: /^e2e\+/ })` (and their workspaces) if they get in the way.
+- **API groundwork landed early.** F07's endpoint needed the `/api/v1` wrapper (`apps/web/lib/api.ts`: session, Origin check, zod bodies, operator-key check, error envelope, request id) and the `Me`, `Workspace` and `Usage` mappers (`packages/spec/src/api/me.ts`). F08 adds idempotency and the rest of the error codes; F10 adds `GET /me` and the limit states.
+- **Shell details waiting on later features.** The Posts count badge (F28), the notifications bell in the top bar (F31), and "Listen to samples" under Default narrator (voice previews, F20) are left out until their data exists.
+- **Next.js dev tools button.** In `pnpm dev` it sits in a screen corner and can cover a tab-bar tab at phone width; production has no such button. The shell e2e tests hide it (`hideNextDevTools` in `e2e/helpers.ts`).
+- **Restart `pnpm dev` after adding route folders.** The running dev server missed the new `app/(app)/projects/` folders (404 in dev, 200 in a production build) until it was restarted.

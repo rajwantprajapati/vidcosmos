@@ -4,34 +4,12 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { migrate } from "./migrate.ts";
 import { systemCollection } from "./scoped.ts";
 import { useTestDatabase } from "./testing/database.ts";
-import { ensureWorkspace, istPeriod, newWorkspace, workspaceName } from "./workspaces.ts";
+import { ensureWorkspace, newWorkspace, workspaceName } from "./workspaces.ts";
 
 const database = useTestDatabase();
 
 beforeAll(async () => {
   await migrate(database.get());
-});
-
-describe("istPeriod", () => {
-  it("uses the IST date, which is ahead of UTC", () => {
-    // 20:00 UTC on 31 Oct is 01:30 on 1 Nov in India.
-    expect(istPeriod(new Date("2026-10-31T20:00:00Z"))).toEqual({
-      periodKey: "2026-11",
-      periodStart: new Date("2026-10-31T18:30:00Z"),
-      dayKey: "2026-11-01",
-    });
-  });
-
-  it("keeps the previous month until midnight IST", () => {
-    expect(istPeriod(new Date("2026-10-31T18:29:59Z")).periodKey).toBe("2026-10");
-  });
-
-  it("rolls the year over", () => {
-    expect(istPeriod(new Date("2026-12-31T19:00:00Z"))).toMatchObject({
-      periodKey: "2027-01",
-      dayKey: "2027-01-01",
-    });
-  });
 });
 
 describe("workspaceName", () => {

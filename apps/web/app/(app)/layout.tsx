@@ -1,9 +1,48 @@
-// Every app page needs a signed-in user. The proxy already sent visitors without a session
-// cookie to sign-in; this checks the session itself. The app shell arrives in F07.
+// The app shell (F07): the sidebar on desktop; the top bar and tab bar on phones (under 768 px).
+// Every page here needs a session (the proxy has already turned away visitors without a
+// cookie), and onboarding comes first until it is finished or skipped.
+import { readAppUserFields, needsOnboarding, ObjectId } from "@vidcosmos/db";
+import { toUsageDto } from "@vidcosmos/spec/api";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { AppSidebar } from "@/components/shell/app-sidebar";
+import { MobileTabBar } from "@/components/shell/mobile-tab-bar";
+import { MobileTopBar } from "@/components/shell/mobile-top-bar";
+import { firstNameOf, initialsOf } from "@/components/shell/nav";
+import { onboardingPath, requestPathHeader } from "@/lib/auth-routes";
+import { getDb } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  await requireSession("/library");
-  return <div className="min-h-dvh bg-bg text-ink">{children}</div>;
+  const { user, workspace } = await requireSession("/library");
+  if (needsOnboarding(await readAppUserFields(getDb(), new ObjectId(user.id)))) {
+    // Come back to the page that was asked for once onboarding is saved or skipped.
+    redirect(onboardingPath((await headers()).get(requestPathHeader)));
+  }
+
+  const usage = toUsageDto(workspace, new Date());
+  // Shown in the user's own time zone; the reset itself happens at midnight IST.
+  const resetsOn = new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    timeZone: user.timeZone,
+  }).format(new Date(usage.period.resetsAt));
+  const initials = initialsOf(user.name);
+
+  return (
+    <div className="flex min-h-dvh bg-bg font-sans text-ink">
+      <AppSidebar
+        user={{ firstName: firstNameOf(user.name), initials, plan: "Free beta" }}
+        usage={{ used: usage.videos.used, max: usage.videos.max, resetsOn }}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileTopBar initials={initials} />
+        <main className="box-border flex min-w-0 flex-1 flex-col gap-7 px-4 pt-1 pb-[110px] md:px-10 md:pt-7 md:pb-12">
+          {children}
+        </main>
+      </div>
+      <MobileTabBar />
+    </div>
+  );
 }
