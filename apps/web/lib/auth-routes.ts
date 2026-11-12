@@ -12,6 +12,9 @@ export const protectedPrefixes = [
 
 export const appHome = "/library";
 
+/** Request header the proxy sets to the page asked for (path and query). */
+export const requestPathHeader = "x-vidcosmos-path";
+
 const matchesPrefix = (pathname: string, prefix: string) =>
   pathname === prefix || pathname.startsWith(`${prefix}/`);
 
@@ -32,4 +35,10 @@ export function safeReturnTo(value: string | null | undefined): string {
 export function signInPath(returnTo?: string): string {
   const next = safeReturnTo(returnTo);
   return next === appHome ? "/sign-in" : `/sign-in?next=${encodeURIComponent(next)}`;
+}
+
+/** Onboarding, coming back to `returnTo` afterwards (or the library). */
+export function onboardingPath(returnTo?: string | null): string {
+  const next = safeReturnTo(returnTo);
+  return next === appHome ? "/onboarding" : `/onboarding?next=${encodeURIComponent(next)}`;
 }

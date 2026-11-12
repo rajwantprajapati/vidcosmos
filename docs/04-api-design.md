@@ -302,6 +302,7 @@ Sign-up hooks create the workspace with default limits in the same request (DB d
 | `GET /me` | User, workspace, onboarding state and usage in one call | `200 Me` |
 | `PATCH /me` | Change name, time zone or UI language | `200 Me` |
 | `PUT /me/onboarding` | Save onboarding answers | `200 Me` |
+| `POST /me/onboarding/skip` | "Skip for now": save no answers, stop showing onboarding (sets `user.onboardingSkippedAt`) | `200 Me` |
 | `GET /workspace` | Workspace name and defaults | `200 Workspace` |
 | `PATCH /workspace` | Change name or defaults for new videos | `200 Workspace` |
 | `GET /usage` | Usage against limits | `200 Usage` |
@@ -314,7 +315,7 @@ type Me = {
   user: { id: Id; name: string; email: string; emailVerified: boolean; image: string | null;
           role: 'user' | 'admin'; timeZone: string; locale: 'en' | 'hi'; createdAt: Iso };
   onboarding: { persona: 'creator' | 'educator' | 'brand' | 'other'; topicArea: string | null;
-                language: 'en' | 'hi'; completedAt: Iso | null } | null;   // null = show onboarding
+                language: 'en' | 'hi'; completedAt: Iso | null } | null;   // null = not completed (shown unless skipped)
   workspace: Workspace;
   usage: Usage;
   instagram: { status: 'connected' | 'expiring' | 'revoked'; username: string } | null;
@@ -324,8 +325,9 @@ type Me = {
 type UpdateMe = { name?: string; timeZone?: string; locale?: 'en' | 'hi' };   // timeZone must be a valid IANA name
 
 // PUT /me/onboarding
-type Onboarding = { persona: 'creator' | 'educator' | 'brand' | 'other'; topicArea?: string; language: 'en' | 'hi' };
-// also sets workspace.defaults.language
+type Onboarding = { persona: 'creator' | 'educator' | 'brand' | 'other'; topicArea?: string;   // topicArea up to 80 chars
+                    language: 'en' | 'hi'; voiceGender: 'female' | 'male' };
+// also sets workspace.defaults.language and workspace.defaults.voiceGender (the default narrator)
 
 type Workspace = {
   id: Id;

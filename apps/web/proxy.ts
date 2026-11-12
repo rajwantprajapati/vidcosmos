@@ -6,14 +6,23 @@
 // check: doing it here on the cookie alone would loop with an expired cookie.
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
-import { isProtectedPath, signInPath } from "@/lib/auth-routes";
+import { isProtectedPath, requestPathHeader, signInPath } from "@/lib/auth-routes";
 
 export function proxy(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
+  const { pathname } = request.nextUrl;
+  const params = new URLSearchParams(request.nextUrl.search);
+  params.delete("_rsc"); // Next.js's own marker for client navigations, not part of the page
+  const path = pathname + (params.size ? `?${params}` : "");
+
   if (isProtectedPath(pathname) && !getSessionCookie(request)) {
-    return NextResponse.redirect(new URL(signInPath(pathname + search), request.url));
+    return NextResponse.redirect(new URL(signInPath(path), request.url));
   }
-  return NextResponse.next();
+  // Pages can't see their own URL in a layout; this header tells the app layout which page was
+  // asked for (to come back to it after onboarding). Set here on every request, so a value
+  // sent by the browser never gets through.
+  const headers = new Headers(request.headers);
+  headers.set(requestPathHeader, path);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

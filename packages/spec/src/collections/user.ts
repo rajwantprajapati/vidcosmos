@@ -1,6 +1,6 @@
 // The app's fields on Better Auth's `user` collection (DB §3). Better Auth owns the
 // collection; `role`, `timeZone`, `locale` and `status` are Better Auth additional fields,
-// while `onboarding` and `notificationPrefs` are objects the app writes itself.
+// while `onboarding`, `onboardingSkippedAt` and `notificationPrefs` are written by the app.
 import { z } from "zod";
 import { date, language } from "./common.ts";
 
@@ -19,6 +19,9 @@ export type Onboarding = z.infer<typeof onboardingSchema>;
 export const notificationPrefsSchema = z.object({
   email: z.object({ videoReady: z.boolean(), posts: z.boolean(), account: z.boolean() }),
 });
+/** Set when the user chose "Skip for now" on the onboarding screen; it isn't shown again. */
+export const onboardingSkippedAt = date;
+
 export type NotificationPrefs = z.infer<typeof notificationPrefsSchema>;
 
 /** Every email type on until the user turns one off (or a hard bounce turns all off). */

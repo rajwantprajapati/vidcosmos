@@ -1,24 +1,9 @@
 // Creating a user's workspace (DB §4). In V1 each user owns exactly one, created in the
 // sign-up request; `ensureWorkspace` also creates it on first use if that step ever failed.
 import type { Workspace } from "@vidcosmos/spec/collections";
+import { istPeriod } from "@vidcosmos/spec/time";
 import { type Db, ObjectId } from "mongodb";
 import { systemCollection, workspaceCollection } from "./scoped.ts";
-
-/** India Standard Time is UTC+5:30 all year (no daylight saving). */
-const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
-
-/** The IST calendar month and day of an instant, and when that month started (in UTC). */
-export function istPeriod(now: Date): { periodKey: string; periodStart: Date; dayKey: string } {
-  const ist = new Date(now.getTime() + istOffsetMs);
-  const year = ist.getUTCFullYear();
-  const month = ist.getUTCMonth();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return {
-    periodKey: `${year}-${pad(month + 1)}`,
-    periodStart: new Date(Date.UTC(year, month, 1) - istOffsetMs),
-    dayKey: `${year}-${pad(month + 1)}-${pad(ist.getUTCDate())}`,
-  };
-}
 
 /** Default limits for a beta workspace (DB §4); an admin can change them per workspace. */
 export const defaultLimits: Workspace["limits"] = {

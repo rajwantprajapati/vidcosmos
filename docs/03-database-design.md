@@ -81,6 +81,7 @@ Better Auth owns these five collections through its MongoDB adapter. The Better 
 | `timeZone` | string | yes | App field, IANA name, default `Asia/Kolkata`. Used to show schedules |
 | `locale` | `en` or `hi` | yes | App field, UI language, default `en` |
 | `onboarding` | object | no | App field, see below |
+| `onboardingSkippedAt` | Date | no | App field, written by the app (not Better Auth). Set when the user chooses "Skip for now"; the app stops sending them to onboarding |
 | `status` | `active` or `deleting` | yes | App field. Set to `deleting` when account deletion starts; sign-in is refused |
 | `lastActiveAt` | Date | no | App field, written at most once an hour |
 | `createdAt`, `updatedAt` | Date | yes |  |
@@ -93,6 +94,8 @@ type Onboarding = {
   completedAt?: Date;            // unset while onboarding is unfinished
 };
 ```
+
+Until `onboarding.completedAt` or `onboardingSkippedAt` is set, every app page sends the user to onboarding. `onboarding`, `onboardingSkippedAt` and `notificationPrefs` are stored as plain objects and dates written by the app; Better Auth's additional fields cover only the scalar fields above.
 
 One more app field, `notificationPrefs`, holds which events also send email: `{ email: { videoReady: boolean; posts: boolean; account: boolean } }`, all `true` by default. A hard bounce reported by Resend sets all three to `false`.
 

@@ -20,10 +20,16 @@ export {
 } from "./scoped.ts";
 export { toMongoJsonSchema, validatorFor } from "./validators.ts";
 export {
+  type AppUserFields,
+  needsOnboarding,
+  readAppUserFields,
+  saveOnboarding,
+  skipOnboarding,
+} from "./users.ts";
+export {
   defaultLimits,
   defaultVideoDefaults,
   ensureWorkspace,
-  istPeriod,
   newWorkspace,
   workspaceName,
 } from "./workspaces.ts";
