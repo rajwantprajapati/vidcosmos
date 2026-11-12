@@ -1,9 +1,14 @@
-// The 15 app collections (DB §1): one zod schema per document type. Better Auth's five
+// The app collections (DB §1, plus `idempotency_keys`): one zod schema per document type. Better Auth's five
 // collections (user, session, account, verification, rateLimit) are owned by Better Auth.
 import { assetSchema, exportSchema, jobSchema } from "./job.ts";
 import { chatMessageSchema, projectSchema, projectVersionSchema } from "./project.ts";
 import { oauthStateSchema, postSchema, socialAccountSchema } from "./publishing.ts";
-import { adminAuditSchema, migrationSchema, notificationSchema } from "./system.ts";
+import {
+  adminAuditSchema,
+  idempotencyKeySchema,
+  migrationSchema,
+  notificationSchema,
+} from "./system.ts";
 import { moderationEventSchema, usageEventSchema, workspaceSchema } from "./workspace.ts";
 
 export * from "./common.ts";
@@ -30,6 +35,7 @@ export const collectionSchemas = {
   notifications: notificationSchema,
   admin_audit: adminAuditSchema,
   migrations: migrationSchema,
+  idempotency_keys: idempotencyKeySchema,
 } as const;
 
 export type CollectionName = keyof typeof collectionSchemas;
@@ -49,4 +55,5 @@ export const workspaceScopedCollections = [
   "oauth_states",
   "posts",
   "notifications",
+  "idempotency_keys",
 ] as const satisfies readonly CollectionName[];

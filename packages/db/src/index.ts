@@ -6,6 +6,38 @@ export {
   defaultDatabaseName,
   mongoClientOptions,
 } from "./client.ts";
+export {
+  bodyHash,
+  type Created,
+  IdempotencyError,
+  type IdempotencyErrorCode,
+  withIdempotency,
+} from "./idempotency.ts";
+export {
+  activeJobs,
+  createProject,
+  deleteProject,
+  duplicateProject,
+  getProject,
+  ideaHash,
+  leaseHolder,
+  leaseMs,
+  listProjects,
+  type Owner,
+  parseProjectId,
+  ProjectError,
+  type ProjectErrorCode,
+  projectStale,
+  releaseLease,
+  restoreProject,
+  saveDraft,
+  takeLease,
+  textHash,
+  trashDays,
+  updateProject,
+  userName,
+  wizardStepNeeds,
+} from "./projects.ts";
 export { type BetterAuthCollection, type IndexSpec, indexCatalogue } from "./indexes.ts";
 export { migrate, type MigrateOptions, type MigrateResult, MigrationError } from "./migrate.ts";
 export { isEmptyPlan, planSchemaSync, type SchemaSyncPlan, syncSchema } from "./schema-sync.ts";

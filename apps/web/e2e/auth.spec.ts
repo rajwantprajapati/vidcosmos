@@ -144,6 +144,21 @@ test.describe("route protection", () => {
     await expect(page).toHaveURL(/\/sign-in$/);
   });
 
+  test("a signed-in visit to /sign-in never leaves the site", async ({ page }) => {
+    await signUp(page, newEmail("redirect"));
+    await skipOnboarding(page);
+    for (const next of [
+      "%2F%09%2Fexample.org",
+      "%2F%0A%2Fexample.org",
+      "%2F%0D%2Fexample.org",
+      "%2F%2Fexample.org",
+    ]) {
+      const response = await page.goto(`/sign-in?next=${next}`);
+      expect(response?.status(), next).toBe(200);
+      await expect(page, next).toHaveURL(/^http:\/\/localhost:\d+\/library$/);
+    }
+  });
+
   test("a signed-in visit to /sign-in goes to the library", async ({ page }) => {
     await signUp(page, newEmail("signedin"));
     await skipOnboarding(page);

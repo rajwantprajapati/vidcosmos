@@ -86,3 +86,25 @@ export const migrationSchema = z.union([migrationRecordSchema, migrationLockSche
 export type MigrationRecord = z.infer<typeof migrationRecordSchema>;
 export type MigrationLock = z.infer<typeof migrationLockSchema>;
 export type Migration = z.infer<typeof migrationSchema>;
+
+/**
+ * One `Idempotency-Key` used on a create (API §1): the same key within 24 hours replays the
+ * first result; with a different body it is refused. Not in DB §1's list: added with the
+ * projects API (decision log, 12 Nov). A TTL index removes rows when they expire.
+ */
+export const idempotencyKeySchema = z.object({
+  _id: objectId,
+  schemaVersion,
+  workspaceId: objectId,
+  key: z.string().min(1).max(255),
+  /** What the key was used for, e.g. `POST /projects`. */
+  route: z.string().min(1),
+  /** sha256 of the request body, to tell a replay from a different request. */
+  bodyHash: z.string().regex(/^[0-9a-f]{64}$/),
+  status: z.enum(["pending", "done"]),
+  /** Set when done: the response status and the resource it created. */
+  result: z.object({ status: z.int(), resourceId: objectId }).optional(),
+  createdAt: date,
+  expiresAt: date,
+});
+export type IdempotencyKey = z.infer<typeof idempotencyKeySchema>;

@@ -32,7 +32,26 @@ describe("safeReturnTo", () => {
     ["//evil.example/", "/library"],
     ["/\\evil.example", "/library"],
     ["library", "/library"],
+    // Browsers drop tabs and newlines from URLs: "/<tab>/host" would become "//host".
+    ["/\t/example.org", "/library"],
+    ["/\n/example.org", "/library"],
+    ["/\r/example.org", "/library"],
+    ["\t/example.org", "/library"],
+    ["/%09/example.org", "/%09/example.org"],
+    ["/ /example.org", "/library"],
+    ["/\u0000/example.org", "/library"],
+    ["/\u2028/example.org", "/library"],
+    ["/posts?tab=scheduled#top", "/posts?tab=scheduled#top"],
+    ["/projects/../library", "/library"],
   ])("%j -> %j", (value, expected) => expect(safeReturnTo(value)).toBe(expected));
+
+  it("never returns anything a browser would read as another host", () => {
+    const tricky = ["/\t/evil.example", "/\\evil.example", "//evil.example", "/\n\n/evil.example"];
+    for (const value of tricky) {
+      const resolved = new URL(safeReturnTo(value), "https://app.test");
+      expect(resolved.host).toBe("app.test");
+    }
+  });
 });
 
 describe("signInPath", () => {

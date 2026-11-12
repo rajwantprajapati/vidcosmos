@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F08 Projects API** (next)
+Last updated: 11 Nov 2026 · Current focus: **F09 Library screen** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -11,14 +11,14 @@ This file is the single place that says where the build stands. Update it at the
 | Milestone | Done | Total |
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
-| M1 Projects and library | 0 | 3 |
+| M1 Projects and library | 1 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **7** | **36** |
+| **Total** | **8** | **36** |
 
 ## Features
 
@@ -31,7 +31,7 @@ This file is the single place that says where the build stands. Update it at the
 | F05 | Database and migrations | M0 | F02 | Done | 11 Nov 2026 | `packages/db`; `pnpm db:migrate` |
 | F06 | Sign up, sign in and workspaces | M0 | F04, F05 | Done | 11 Nov 2026 | Better Auth; `/sign-in`, `/sign-up`, `/verify`, `/reset-password` |
 | F07 | App shell and onboarding | M0 | F06 | Done | 11 Nov 2026 | Sidebar, tab bar, placeholders, `/onboarding` |
-| F08 | Projects API | M1 | F05, F06 | Not started | | |
+| F08 | Projects API | M1 | F05, F06 | Done | 12 Nov 2026 | `/api/v1/projects`; `packages/db/src/projects.ts` |
 | F09 | Library screen | M1 | F07, F08 | Not started | | |
 | F10 | Usage and limits (read side) | M1 | F08 | Not started | | |
 | F11 | Jobs and background functions | M2 | F08 | Not started | | |
@@ -64,6 +64,36 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F08 Projects API · 12 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (db 139, web 165, config 19, spec 14, integrations 5) and `pnpm build` pass; `pnpm test:e2e` 136 passed, 44 skipped. `pnpm db:migrate` on the local MongoDB added the `idempotency_keys` indexes; a second run changed nothing.
+- Database tests (`packages/db/src/projects.test.ts`, `idempotency.test.ts`, on `mongodb-memory-server`):
+  - **Ownership:** another workspace's project is `NOT_FOUND` for get, update, lease, takeover, draft save, duplicate, delete and restore; it doesn't appear in their list and is left unchanged.
+  - **`REV_CONFLICT`:** an old `baseRev` is refused with the current rev.
+  - **`LEASE_HELD`:** a lease held by another tab is refused (`heldBy: you_elsewhere`, `expiresAt`) until it expires or a takeover; a draft save without the lease is refused and saves nothing; only the holder can release; taking the lease doesn't move the video up the library.
+  - **Idempotent create:** the same key runs once and replays (also with the body's keys in another order); a different body is `IDEMPOTENCY_MISMATCH`; a second request while the first runs is `IDEMPOTENCY_IN_PROGRESS`; a failure frees the key; keys are per workspace.
+  - **Soft delete and restore:** Trash, scheduled posts cancelled (published ones untouched), deleting twice is not found, restore within 30 days only, cancelled posts stay cancelled.
+  - **Every list filter:** stage (one or several), language, format (one or several), `q` on title and topic (case-insensitive, literal text), trash, sort by updated or created, cursor paging for both sorts, and `INVALID_CURSOR` for another sort's cursor or garbage.
+  - **PATCH rules:** language locked once a script exists (`STAGE_INVALID`); palette and format update the draft spec, keep timing and bump the rev; a new voice clears every scene's timing; a script edit becomes `ai_edited` and marks the storyboard stale; a script edit before a script exists is `STAGE_INVALID`; `null` clears an idea field.
+  - **Duplicate:** a new draft project with the idea, script and draft, without versions or counters.
+  - **Draft timing:** stored timing is kept only where a scene's narration and the voice are unchanged, so forged timing is replaced; scenes that lose timing are returned as stale.
+  - **Responses:** summary and detail mappers parse with the `@vidcosmos/spec/api` schemas and carry no internal fields.
+- HTTP tests (`apps/web/e2e/projects-api.spec.ts`, desktop project), every body parsed with the shared schemas:
+  - `201` with `Location` and `Idempotent-Replayed: true` on replay; the key is required; field paths on `400`;
+  - list filters, paging and `INVALID_CURSOR`;
+  - every route `404` for another user;
+  - lease `423` and takeover, draft `409`/`423`, release by beacon body;
+  - PATCH, `STAGE_INVALID`, duplicate, delete (`204` with `X-Cancelled-Posts`), Trash, restore;
+  - `403 CSRF_ORIGIN` and `401` with `Cache-Control: private, no-store`.
+- Unit tests for the route wrapper: repeated query parameters, the `X-Editor-Id` and `Idempotency-Key` headers.
+- Fixed after manual QA (another session), including two F07 bugs already in commit `aac6cf4`:
+  - **Open redirect (security, F06/F07 code).** `safeReturnTo` let control characters through: browsers drop a tab from `/<tab>/example.org`, so `/onboarding?next=%2F%09%2Fexample.org` and `/sign-in?next=…` sent a signed-in user to example.org (`%0A`/`%0D` gave a 500 instead). It now refuses control characters, spaces and backslashes, and resolves the value as a URL that must stay on this origin as a plain path; anything else falls back to `/library`. Covered by unit cases (tab, LF, CR, NUL, line separator, leading tab, `/%09/host`, `..`) and e2e checks that `/onboarding` and `/sign-in` with these stay on localhost.
+  - **Dark theme lost on the in-app 404.** On a 404 inside the app the root layout renders again in the browser, where React doesn't run inline scripts, so `data-theme` disappeared. A small client effect (`components/theme-sync.tsx`) now puts the attribute back when it is missing. The theme script stays inline in `<head>`, so it still runs before the first paint. A first attempt moved it to `next/script` `beforeInteractive`, which only queues it until Next's async scripts load and gave dark-theme users a light first paint; QA caught that and it was reverted. Checked on `pnpm dev` and a production build. `e2e/theme.spec.ts` delays Next's scripts and checks `data-theme` when the HTML has loaded (stored dark, system dark, stored light over system dark; the script inline in `<head>`); it fails on the `beforeInteractive` version. Plus an e2e check for a stored dark choice on the 404.
+  - **ETag:** `GET /projects/{id}` sends an ETag and `Cache-Control: private, no-cache`; a matching `If-None-Match` (or `*`) gets `304` with no body (API §1 "Caching"). e2e check: 304, then 200 with a new tag after a PATCH.
+  - **Duplicate requires an `Idempotency-Key`**, like create, so a double click makes one copy (API §5 updated); e2e: 400 without it, replay with it.
+  - **Drafts with more than 10 scenes** are `400 VALIDATION_FAILED` (`spec.scenes`) and nothing is saved; e2e check.
+  - **Wizard step (decision D4):** PATCH refuses moving forward to a step whose input doesn't exist yet (`409 STAGE_INVALID`, `needs`); going back is always allowed, and a refused request changes nothing. Database tests for each step and its need; e2e check that a new project can't jump to `video`.
 
 ### F07 App shell and onboarding · 11 Nov 2026
 
@@ -185,6 +215,9 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 12 Nov 2026 | D4: `PATCH /projects/{id}` may move `wizardStep` back freely, but forward only to a step whose input exists (angles: some angles; script: a script; storyboard: a draft spec; video: a saved version), else `409 STAGE_INVALID` with `details.needs` (`angles`, `script`, `storyboard` or `version`). Found in manual QA of F08. |
+| 12 Nov 2026 | Idempotency keys for creates are stored in a new `idempotency_keys` collection (24 h TTL, unique per workspace and key); a replay returns the created resource as it is now. A second request while the first is running gets `409 IDEMPOTENCY_IN_PROGRESS` (new code). DB §9 and API §2 updated. |
+| 12 Nov 2026 | The edit lease is held by session id + editor tab id (`X-Editor-Id`). A draft save without the lease is `423 LEASE_HELD` with `heldBy: null` when nobody holds it. PATCH doesn't need the lease, but changes it makes to the draft spec (theme, format, voice) bump `draft.rev`, so an open editor reloads. |
 | 11 Nov 2026 | Every app page sends a user to `/onboarding` until it is completed or skipped, so "first sign-in goes to onboarding, later sign-ins go to the library" holds for email and Google alike. "Skip for now" stores `user.onboardingSkippedAt` through `POST /api/v1/me/onboarding/skip` (new endpoint); `Me.onboarding` stays null when skipped. |
 | 11 Nov 2026 | `PUT /me/onboarding` also takes `voiceGender` (the default narrator on the onboarding screen), which API §4's type predates; it sets `workspace.defaults.voiceGender` beside `language`. |
 | 11 Nov 2026 | "New video" goes to `/projects/new` (not in the route map) until F14 makes it create the project and open `/projects/[id]/idea`. Sign out lives in Settings, as in the MobileSettings design. |
@@ -249,3 +282,8 @@ Decisions already made, newest first. Details are in the docs.
 - **Shell details waiting on later features.** The Posts count badge (F28), the notifications bell in the top bar (F31), and "Listen to samples" under Default narrator (voice previews, F20) are left out until their data exists.
 - **Next.js dev tools button.** In `pnpm dev` it sits in a screen corner and can cover a tab-bar tab at phone width; production has no such button. The shell e2e tests hide it (`hideNextDevTools` in `e2e/helpers.ts`).
 - **Restart `pnpm dev` after adding route folders.** The running dev server missed the new `app/(app)/projects/` folders (404 in dev, 200 in a production build) until it was restarted.
+- **Projects API: parts waiting on later features.** `DELETE /projects/{id}/permanent` (returns a job) and cancelling a running job on delete come with jobs (F11). Draft `issues` and `narrationHash`-based timing checks come with the VideoSpec (F16, F20); until then the draft is checked at the top level and timing is kept by matching narration text. Moderation is a stub that allows everything (F13). Summary fields `thumbnail`, `lastExport`, `nextPost` and detail `audio` are empty until F12, F26 and F28. A voice change in PATCH updates gender and speed in the draft; the ElevenLabs `voiceId` follows with narration (F20).
+- **Library search is a regex.** `q` matches title and topic with a case-insensitive regex, which scans the workspace's projects; fine for V1 sizes. Switch to the Atlas Search index `projects_search` on Atlas.
+- **New indexes before new code.** Running the e2e tests before `pnpm db:migrate` created duplicate idempotency rows, which then blocked the unique index (16 local test rows were cleared). The deploy job must run `db:migrate` before the new app goes live (DB §13 already says so).
+- **Dev-only warning on the in-app 404.** In `pnpm dev`, a 404 inside the app logs React's "Encountered a script tag while rendering React component" (the theme script, when Next renders the root layout again). The theme is correct and a production build doesn't log it.
+- **No CSS fallback for the theme.** `tokens.css` (generated by the design export) defaults to light and has no `prefers-color-scheme` rule, so if the inline theme script were blocked, a dark-system user would see light. A fallback would have to repeat every dark token value in the app's CSS; better added to the design export itself.

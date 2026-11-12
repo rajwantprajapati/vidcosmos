@@ -257,6 +257,20 @@ export const indexCatalogue: readonly IndexSpec[] = [
     serves: "Keep 2 years",
   },
 
+  // idempotency_keys (API §1)
+  {
+    collection: "idempotency_keys",
+    keys: { workspaceId: 1, key: 1 },
+    options: { unique: true },
+    serves: "Replaying a request by its Idempotency-Key",
+  },
+  {
+    collection: "idempotency_keys",
+    keys: { expiresAt: 1 },
+    options: { expireAfterSeconds: 0 },
+    serves: "Keys last 24 hours",
+  },
+
   // Better Auth collections (DB §3)
   {
     collection: "user",
