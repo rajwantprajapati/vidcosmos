@@ -14,6 +14,27 @@ export {
   withIdempotency,
 } from "./idempotency.ts";
 export {
+  advanceJob,
+  cancelRequested,
+  claimStartResend,
+  createJob,
+  finishJob,
+  getJob,
+  JobError,
+  type JobErrorCode,
+  type JobOutcome,
+  type JobProgress,
+  type JobRef,
+  jobRetentionDays,
+  listJobs,
+  type NewJob,
+  parseJobId,
+  requestCancel,
+  retryJob,
+  startJob,
+  startResendMs,
+} from "./jobs.ts";
+export {
   activeJobs,
   countProjects,
   createProject,

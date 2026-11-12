@@ -25,6 +25,7 @@
     "@vidcosmos/video": "workspace:*",
     "better-auth": "1.7.20",
     "clsx": "2.1.1",
+    "inngest": "4.26.2",
     "lucide-react": "1.72.0",
     "next": "16.4.6",
     "react": "19.3.1",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
+    "@inngest/test": "1.0.0",
     "@playwright/test": "1.65.0",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",

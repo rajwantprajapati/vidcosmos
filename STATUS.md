@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F11 Jobs and background functions** (next)
+Last updated: 12 Nov 2026 · Current focus: **F11 Jobs and background functions** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -12,13 +12,13 @@ This file is the single place that says where the build stands. Update it at the
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
-| M2 Create flow | 0 | 7 |
+| M2 Create flow | 1 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **10** | **36** |
+| **Total** | **11** | **36** |
 
 ## Features
 
@@ -34,7 +34,7 @@ This file is the single place that says where the build stands. Update it at the
 | F08 | Projects API | M1 | F05, F06 | Done | 12 Nov 2026 | `/api/v1/projects`; `packages/db/src/projects.ts` |
 | F09 | Library screen | M1 | F07, F08 | Done | 12 Nov 2026 | `/library`: create, search, filters, rename, duplicate, Trash |
 | F10 | Usage and limits (read side) | M1 | F08 | Done | 12 Nov 2026 | `GET /me`, `/usage`; meters; limit state |
-| F11 | Jobs and background functions | M2 | F08 | Not started | | |
+| F11 | Jobs and background functions | M2 | F08 | Done | 12 Nov 2026 | Inngest at `/api/inngest`; `/api/v1/jobs`; `packages/db/src/jobs.ts`; `/dev/jobs` |
 | F12 | Storage (Cloudflare R2) | M2 | F02 | Not started | | |
 | F13 | LLM providers and moderation | M2 | F11 | Not started | | |
 | F14 | New video: idea and angles | M2 | F09, F13 | Not started | | Needs decision D1 |
@@ -64,6 +64,49 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F11 Jobs and background functions · 12 Nov 2026
+
+- `pnpm db:migrate` (jobs validator gains `demo`), `pnpm typecheck`, `pnpm lint`, `pnpm test` (db 160, web 203, spec 25, config 19, integrations 5) and `pnpm build` pass. `pnpm test:e2e`: 159 passed, 50 skipped; three `shell.spec.ts` 404 checks timed out once under full parallel load and pass when run again (16 of 16).
+- Tests added:
+  - `packages/db/src/jobs.test.ts` (15, in-memory MongoDB):
+    - one running job per project, with the holder's id;
+    - two parallel starts, one gets through;
+    - a stale claim from a finished job is cleared;
+    - the concurrent-jobs limit, with nothing kept;
+    - another workspace gets 404;
+    - progress never goes down, and step writes are refused after a cancel;
+    - finishing frees the project but never a newer job's claim;
+    - cancel, for queued and for running jobs, and `NOT_CANCELLABLE`;
+    - retry and `NOT_RETRYABLE`;
+    - the list, its filters and its cursor.
+  - `apps/web/inngest/functions/demo-job.test.ts` (8, `@inngest/test`):
+    - a full run through every stage;
+    - cancel stops at the next step and ends `cancelled`;
+    - a job cancelled before it started doesn't run;
+    - retry: a step failing on attempt 0 succeeds on attempt 1;
+    - a step that keeps failing fails every attempt;
+    - `onFailure` marks the job failed and retryable;
+    - the `inngest/function.cancelled` handler ends the job, and ignores other runs.
+  - `components/jobs/job-progress.test.tsx` (5): polls every 1.5 s with the ETag (304 keeps the job), stops when finished, Cancel shows "Stopping…", Try again only for retryable errors.
+  - `e2e/jobs.spec.ts`, with the real Inngest Dev Server started by the Playwright config:
+    - UI flow: the demo job reaches "Recording narration"; a reload shows the same job id still running; a second start shows "Something is already running on this video."; Cancel ends it `cancelled` below 100%; a new run on the freed video reaches `succeeded` at 100%; axe is clean.
+    - API: `202` with Location; `409 JOB_IN_PROGRESS` with `jobId`; ETag `304`; `?active=true`; another workspace gets 404 on read and cancel; `409 NOT_CANCELLABLE` and `NOT_RETRYABLE` after a cancel.
+    - Phone: no sideways scroll, axe clean.
+- Fixed after manual QA (another session):
+  - **Stuck jobs.** A job whose start event couldn't reach Inngest stayed queued and blocked its video for good, because a replay of the request didn't send the event again. Now `GET /jobs/{id}`, `GET /jobs` and a replayed start or retry send it again for a job that is still queued and never started, at most every 10 s (`claimStartResend`). The event id makes that safe.
+  - **Progress card.** A failed bar is red and a cancelled one grey; the badge, the icon and the words still say the status.
+  - **Focus.** After Cancel, focus moves to the job's title; after Try again, to the new job's title.
+  - **Repeated text.** A finished job's label says where it got to ("Stopped during: …") instead of repeating the badge. The extra screen-reader copy is gone: the bar's label is the live region.
+  - **Dev Server address.** `pnpm inngest` and the Playwright config bind the Inngest Dev Server to 127.0.0.1, so its dashboard isn't reachable from the LAN.
+  - **Tests added:**
+    - `claimStartResend` (2 database tests): one re-send per interval, even with two pollers at once, and none once started or cancelled;
+    - `lib/jobs.test.ts` (4): a failed send keeps the job queued; a re-send uses the same event id; a replay re-sends;
+    - ProgressBar tone and live label (2);
+    - JobProgress text, bar colour and focus (2);
+    - the e2e flow checks focus after Cancel.
+  - **Live check:** a job started while Inngest was down was queued, then ran to `succeeded` once the Dev Server started and the job was polled.
+- Screenshots of `/dev/jobs` at 1440×900 and 390×844 while a job runs. There's no design screen for this development page; the progress row (stage label, percentage, teal bar, Cancel as a text button) follows the Generating design.
 
 ### F10 Usage and limits (read side) · 12 Nov 2026
 
@@ -256,6 +299,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 12 Nov 2026 | Jobs (F11): `POST /jobs/{id}/retry` on a job that isn't failed or partial with a retryable error returns `409 NOT_RETRYABLE` with `{ status }` (API §11 didn't name a code). The cancel event is `job/cancel.requested` (API §11) rather than SDD §5's `job/cancelled`. A queued job is cancelled at once. A start event's id is `job-<jobId>`, so sending it twice runs once. The demo job (`type: demo`) and `POST /api/dev/jobs/demo` exist only for development; both 404 in production. |
 | 12 Nov 2026 | At the monthly limit, the Library's Generate video is turned off with the reset date (F10 scope, PRD FR-10.5), although creating a draft doesn't use a video; existing videos stay open to edit, export and post. Reserved videos count as taken. |
 | 12 Nov 2026 | D5: a Hindi topic in the Library prompt box doesn't switch the narration language. New videos use the workspace's default language (English unless the user chose Hindi in onboarding or settings); step 1's Language control changes it per video. Found in manual QA of F09. |
 | 12 Nov 2026 | D1: the video type chosen in step 1 is stored as `idea.videoType` (`explainer`, `product_ad`, `story`, `travel`, `quote`, `music_visual`; missing means `explainer`), sent on create and PATCH and returned on project summaries and details; `idea.goal` stays for explain/teach/summarise/promote. DB §5 and API §3, §5 updated. F14 uses it in the LLM prompts. |
@@ -297,6 +341,16 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **Jobs: parts waiting on later features (F11).**
+  - `GET /jobs/{id}/events` (Server-Sent Events) isn't built; the client polls, as SDD §4 describes.
+  - Polling is a small `useJob` hook rather than TanStack Query.
+  - Per-type checks on retry (lease, `rev`, limits) and usage reservation arrive with each job type (F13 onwards).
+  - The stuck-job sweeper is F35. Until then, a job whose start event never reached Inngest runs as soon as someone reads the job (polling, the active list, a replay) once Inngest is back. If nobody does, it waits.
+  - Cancelling `publish` once uploading is refused only from F28.
+  - `DELETE /projects/{id}/permanent` and cancel-on-delete still need doing.
+  - `/dev/jobs` lists only running jobs, so after a reload a failed job and its Try again are gone. F20's generating screen must show the project's latest job when it failed or was cancelled, with Try again (found in QA of F11).
+- **Run the Inngest Dev Server for jobs:** `pnpm inngest` (dashboard on http://127.0.0.1:8288, this machine only) next to `pnpm dev`. Without it, jobs stay queued. `pnpm test:e2e` starts it.
 
 - **TypeScript 6.0, not 7.** `typescript-eslint` 8.72 supports TypeScript `<6.1`, so the repo pins `typescript@6.0.3`. Move to 7 when typescript-eslint supports it.
 - **ESLint 9.** ESLint 9.39 is marked deprecated in favour of 10; kept on 9 because `eslint-config-next` 16 pulls in React plugins that are tested on 9. Revisit with the next Next.js upgrade.
