@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Icon, PromptComposer } from "@/components/ui";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
+import { LimitNotice, type VideoLimit } from "./limit-notice";
 
 const typeByLabel = Object.fromEntries(
   Object.entries(videoTypeLabels).map(([type, label]) => [label, type]),
@@ -21,7 +22,10 @@ export function NewVideoComposer({
   value,
   onValueChange,
   id,
+  limit,
 }: {
+  /** Set when the monthly allowance is used up: Generate is off. */
+  limit?: VideoLimit;
   defaultFormat: string;
   placeholder?: string;
   value: string;
@@ -38,6 +42,8 @@ export function NewVideoComposer({
   const setError = (message?: string) => setFailure(message ? { message, text: value } : undefined);
 
   async function generate() {
+    // The button is off at the limit; this also stops a submit from anywhere else.
+    if (limit) return;
     const topic = value.trim();
     if (topic.length < 3) {
       setError("Describe your video in a few words.");
@@ -76,11 +82,18 @@ export function NewVideoComposer({
       onGenerate={generate}
       loading={busy}
       error={error}
+      generateDisabled={Boolean(limit)}
     />
   );
 }
 
-export function NewVideoSection({ defaultFormat }: { defaultFormat: string }) {
+export function NewVideoSection({
+  defaultFormat,
+  limit,
+}: {
+  defaultFormat: string;
+  limit?: VideoLimit;
+}) {
   const [value, setValue] = useState("");
   return (
     <>
@@ -88,16 +101,22 @@ export function NewVideoSection({ defaultFormat }: { defaultFormat: string }) {
         <h2 id="start-h" className="m-0 font-display text-[20px] leading-[30px] font-extrabold">
           Start a new video
         </h2>
+        {limit ? <LimitNotice limit={limit} /> : null}
         <NewVideoComposer
+          limit={limit}
           id="lib-prompt"
           defaultFormat={defaultFormat}
           value={value}
           onValueChange={setValue}
         />
       </section>
+      {limit ? <LimitNotice limit={limit} className="md:hidden" /> : null}
       <Link
         href="/projects/new"
-        className="flex flex-col gap-2.5 rounded-[16px] border border-line bg-surface p-3.5 text-ink no-underline md:hidden"
+        aria-disabled={limit ? true : undefined}
+        tabIndex={limit ? -1 : undefined}
+        onClick={limit ? (event) => event.preventDefault() : undefined}
+        className={`flex flex-col gap-2.5 rounded-[16px] border border-line bg-surface p-3.5 text-ink no-underline md:hidden ${limit ? "pointer-events-none opacity-45" : ""}`}
       >
         <span className="text-[13px] leading-4 font-semibold">Start a new video</span>
         <span className="flex items-center gap-2.5">

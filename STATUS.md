@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F10 Usage and limits (read side)** (next)
+Last updated: 11 Nov 2026 · Current focus: **F11 Jobs and background functions** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -11,14 +11,14 @@ This file is the single place that says where the build stands. Update it at the
 | Milestone | Done | Total |
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
-| M1 Projects and library | 2 | 3 |
+| M1 Projects and library | 3 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **9** | **36** |
+| **Total** | **10** | **36** |
 
 ## Features
 
@@ -33,7 +33,7 @@ This file is the single place that says where the build stands. Update it at the
 | F07 | App shell and onboarding | M0 | F06 | Done | 11 Nov 2026 | Sidebar, tab bar, placeholders, `/onboarding` |
 | F08 | Projects API | M1 | F05, F06 | Done | 12 Nov 2026 | `/api/v1/projects`; `packages/db/src/projects.ts` |
 | F09 | Library screen | M1 | F07, F08 | Done | 12 Nov 2026 | `/library`: create, search, filters, rename, duplicate, Trash |
-| F10 | Usage and limits (read side) | M1 | F08 | Not started | | |
+| F10 | Usage and limits (read side) | M1 | F08 | Done | 12 Nov 2026 | `GET /me`, `/usage`; meters; limit state |
 | F11 | Jobs and background functions | M2 | F08 | Not started | | |
 | F12 | Storage (Cloudflare R2) | M2 | F02 | Not started | | |
 | F13 | LLM providers and moderation | M2 | F11 | Not started | | |
@@ -64,6 +64,22 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F10 Usage and limits (read side) · 12 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (db 145, web 190, config 19, spec 25, integrations 5) and `pnpm build` pass; `pnpm test:e2e` 159 passed, 47 skipped.
+- Unit tests for the IST month (`packages/spec/src/api/me.test.ts`): the last second of November in IST is still November; midnight IST on 1 December starts December at zero, with the next reset on 31 Dec 18:30 UTC; 1 January 2027 rolls the year over; counters from an earlier month read as zero. `videoAllowance`: reserved videos count as taken, near from 80%, reached at the limit, never negative. Reset date in the user's time zone: "1 Dec" in India, "30 Nov" in New York (`apps/web/lib/usage.test.ts`).
+- Database tests (`packages/db/src/usage.test.ts`): only this workspace's queued and running jobs count as active; `readUsage` reads this month's counters, exports and per-video limits.
+- `apps/web/e2e/usage.spec.ts` (account set-up through `e2e/support/set-videos-used.ts`, which writes to the development database):
+  - `GET /api/v1/usage` and `/me` match the shared schemas and agree (7 used, 1 reserved, 20 max; no active jobs);
+  - Settings' Usage card shows "of 20 · resets <date>" with the progress bar at 12, exports today, and the per-video limits; the sidebar meter agrees (desktop);
+  - at the limit (19 used + 1 reserved), the Library says "You’ve used all 20 videos this month. You can make new videos again on <date>.", Generate video is disabled (desktop) and the "Start a new video" card is disabled (phone); existing videos still open; back under the limit, Generate works again;
+  - a new account at its limit sees the message in the empty state.
+- Fixed after manual QA (another session):
+  - **Meters and notice disagreed:** the meters showed only used videos while the notice also counted reserved ones (19 + 1 generating read "19 of 20" beside "You’ve used all 20"). The sidebar and Settings meters now show used plus reserved, so the number, the warning colour (from 80%) and "reached" agree; e2e checks 19 + 1 (both meters at 20) and 15 + 1 (warning at 16).
+  - **Exports reset outside India:** "resets midnight" is now the user's local time of midnight IST ("1:30 pm" in New York); unit test for India, New York and London.
+  - **Smaller:** the New video page also shows the limit (the create step itself is F14); the progress bar's value never goes above its maximum ("25 of 20" stays as text); a workspace with a limit of 0 reads "New videos are turned off for this workspace." with no reset date (render test; the first attempt at this edit didn't apply and QA caught it); the composer refuses a submit at the limit even if one is forced.
+- Screenshots: Settings' Usage card at 1440 next to the card in `Settings.png` (same width, 306 vs 312 px tall, same text and meters; the list bullets were missing and are fixed); the limit state on the Library at 1440 and 390 px (no design: the warning uses the warning colour with an icon and words).
 
 ### F09 Library screen · 12 Nov 2026
 
@@ -240,6 +256,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 12 Nov 2026 | At the monthly limit, the Library's Generate video is turned off with the reset date (F10 scope, PRD FR-10.5), although creating a draft doesn't use a video; existing videos stay open to edit, export and post. Reserved videos count as taken. |
 | 12 Nov 2026 | D5: a Hindi topic in the Library prompt box doesn't switch the narration language. New videos use the workspace's default language (English unless the user chose Hindi in onboarding or settings); step 1's Language control changes it per video. Found in manual QA of F09. |
 | 12 Nov 2026 | D1: the video type chosen in step 1 is stored as `idea.videoType` (`explainer`, `product_ad`, `story`, `travel`, `quote`, `music_visual`; missing means `explainer`), sent on create and PATCH and returned on project summaries and details; `idea.goal` stays for explain/teach/summarise/promote. DB §5 and API §3, §5 updated. F14 uses it in the LLM prompts. |
 | 12 Nov 2026 | D4: `PATCH /projects/{id}` may move `wizardStep` back freely, but forward only to a step whose input exists (angles: some angles; script: a script; storyboard: a draft spec; video: a saved version), else `409 STAGE_INVALID` with `details.needs` (`angles`, `script`, `storyboard` or `version`). Found in manual QA of F08. |
@@ -319,3 +336,7 @@ Decisions already made, newest first. Details are in the docs.
 - **No designs for the card menu, rename dialog, Trash view or toasts.** Built from the design-system components; check them with the designer.
 - **If MongoDB stops, restart `pnpm dev` too.** When the local MongoDB stopped (the disk filled up on 12 Nov), the dev server's cached client closed (`MongoTopologyClosedError`) and kept failing after MongoDB came back, until `pnpm dev` was restarted. Local MongoDB isn't a Homebrew service; `--fork` doesn't work on macOS, so start it with `nohup mongod --config /opt/homebrew/etc/mongod.conf > /dev/null 2>&1 &`. Production (Atlas) reconnects on its own; a reconnecting client for development can wait.
 - **Turborepo cache: fixed on 12 Nov.** Each `pnpm build` used to save about 1.2 GB to `.turbo/cache`, because the build outputs in `turbo.json` included `.next/dev`, the running dev server's folder (Next.js 16). That filled the disk. `.next/dev` is now excluded, so a build saves about 7 MB and a cache restore no longer writes old files into the running dev server's folder. The cache can still be deleted at any time.
+- **Usage: write side comes with generation.** Reserving, committing and releasing videos, the conditional month rollover in the database, the daily export counter and the stuck-job release arrive with F20 (and F26 for exports). Until then the counters only change by hand (as the usage e2e tests do).
+- **Settings shows only Usage and Account.** The rest of the Settings design (account form, video defaults, Instagram, notifications, delete) is F30.
+- **F14 must refuse at the limit.** The create step (`/projects/new`, step 1) has to keep refusing new videos at the monthly limit with the reset date, as the Library and the New video placeholder do now (found in QA of F10).
+- **`PATCH /me` is F30.** API §4 lists it (name, time zone, UI language); it returns 405 until the Settings account form arrives.

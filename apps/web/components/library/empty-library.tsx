@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { buttonClassName, Chip } from "@/components/ui";
+import { LimitNotice, type VideoLimit } from "./limit-notice";
 import { NewVideoComposer } from "./new-video";
 
 const ideas = [
@@ -13,7 +14,13 @@ const ideas = [
   "UPI पेमेंट कैसे काम करता है",
 ];
 
-export function EmptyLibrary({ defaultFormat }: { defaultFormat: string }) {
+export function EmptyLibrary({
+  defaultFormat,
+  limit,
+}: {
+  defaultFormat: string;
+  limit?: VideoLimit;
+}) {
   const [value, setValue] = useState("");
   return (
     <section
@@ -46,8 +53,10 @@ export function EmptyLibrary({ defaultFormat }: { defaultFormat: string }) {
         Describe it in a sentence. In a few minutes you’ll have a narrated, animated video to watch,
         change by chatting, and post.
       </p>
+      {limit ? <LimitNotice limit={limit} className="w-full max-w-[640px] text-left" /> : null}
       <div className="hidden w-full max-w-[640px] text-left md:block">
         <NewVideoComposer
+          limit={limit}
           id="lib-first"
           defaultFormat={defaultFormat}
           placeholder="A 60-second explainer on…"
@@ -70,12 +79,14 @@ export function EmptyLibrary({ defaultFormat }: { defaultFormat: string }) {
           </Chip>
         ))}
       </div>
-      <Link
-        href="/projects/new"
-        className={buttonClassName({ size: "lg", className: "md:hidden" })}
-      >
-        Start a new video
-      </Link>
+      {limit ? null : (
+        <Link
+          href="/projects/new"
+          className={buttonClassName({ size: "lg", className: "md:hidden" })}
+        >
+          Start a new video
+        </Link>
+      )}
     </section>
   );
 }

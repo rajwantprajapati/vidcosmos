@@ -1,7 +1,7 @@
 // Builds the `Me` response (API §4) for the signed-in user.
 import "server-only";
 import type { AppUserFields } from "@vidcosmos/db";
-import { type MeDto, toOnboardingDto, toUsageDto, toWorkspaceDto } from "@vidcosmos/spec/api";
+import { type MeDto, toOnboardingDto, toWorkspaceDto, type UsageDto } from "@vidcosmos/spec/api";
 import type { Workspace } from "@vidcosmos/spec/collections";
 import type { Session } from "./auth";
 
@@ -9,7 +9,7 @@ export function toMeDto(
   session: Session,
   fields: AppUserFields,
   workspace: Workspace,
-  now = new Date(),
+  usage: UsageDto,
 ): MeDto {
   const { user } = session;
   return {
@@ -26,7 +26,7 @@ export function toMeDto(
     },
     onboarding: toOnboardingDto(fields.onboarding),
     workspace: toWorkspaceDto(workspace),
-    usage: toUsageDto(workspace, now),
+    usage,
     // Instagram connections arrive in F27.
     instagram: null,
   };

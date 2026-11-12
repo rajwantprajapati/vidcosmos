@@ -143,6 +143,20 @@ export function toUsageDto(workspace: Workspace, now: Date, activeJobs = 0): Usa
   };
 }
 
+/**
+ * What the monthly video allowance allows now. Reserved videos count: they are generations in
+ * flight that will use a video if they succeed (DB §4).
+ */
+export function videoAllowance(usage: Pick<UsageDto, "videos">) {
+  const taken = usage.videos.used + usage.videos.reserved;
+  return {
+    remaining: Math.max(0, usage.videos.max - taken),
+    reached: taken >= usage.videos.max,
+    /** 80% or more used: the meter turns warning. */
+    near: usage.videos.max > 0 && taken / usage.videos.max >= 0.8,
+  };
+}
+
 export function toOnboardingDto(onboarding: Onboarding | null | undefined) {
   if (!onboarding?.completedAt) return null;
   return {

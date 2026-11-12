@@ -14,6 +14,7 @@ import { Toaster } from "@/components/toaster";
 import { onboardingPath, requestPathHeader } from "@/lib/auth-routes";
 import { getDb } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { usageView } from "@/lib/usage";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user, workspace } = await requireSession("/library");
@@ -24,18 +25,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const usage = toUsageDto(workspace, new Date());
   // Shown in the user's own time zone; the reset itself happens at midnight IST.
-  const resetsOn = new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "short",
-    timeZone: user.timeZone,
-  }).format(new Date(usage.period.resetsAt));
+  const { taken, resetsOn } = usageView(usage, user.timeZone);
   const initials = initialsOf(user.name);
 
   return (
     <div className="flex min-h-dvh bg-bg font-sans text-ink">
       <AppSidebar
         user={{ firstName: firstNameOf(user.name), initials, plan: "Free beta" }}
-        usage={{ used: usage.videos.used, max: usage.videos.max, resetsOn }}
+        usage={{ used: taken, max: usage.videos.max, resetsOn }}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar initials={initials} />

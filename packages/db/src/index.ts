@@ -53,6 +53,7 @@ export {
   WorkspaceScopeError,
 } from "./scoped.ts";
 export { toMongoJsonSchema, validatorFor } from "./validators.ts";
+export { activeJobCount, readUsage } from "./usage.ts";
 export {
   type AppUserFields,
   needsOnboarding,
