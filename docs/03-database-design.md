@@ -289,6 +289,8 @@ type Project = {
 
   idea: {
     topic: string;                     // 3-500 chars
+    videoType?: 'explainer' | 'product_ad' | 'story' | 'travel' | 'quote' | 'music_visual';
+                                       // chosen in step 1 (decision D1); missing = 'explainer'
     notes?: string;                    // up to 5,000 chars of the user's own material
     goal?: 'explain' | 'teach' | 'summarise' | 'promote';
     angles: Array<{ id: string; title: string; hook: string; outline: string[] }>;  // 3-5 from the ideas step

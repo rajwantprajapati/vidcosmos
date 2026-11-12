@@ -13,6 +13,7 @@ import { ObjectId } from "mongodb";
 import { beforeAll, describe, expect, it } from "vitest";
 import { migrate } from "./migrate.ts";
 import {
+  countProjects,
   createProject,
   deleteProject,
   duplicateProject,
@@ -117,6 +118,13 @@ describe("create and read", () => {
       draft: { spec: null, rev: 0 },
       settings: { format: "16:9", language: "en", voiceGender: "female", voiceSpeed: 1 },
     });
+  });
+
+  it("a multi-line topic gives a one-line title, and the topic keeps its lines", async () => {
+    const owner = await newOwner();
+    const project = await create(owner, "How UPI\nmoves money\twith three hops");
+    expect(project.title).toBe("How UPI moves money with three hops");
+    expect(project.idea.topic).toBe("How UPI\nmoves money\twith three hops");
   });
 
   it("maps to the API types without internal fields", async () => {
@@ -614,5 +622,60 @@ describe("list filters", () => {
     await deleteProject(db(), owner, extra._id);
     expect(await titles({ trash: "true" })).toEqual(["Monday motivation"]);
     expect(await titles({})).not.toContain("Monday motivation");
+  });
+});
+
+describe("video type (D1)", () => {
+  it("is saved on create, defaults to explainer and can be changed", async () => {
+    const owner = await newOwner();
+    const ad = await create(owner, "Ember and Wick candle launch", { videoType: "product_ad" });
+    expect(ad.idea.videoType).toBe("product_ad");
+    expect(toProjectSummaryDto(ad).videoType).toBe("product_ad");
+    const plain = await create(owner);
+    expect(plain.idea.videoType).toBe("explainer");
+    const changed = await updateProject(db(), owner, plain._id, { idea: { videoType: "story" } });
+    expect(changed.idea.videoType).toBe("story");
+  });
+
+  it("projects made before D1 read as explainers", async () => {
+    const owner = await newOwner();
+    const project = await create(owner);
+    await workspaceCollection(db(), "projects").updateOne(
+      { workspaceId: owner.workspaceId, _id: project._id },
+      { $unset: { "idea.videoType": "" } },
+    );
+    const old = await getProject(db(), owner.workspaceId, project._id);
+    expect(toProjectSummaryDto(old).videoType).toBe("explainer");
+  });
+});
+
+describe("countProjects", () => {
+  it("counts each stage, all and Trash, for this workspace only", async () => {
+    const owner = await newOwner();
+    const other = await newOwner("Ravi");
+    await create(other);
+    const projects = [];
+    for (const topic of ["One video", "Two video", "Three video", "Four video"]) {
+      projects.push(await create(owner, topic));
+    }
+    const collection = workspaceCollection(db(), "projects");
+    await collection.updateOne(
+      { workspaceId: owner.workspaceId, _id: projects[0]!._id },
+      { $set: { stage: "ready" } },
+    );
+    await collection.updateOne(
+      { workspaceId: owner.workspaceId, _id: projects[1]!._id },
+      { $set: { stage: "failed" } },
+    );
+    await deleteProject(db(), owner, projects[2]!._id);
+    expect(await countProjects(db(), owner.workspaceId)).toEqual({
+      all: 3,
+      trash: 1,
+      draft: 1,
+      generating: 0,
+      ready: 1,
+      revising: 0,
+      failed: 1,
+    });
   });
 });

@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 11 Nov 2026 · Current focus: **F09 Library screen** (next)
+Last updated: 11 Nov 2026 · Current focus: **F10 Usage and limits (read side)** (next)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -11,14 +11,14 @@ This file is the single place that says where the build stands. Update it at the
 | Milestone | Done | Total |
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
-| M1 Projects and library | 1 | 3 |
+| M1 Projects and library | 2 | 3 |
 | M2 Create flow | 0 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **8** | **36** |
+| **Total** | **9** | **36** |
 
 ## Features
 
@@ -32,7 +32,7 @@ This file is the single place that says where the build stands. Update it at the
 | F06 | Sign up, sign in and workspaces | M0 | F04, F05 | Done | 11 Nov 2026 | Better Auth; `/sign-in`, `/sign-up`, `/verify`, `/reset-password` |
 | F07 | App shell and onboarding | M0 | F06 | Done | 11 Nov 2026 | Sidebar, tab bar, placeholders, `/onboarding` |
 | F08 | Projects API | M1 | F05, F06 | Done | 12 Nov 2026 | `/api/v1/projects`; `packages/db/src/projects.ts` |
-| F09 | Library screen | M1 | F07, F08 | Not started | | |
+| F09 | Library screen | M1 | F07, F08 | Done | 12 Nov 2026 | `/library`: create, search, filters, rename, duplicate, Trash |
 | F10 | Usage and limits (read side) | M1 | F08 | Not started | | |
 | F11 | Jobs and background functions | M2 | F08 | Not started | | |
 | F12 | Storage (Cloudflare R2) | M2 | F02 | Not started | | |
@@ -64,6 +64,32 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F09 Library screen · 12 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (db 143, web 183, config 19, spec 20, integrations 5) and `pnpm build` pass; `pnpm test:e2e` 148 passed, 46 skipped.
+- `apps/web/e2e/library.spec.ts`:
+  - **Empty state:** a new account sees "Make your first video" and no filters; axe finds no violations.
+  - **Create (desktop):** a suggestion fills the prompt; type "Product ad" and format 16:9 are kept; Generate video opens `/projects/[id]/idea`; the card shows the type and "Draft · idea"; an empty prompt shows "Describe your video in a few words." and focuses the field; the library's own prompt box creates a second video.
+  - **Card actions:** rename through the dialog; duplicate ("(copy)"); Move to Trash with the "Moved to Trash" message and Undo; delete again, open Trash, Restore, back to the library.
+  - **Filters and search:** search by title and topic changes the grid and the address; "No videos match"; "Show all videos" clears the search (the box follows the address); chips show "All 3, Drafts 3, Ready 0, Failed 0", "Ready" shows the empty message and is marked current, "Drafts" and "All" bring the videos back; axe finds no violations.
+  - **Phone:** no prompt box, the "Start a new video" card opens `/projects/new`; the search spans the width; cards sit two to a row; no sideways scroll.
+- Unit tests: the card for each stage and wizard step (where it opens, the badge, "Generating 62%" and "62%" on phones, the length from scene timings, Trash, pre-D1 projects as Explainer) in `apps/web/lib/library.test.ts`; `idea.videoType` and `countProjects` in `packages/db/src/projects.test.ts`.
+- Screenshots: a seeded account with the design's seven videos (titles, types, themes, stages) against `Library.png` (1440, full page, 1420 vs 1421 px tall) 2.3% different, and `MobileLibrary.png` (390×844 at 2×) 11% different. Differences:
+  - no notifications bell (F31) and no Scheduled chip (F28);
+  - "Ready 4" instead of 3, because the design's scheduled and published cards are ready projects until posts exist;
+  - the "More actions" button beside each card's title, which the design doesn't show;
+  - on phones, the four chips fit on one line where the design's five squeeze onto two, so the cards sit 20 px higher.
+  Fixed from the comparison: the sidebar column now runs the full page height, the phone search spans the width, and the generating badge reads "62%" on phones.
+- Fixed on the way: the search box navigated once on mount in development (React runs effects twice), which could cancel the navigation to step 1 after Generate video.
+- Fixed after manual QA (another session):
+  - **Menu button misplaced in mixed-format rows:** grid rows stretched every card to the tallest, and the "More actions" button sat at the row's bottom; cards no longer stretch. e2e check with 9:16, 16:9 and 1:1 cards: each button is centred on its own title (it was 160 px off without the fix).
+  - **NUL in a search was a 500** (MongoDB refuses a NUL in a regex), and a NUL in a topic was saved. A shared plain-text check (`packages/spec/src/api/text.ts`) now refuses control characters in topics, notes, titles, scripts and the onboarding topic area (`400 VALIDATION_FAILED`; tab and newline allowed in multi-line text), and search drops them. Unit tests, plus e2e checks on the API.
+  - **Long titles** are clamped on the thumbnail to fit its shape (6 lines on 9:16, 3 on 1:1, 2 on 16:9) and long unbroken words wrap; **Devanagari titles** are marked `lang="hi"` and use Noto Sans Devanagari.
+  - **Focus:** back on the card's "More actions" button after Rename (save or cancel); on Undo after Move to Trash; on the next Restore, or "Back to your library", after Restore. Restore buttons are named "Restore <title>".
+  - **Search** shows "1 video matches “upi”" (the chips keep counting the whole library, as in the design); a suggestion clears the prompt's error.
+  - **Re-test follow-ups:** the "Moved to Trash" message no longer closes on its timer while it has keyboard focus or the pointer is on it (WCAG 2.2.1), and when it closes with focus inside, focus moves to the neighbouring card's "More actions" button (or the page heading) instead of the page body; e2e check waits past the 10 s timer with focus on Undo, then closes the message from the keyboard. Thumbnail titles wrap whole words (with hyphens) and only break overlong words; a gap keeps the title off the colour tiles on small 16:9 cards; a title made from a multi-line topic is one line; C1 control characters (U+0080 to U+009F) are refused too. The gap first squeezed two-line titles on 16:9 phone cards (a 97 px thumbnail) to 1.67 lines, cutting the second line; 16:9 titles now get one line under 768 px and two above, and the title never shrinks below whole lines. The shape test checks every title is a whole number of lines, at 1440 and 390 px (it failed with 1.67 before the fix).
+  - **Card links read their title twice** (from F04's VideoCard): the thumbnail's headline was inside the link. The thumbnail is now hidden from assistive tech (it pictures the video), and the length moved into the caption as visually hidden text, so a card reads "How UPI moves money, Explainer, 0:58 long, Generating 62%". Render test on the accessible name, and an e2e check that every library card link has its title once (it found it twice without the fix).
 
 ### F08 Projects API · 12 Nov 2026
 
@@ -205,7 +231,6 @@ For each finished feature, list how it was checked: commands run, tests added, s
 
 | ID | Question | Needed by | Recommendation | Decision |
 | --- | --- | --- | --- | --- |
-| D1 | Where to store the video type chosen in step 1 (explainer, product ad, story, travel, quote, music visual) | F14 | Add `idea.videoType` to the project, the API and the LLM prompts; keep `idea.goal` for explain/teach/summarise/promote | Open |
 | D2 | Captions burned into the video, a separate SRT, or both | F26 | Both: burned in by default (with a "None" caption style to turn off), SRT always available | Open |
 | D3 | Default usage limit for beta (20 videos a month) | F36 | Keep 20; revisit after the first 2 beta weeks | Open |
 
@@ -215,6 +240,8 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 12 Nov 2026 | D5: a Hindi topic in the Library prompt box doesn't switch the narration language. New videos use the workspace's default language (English unless the user chose Hindi in onboarding or settings); step 1's Language control changes it per video. Found in manual QA of F09. |
+| 12 Nov 2026 | D1: the video type chosen in step 1 is stored as `idea.videoType` (`explainer`, `product_ad`, `story`, `travel`, `quote`, `music_visual`; missing means `explainer`), sent on create and PATCH and returned on project summaries and details; `idea.goal` stays for explain/teach/summarise/promote. DB §5 and API §3, §5 updated. F14 uses it in the LLM prompts. |
 | 12 Nov 2026 | D4: `PATCH /projects/{id}` may move `wizardStep` back freely, but forward only to a step whose input exists (angles: some angles; script: a script; storyboard: a draft spec; video: a saved version), else `409 STAGE_INVALID` with `details.needs` (`angles`, `script`, `storyboard` or `version`). Found in manual QA of F08. |
 | 12 Nov 2026 | Idempotency keys for creates are stored in a new `idempotency_keys` collection (24 h TTL, unique per workspace and key); a replay returns the created resource as it is now. A second request while the first is running gets `409 IDEMPOTENCY_IN_PROGRESS` (new code). DB §9 and API §2 updated. |
 | 12 Nov 2026 | The edit lease is held by session id + editor tab id (`X-Editor-Id`). A draft save without the lease is `423 LEASE_HELD` with `heldBy: null` when nobody holds it. PATCH doesn't need the lease, but changes it makes to the draft spec (theme, format, voice) bump `draft.rev`, so an open editor reloads. |
@@ -287,3 +314,8 @@ Decisions already made, newest first. Details are in the docs.
 - **New indexes before new code.** Running the e2e tests before `pnpm db:migrate` created duplicate idempotency rows, which then blocked the unique index (16 local test rows were cleared). The deploy job must run `db:migrate` before the new app goes live (DB §13 already says so).
 - **Dev-only warning on the in-app 404.** In `pnpm dev`, a 404 inside the app logs React's "Encountered a script tag while rendering React component" (the theme script, when Next renders the root layout again). The theme is correct and a production build doesn't log it.
 - **No CSS fallback for the theme.** `tokens.css` (generated by the design export) defaults to light and has no `prefers-color-scheme` rule, so if the inline theme script were blocked, a dark-system user would see light. A fallback would have to repeat every dark token value in the app's CSS; better added to the design export itself.
+- **Library: what waits for later features.** The notifications bell (F31) and the Scheduled chip and post badges (F28) are not shown; real thumbnails (F12) replace the themed placeholders. On phones "Start a new video" opens `/projects/new`, a placeholder until F14. "Show more videos" grows the page by 24 (up to 100) and isn't covered by an e2e test.
+- **Sidebar stays in view.** The design's sidebar scrolls with the page (on a long library the usage meter is at the bottom of the page); ours stays fixed in view, with its column running the full height.
+- **No designs for the card menu, rename dialog, Trash view or toasts.** Built from the design-system components; check them with the designer.
+- **If MongoDB stops, restart `pnpm dev` too.** When the local MongoDB stopped (the disk filled up on 12 Nov), the dev server's cached client closed (`MongoTopologyClosedError`) and kept failing after MongoDB came back, until `pnpm dev` was restarted. Local MongoDB isn't a Homebrew service; `--fork` doesn't work on macOS, so start it with `nohup mongod --config /opt/homebrew/etc/mongod.conf > /dev/null 2>&1 &`. Production (Atlas) reconnects on its own; a reconnecting client for development can wait.
+- **Turborepo cache: fixed on 12 Nov.** Each `pnpm build` used to save about 1.2 GB to `.turbo/cache`, because the build outputs in `turbo.json` included `.next/dev`, the running dev server's folder (Next.js 16). That filled the disk. `.next/dev` is now excluded, so a build saves about 7 MB and a cache restore no longer writes old files into the running dev server's folder. The cache can still be deleted at any time.

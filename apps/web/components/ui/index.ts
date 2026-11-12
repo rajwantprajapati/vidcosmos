@@ -3,7 +3,7 @@ export { Badge, type BadgeProps, type BadgeTone } from "./badge";
 export { Button, buttonClassName, type ButtonProps } from "./button";
 export { Card, type CardProps } from "./card";
 export { ChatMessage, type ChatMessageProps } from "./chat-message";
-export { Chip, type ChipProps } from "./chip";
+export { Chip, chipClassName, type ChipProps } from "./chip";
 export { cn } from "./cn";
 export { Icon, iconNames, type IconName, type IconProps } from "./icon";
 export { Logo, type LogoProps } from "./logo";

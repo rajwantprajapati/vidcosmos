@@ -40,6 +40,8 @@ export type PromptComposerProps = {
   onFormatChange?: (format: string) => void;
   onGenerate?: () => void;
   loading?: boolean;
+  /** Shown under the prompt, which is marked invalid. */
+  error?: string;
   submitLabel?: string;
   className?: string;
 };
@@ -61,6 +63,7 @@ export function PromptComposer({
   onFormatChange,
   onGenerate,
   loading = false,
+  error,
   submitLabel = "Generate video",
   className,
 }: PromptComposerProps) {
@@ -91,6 +94,7 @@ export function PromptComposer({
         value={value}
         onChange={onChange}
         id={id}
+        error={error}
         controlClassName="border-transparent bg-surface-sunken text-[16px] leading-[22px] hover:border-transparent focus:border-brand-text focus:bg-surface"
       />
       <div role="group" aria-label="Video type" className="flex flex-wrap gap-2">

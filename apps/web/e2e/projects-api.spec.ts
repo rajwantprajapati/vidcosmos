@@ -113,6 +113,15 @@ test.describe("projects API", () => {
     expect(noKey.status()).toBe(400);
     expect((await json(noKey)).error.fields[0].path).toBe("Idempotency-Key");
 
+    const nul = await api.send(
+      "POST",
+      "/projects",
+      { topic: "abc\u0000def" },
+      { "Idempotency-Key": key() },
+    );
+    expect(nul.status()).toBe(400);
+    expect((await json(nul)).error.fields[0]).toMatchObject({ path: "topic" });
+
     const short = await api.send(
       "POST",
       "/projects",
@@ -157,6 +166,10 @@ test.describe("projects API", () => {
     const second = await json(await api.get(`/projects?limit=2&cursor=${first.nextCursor}`));
     expect(second.items.map((p: { title: string }) => p.title)).toEqual(["Photosynthesis basics"]);
     expect(second.nextCursor).toBeNull();
+
+    // A NUL in a search is dropped, not a server error.
+    expect((await api.get("/projects?q=ab%00")).status()).toBe(200);
+    expect((await api.get("/projects?q=%00%00")).status()).toBe(400);
 
     const bad = await api.get("/projects?cursor=nope");
     expect(bad.status()).toBe(400);

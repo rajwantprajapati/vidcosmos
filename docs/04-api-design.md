@@ -211,6 +211,7 @@ type JobResult =                       // by job type
 type ProjectSummary = {                // library cards
   id: Id;
   title: string;
+  videoType: VideoType;                // 'explainer' | 'product_ad' | 'story' | 'travel' | 'quote' | 'music_visual' (D1)
   stage: 'draft' | 'generating' | 'ready' | 'revising' | 'failed';
   wizardStep: 'idea' | 'angles' | 'script' | 'storyboard' | 'video';
   language: 'en' | 'hi';
@@ -231,6 +232,7 @@ type ProjectDetail = ProjectSummary & {  // the editor
   settings: ProjectSettings;
   idea: {
     topic: string;
+    videoType: VideoType;
     notes: string | null;
     goal: 'explain' | 'teach' | 'summarise' | 'promote' | null;
     angles: Array<{ id: string; title: string; hook: string; outline: string[] }>;
@@ -394,6 +396,7 @@ GET /api/v1/projects?trash=true
 // POST /projects   (Idempotency-Key required)
 type CreateProject = {
   topic: string;                       // 3-500 chars
+  videoType?: VideoType;               // default 'explainer'; the type chips in the prompt box
   notes?: string;                      // up to 5,000 chars
   goal?: 'explain' | 'teach' | 'summarise' | 'promote';
   settings?: Partial<ProjectSettings>; // missing fields come from workspace defaults
@@ -410,7 +413,7 @@ type UpdateProject = {
   title?: string;                      // 1-100 chars
   wizardStep?: 'idea' | 'angles' | 'script' | 'storyboard' | 'video';
   settings?: Partial<ProjectSettings>;
-  idea?: { topic?: string; notes?: string | null; goal?: string | null; selectedAngleId?: string | null };
+  idea?: { topic?: string; videoType?: VideoType; notes?: string | null; goal?: string | null; selectedAngleId?: string | null };
   script?: { title?: string; hook?: string; text?: string };   // the user's own edits; source becomes 'user' or 'ai_edited'
 };
 ```
