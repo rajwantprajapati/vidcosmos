@@ -362,6 +362,18 @@ export function sampleDocuments(
       ip: "203.0.113.7",
       createdAt: created,
     },
+    idempotency_keys: {
+      _id: new ObjectId(),
+      schemaVersion: 1,
+      workspaceId,
+      key: "7d3c0f0e-2b1a-4f3e-9c55-0d6f1d0f2a12",
+      route: "POST /projects",
+      bodyHash: sha("9"),
+      status: "done",
+      result: { status: 201, resourceId: projectId },
+      createdAt: created,
+      expiresAt: at("2026-11-12T06:30:00Z"),
+    },
     migrations: {
       _id: "9999-sample-migration",
       name: "A sample record",

@@ -45,6 +45,15 @@ test.describe("app shell", () => {
     await expect(page).toHaveURL(/\/library$/);
   });
 
+  test("the 404 keeps a dark theme", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("vc-theme", "dark"));
+    await page.goto("/projects/not-an-id");
+    await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.goto("/library");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
   test("an address that matches nothing gets the same page", async ({ page }) => {
     const response = await page.goto("/nonexistent");
     expect(response?.status()).toBe(404);

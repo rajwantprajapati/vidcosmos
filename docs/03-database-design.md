@@ -830,6 +830,28 @@ type AdminAudit = {
 
 Indexes: `{ 'target.id': 1, createdAt: -1 }`, `{ actorId: 1, createdAt: -1 }`. Kept for 2 years. The app's database user has no `update` or `delete` grant on this collection (Section 13).
 
+### idempotency\_keys
+
+Added with the projects API (decision log, 12 Nov 2026). One row per `Idempotency-Key` used on a create (`POST /projects`, `POST /projects/{id}/duplicate`), so the same key within 24 hours replays the first result (API Section 1).
+
+```ts
+type IdempotencyKey = {
+  _id: ObjectId;
+  workspaceId: ObjectId;
+  key: string;                         // the header value, up to 255 chars
+  route: string;                       // e.g. 'POST /projects'
+  bodyHash: string;                    // sha256 of the body as canonical JSON
+  status: 'pending' | 'done';          // pending while the first request runs
+  result?: { status: number; resourceId: ObjectId };   // what it created
+  createdAt: Date;
+  expiresAt: Date;                     // createdAt + 24 h (TTL)
+};
+```
+
+A replay returns the created resource as it is now, with the original status. The same key with another route or body is `422 IDEMPOTENCY_MISMATCH`; a second request while the first is still `pending` is `409 IDEMPOTENCY_IN_PROGRESS`. A request that fails deletes its row, so the key can be retried.
+
+Indexes: `{ workspaceId: 1, key: 1 }` unique, TTL `{ expiresAt: 1 }`.
+
 ### migrations
 
 Which migrations have run (Section 13).
@@ -888,6 +910,8 @@ All indexes are declared in `packages/db/indexes.ts` and created by migrations, 
 | `notifications` | `{ createdAt: 1 }` | TTL 90 days |
 | `admin_audit` | `{ 'target.id': 1, createdAt: -1 }`, `{ actorId: 1, createdAt: -1 }` |  |
 | `admin_audit` | `{ createdAt: 1 }` | TTL 730 days |
+| `idempotency_keys` | `{ workspaceId: 1, key: 1 }` | unique |
+| `idempotency_keys` | `{ expiresAt: 1 }` | TTL 0 |
 | `rateLimit` (app rows) | `{ expiresAt: 1 }` | TTL 0 |
 | `session`, `verification` | `{ expiresAt: 1 }` | TTL 0, added by the app |
 

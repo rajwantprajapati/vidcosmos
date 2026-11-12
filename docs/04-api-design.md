@@ -112,6 +112,7 @@ Messages never contain stack traces, provider names, internal ids or other users
 | 409 | `STAGE_INVALID` | The project isn't at a step where this is allowed (e.g. generate without a storyboard) | `{ stage, wizardStep, needs }` |
 | 409 | `PROPOSAL_STALE` | The video changed since the proposal was made, and the change conflicts | `{ conflictingSceneIds }` |
 | 409 | `PROPOSAL_CLOSED` | The proposal was already applied, dismissed or failed | `{ status }` |
+| 409 | `IDEMPOTENCY_IN_PROGRESS` | A request with the same `Idempotency-Key` is still being handled (retryable) |  |
 | 409 | `NOT_CANCELLABLE` | The job or post is past the point where it can be stopped | `{ status }` |
 | 409 | `ACCOUNT_ALREADY_CONNECTED` | The workspace already has an Instagram account |  |
 | 409 | `INSTAGRAM_NOT_CONNECTED` | Posting without a connected account, or the account needs reconnecting | `{ status }` |
@@ -365,7 +366,7 @@ Account deletion signs the user out at once; the job finishes in the background 
 | `PUT /projects/{id}/draft` | Autosave the whole draft spec | `200 DraftSaved` |
 | `POST /projects/{id}/lease` | Take or renew the edit lease | `200 Lease` |
 | `POST /projects/{id}/lease/release` | Give up the lease (tab closed) | `204` |
-| `POST /projects/{id}/duplicate` | Copy as a new project (idea, script, draft; no history) | `201 ProjectDetail` |
+| `POST /projects/{id}/duplicate` | Copy as a new project (idea, script, draft; no history). `Idempotency-Key` required | `201 ProjectDetail` |
 | `DELETE /projects/{id}` | Move to Trash | `204` |
 | `POST /projects/{id}/restore` | Bring back from Trash | `200 ProjectDetail` |
 | `DELETE /projects/{id}/permanent` | Delete from Trash now | `202 Job` |
@@ -416,6 +417,7 @@ type UpdateProject = {
 
 Rules that keep later steps honest:
 
+- `wizardStep` can move back to any earlier step, but forward only to a step whose input exists: `angles` needs angles, `script` a script, `storyboard` a draft spec, `video` a saved version. Otherwise `409 STAGE_INVALID` with `details.needs` (`angles`, `script`, `storyboard` or `version`), and nothing in the request is saved.
 - `settings.language` can't change once a script exists (`409 STAGE_INVALID`); the user starts a new project or rewrites the script.
 - Changing `palette` or `captionStyle` after generation also updates `draft.spec.theme` (no new audio needed).
 - Changing `settings.format` after a storyboard exists also writes `draft.spec.format` (the `setFormat` operation): layouts switch, narration and audio are kept, and it does not count as a revision.

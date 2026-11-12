@@ -14,8 +14,8 @@ function fields(schema: z.ZodType): string[] {
 }
 
 describe("collection schemas", () => {
-  it("cover the 15 app collections (DB §1)", () => {
-    expect(collectionNames).toHaveLength(15);
+  it("cover the 15 app collections of DB §1, plus idempotency_keys", () => {
+    expect(collectionNames).toHaveLength(16);
   });
 
   it("put workspaceId on every workspace-scoped collection", () => {

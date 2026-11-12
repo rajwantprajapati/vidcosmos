@@ -87,6 +87,23 @@ test.describe("onboarding", () => {
     await expect(page).toHaveURL(/localhost:\d+\/library$/);
   });
 
+  test("a return address with control characters stays on this site", async ({ page }) => {
+    // "/<tab>/host": browsers drop the tab and would go to //host.
+    await page.goto("/onboarding?next=%2F%09%2Fexample.org");
+    await page.getByRole("button", { name: "Skip for now" }).click();
+    await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/library$/);
+    for (const next of [
+      "%2F%09%2Fexample.org",
+      "%2F%0A%2Fexample.org",
+      "%2F%0D%2Fexample.org",
+      "%09%2Fexample.org",
+    ]) {
+      const response = await page.goto(`/onboarding?next=${next}`);
+      expect(response?.status(), next).toBe(200);
+      await expect(page, next).toHaveURL(/^http:\/\/localhost:\d+\/library$/);
+    }
+  });
+
   test("arrow keys move the choice between the cards", async ({ page }) => {
     await page.goto("/onboarding");
     await page.getByRole("radio", { name: /Creator/ }).focus();

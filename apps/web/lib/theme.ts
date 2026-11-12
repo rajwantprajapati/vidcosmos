@@ -23,6 +23,13 @@ export const themeScript = `(function () {
   window.addEventListener("storage", function (e) { if (e.key === "${themeStorageKey}") apply(); });
 })();`;
 
+/** The theme to show now: the stored choice, else the system setting. */
+export function resolvedTheme(): Theme {
+  const preference = getThemePreference();
+  if (preference !== "system") return preference;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 /** Read the stored preference; "system" when nothing is stored. */
 export function getThemePreference(): ThemePreference {
   try {
@@ -41,13 +48,7 @@ export function setThemePreference(preference: ThemePreference): void {
   } catch {
     // Storage can be blocked (private mode); the choice then lasts for this page only.
   }
-  const theme =
-    preference === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : preference;
-  document.documentElement.setAttribute("data-theme", theme);
+  document.documentElement.setAttribute("data-theme", resolvedTheme());
   window.dispatchEvent(new Event(themeChangeEvent));
 }
 

@@ -5,8 +5,14 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/env", () => ({ env: { BETTER_AUTH_URL: "http://localhost:3000" } }));
 vi.mock("./auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("./db", () => ({ getDb: vi.fn() }));
+vi.mock("@vidcosmos/db", () => ({
+  ensureWorkspace: vi.fn(),
+  ObjectId: class {},
+  IdempotencyError: class extends Error {},
+  ProjectError: class extends Error {},
+}));
 
-const { ApiError, readJson } = await import("./api");
+const { ApiError, editorId, idempotencyKey, readJson, readQuery } = await import("./api");
 
 const schema = z.object({ name: z.string().max(5) });
 const request = (body: string) => new Request("http://localhost:3000/x", { method: "PUT", body });
@@ -47,5 +53,29 @@ describe("readJson", () => {
     await expect(readJson(request(big), schema)).rejects.toMatchObject({
       code: "PAYLOAD_TOO_LARGE",
     });
+  });
+});
+
+describe("readQuery", () => {
+  const query = z.object({ stage: z.array(z.string()).optional(), q: z.string().optional() });
+  it("turns repeated parameters into a list", () => {
+    const request = new Request("http://localhost:3000/x?stage=ready&stage=draft&q=upi");
+    expect(readQuery(request, query)).toEqual({ stage: ["ready", "draft"], q: "upi" });
+  });
+});
+
+describe("headers", () => {
+  it("X-Editor-Id is required", () => {
+    expect(editorId(new Request("http://x/", { headers: { "X-Editor-Id": "tab-1" } }))).toBe(
+      "tab-1",
+    );
+    expect(() => editorId(new Request("http://x/"))).toThrow(ApiError);
+  });
+
+  it("Idempotency-Key is required where the API says so", () => {
+    const withKey = new Request("http://x/", { headers: { "Idempotency-Key": "k" } });
+    expect(idempotencyKey(withKey, true)).toBe("k");
+    expect(idempotencyKey(new Request("http://x/"), false)).toBeNull();
+    expect(() => idempotencyKey(new Request("http://x/"), true)).toThrow(ApiError);
   });
 });
