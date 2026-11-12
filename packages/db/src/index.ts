@@ -15,6 +15,7 @@ export {
 } from "./idempotency.ts";
 export {
   activeJobs,
+  countProjects,
   createProject,
   deleteProject,
   duplicateProject,
@@ -25,6 +26,7 @@ export {
   listProjects,
   type Owner,
   parseProjectId,
+  type ProjectCounts,
   ProjectError,
   type ProjectErrorCode,
   projectStale,

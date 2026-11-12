@@ -42,8 +42,31 @@ export const angle = z.object({
   outline: z.array(z.string()),
 });
 
+/** The kind of video chosen in step 1 (decision D1). */
+export const videoType = z.enum([
+  "explainer",
+  "product_ad",
+  "story",
+  "travel",
+  "quote",
+  "music_visual",
+]);
+export type VideoType = z.infer<typeof videoType>;
+
+/** How each video type is written in the interface. */
+export const videoTypeLabels: Record<VideoType, string> = {
+  explainer: "Explainer",
+  product_ad: "Product ad",
+  story: "Story",
+  travel: "Travel",
+  quote: "Quote",
+  music_visual: "Music visual",
+};
+
 export const projectIdea = z.object({
   topic: z.string().min(3).max(500),
+  /** Missing on projects made before D1: read as "explainer". */
+  videoType: videoType.optional(),
   notes: z.string().max(5000).optional(),
   goal: z.enum(["explain", "teach", "summarise", "promote"]).optional(),
   angles: z.array(angle).max(5),

@@ -6,6 +6,7 @@ import {
   type ListProjectsQuery,
   type SaveDraftInput,
   scriptStats,
+  singleLine,
   type UpdateProjectInput,
 } from "@vidcosmos/spec/api";
 import type { Project, Workspace } from "@vidcosmos/spec/collections";
@@ -76,13 +77,14 @@ export function newProject(
     schemaVersion: 1,
     workspaceId: owner.workspaceId,
     createdBy: owner.userId,
-    // The topic until the script gives the video a title.
-    title: input.topic.slice(0, 100).trim(),
+    // The topic until the script gives the video a title. A title is one line.
+    title: singleLine(input.topic).slice(0, 100).trim(),
     stage: "draft",
     wizardStep: "idea",
     settings: { ...workspace.defaults, voiceSpeed: 1, ...input.settings },
     idea: {
       topic: input.topic,
+      videoType: input.videoType ?? "explainer",
       ...(input.notes ? { notes: input.notes } : {}),
       ...(input.goal ? { goal: input.goal } : {}),
       angles: [],
@@ -197,6 +199,40 @@ export async function listProjects(
         ? encodeCursor({ s: query.sort, v: last[field].toISOString(), i: last._id.toHexString() })
         : null,
   };
+}
+
+export type ProjectCounts = Record<Project["stage"], number> & { all: number; trash: number };
+
+/** How many projects each library filter would show (the chip counts). */
+export async function countProjects(db: Db, workspaceId: ObjectId): Promise<ProjectCounts> {
+  const rows = await projects(db)
+    .aggregate<{ _id: { stage: Project["stage"]; deleted: boolean }; n: number }>([
+      { $match: { workspaceId } },
+      {
+        $group: {
+          _id: { stage: "$stage", deleted: { $ne: ["$deletedAt", null] } },
+          n: { $sum: 1 },
+        },
+      },
+    ])
+    .toArray();
+  const counts: ProjectCounts = {
+    all: 0,
+    trash: 0,
+    draft: 0,
+    generating: 0,
+    ready: 0,
+    revising: 0,
+    failed: 0,
+  };
+  for (const { _id, n } of rows) {
+    if (_id.deleted) counts.trash += n;
+    else {
+      counts.all += n;
+      counts[_id.stage] += n;
+    }
+  }
+  return counts;
 }
 
 // ---- Update (PATCH) ----

@@ -1,6 +1,7 @@
 // A video in the library: a thumbnail drawn in the video's own theme on the stage, the title,
 // the type and the status.
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Badge, type BadgeTone } from "./badge";
 import { cn } from "./cn";
 
@@ -16,7 +17,7 @@ export type VideoCardProps = {
   duration?: string;
   status?: VideoStatus;
   /** Overrides the badge text, e.g. "Posts 6:30 pm" or "Generating 64%". */
-  statusLabel?: string;
+  statusLabel?: ReactNode;
   /** 0-100, shown on the thumbnail while generating. */
   progress?: number;
   theme?: VideoTheme;
@@ -25,6 +26,8 @@ export type VideoCardProps = {
   /** Makes the whole card a link to the editor. */
   href?: string;
   className?: string;
+  /** Classes for the title line, e.g. room for an actions button beside it. */
+  titleClassName?: string;
 };
 
 // Video colours are the video's own, not the app's (design system: Video themes). Tailwind only
@@ -80,6 +83,19 @@ const statusTones: Record<VideoStatus, BadgeTone> = {
 
 const ratios = { "9:16": "9 / 16", "16:9": "16 / 9", "1:1": "1 / 1" };
 
+/**
+ * How many lines of title fit above the colour tiles in each shape. A 16:9 thumbnail on a
+ * phone card is about 97 px tall: one line there, two from 768 px.
+ */
+const titleLines = {
+  "9:16": "line-clamp-6",
+  "16:9": "line-clamp-1 md:line-clamp-2",
+  "1:1": "line-clamp-3",
+};
+
+/** Text in Devanagari is marked Hindi, so it gets Noto Sans Devanagari (design system: type). */
+const langOf = (text: string) => (/[\u0900-\u097F]/.test(text) ? "hi" : undefined);
+
 export function VideoCard({
   title,
   headline,
@@ -93,21 +109,35 @@ export function VideoCard({
   caption,
   href,
   className,
+  titleClassName,
 }: VideoCardProps) {
   const colors = themes[theme];
   const content = (
     <>
+      {/* The thumbnail is a picture of the video: hidden from assistive tech, so a card reads
+          its title once. The lines below carry the title, type, length and status. */}
       <div
+        aria-hidden
         className={cn(
-          "relative box-border flex max-w-full flex-col justify-between overflow-hidden rounded-lg bg-stage p-4",
+          "relative box-border flex max-w-full flex-col justify-between gap-2 overflow-hidden rounded-lg bg-stage p-4",
           colors.thumb,
         )}
         style={{ aspectRatio: ratios[aspect] }}
       >
-        <div className="pr-11 font-display text-[16px] font-extrabold leading-[1.15] tracking-[-0.02em]">
+        <div
+          lang={langOf(headline ?? title)}
+          className={cn(
+            // A utility font class outranks the :lang(hi) base rule, so Hindi names its font here.
+            langOf(headline ?? title) ? "font-deva" : "font-display",
+            // shrink-0: the column must not squeeze the title to part of a line; the clamp sets
+            // how many whole lines show.
+            "shrink-0 pr-11 text-[16px] font-extrabold leading-[1.15] tracking-[-0.02em] break-words hyphens-auto",
+            titleLines[aspect],
+          )}
+        >
           {headline ?? title}
         </div>
-        <div aria-hidden className="flex gap-1.5">
+        <div className="flex gap-1.5">
           {colors.tiles.map((tile, i) => (
             <span key={i} className={cn("size-[26px] rounded-sm", tile)} />
           ))}
@@ -135,9 +165,18 @@ export function VideoCard({
         ) : null}
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <div className="truncate text-[15px] font-semibold leading-[22px] text-ink">{title}</div>
+        <div
+          lang={langOf(title)}
+          className={cn(
+            "truncate text-[15px] font-semibold leading-[22px] text-ink",
+            titleClassName,
+          )}
+        >
+          {title}
+        </div>
         <div className="flex items-center gap-2 text-[13px] text-ink-muted">
           {type ? <span>{type}</span> : null}
+          {duration ? <span className="sr-only">{`, ${duration} long, `}</span> : null}
           {status ? <Badge tone={statusTones[status]}>{statusLabel ?? status}</Badge> : null}
         </div>
       </div>

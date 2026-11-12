@@ -10,6 +10,7 @@ import { AppSidebar } from "@/components/shell/app-sidebar";
 import { MobileTabBar } from "@/components/shell/mobile-tab-bar";
 import { MobileTopBar } from "@/components/shell/mobile-top-bar";
 import { firstNameOf, initialsOf } from "@/components/shell/nav";
+import { Toaster } from "@/components/toaster";
 import { onboardingPath, requestPathHeader } from "@/lib/auth-routes";
 import { getDb } from "@/lib/db";
 import { requireSession } from "@/lib/session";
@@ -38,8 +39,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar initials={initials} />
-        <main className="box-border flex min-w-0 flex-1 flex-col gap-7 px-4 pt-1 pb-[110px] md:px-10 md:pt-7 md:pb-12">
-          {children}
+        <main className="box-border flex min-w-0 flex-1 flex-col gap-3.5 px-4 pt-1 pb-[110px] md:gap-7 md:px-10 md:pt-7 md:pb-12">
+          <Toaster>{children}</Toaster>
         </main>
       </div>
       <MobileTabBar />

@@ -63,6 +63,10 @@
   transform-origin: 260px 260px;
   animation: vc-spin 60s linear infinite;
 }
+.vc-orbit-small {
+  transform-origin: 200px 160px;
+  animation: vc-spin 50s linear infinite;
+}
 
 /* The interface stays still for people who ask it to (design system: Motion). Transitions are
    switched off (0s, not a tiny duration: with the default `transition-property: all` a tiny

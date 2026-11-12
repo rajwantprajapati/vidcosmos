@@ -14,6 +14,7 @@ import {
 import { onboardingSchema, persona, userRole, type Onboarding } from "../collections/user.ts";
 import type { Workspace } from "../collections/workspace.ts";
 import { istPeriod, nextIstMidnight, nextIstMonthStart } from "../time.ts";
+import { controlCharacterMessage, isPlainText } from "./text.ts";
 
 const id = z.string().regex(/^[0-9a-f]{24}$/);
 const iso = z.iso.datetime();
@@ -83,7 +84,12 @@ export type MeDto = z.infer<typeof meDto>;
  */
 export const onboardingInput = z.object({
   persona,
-  topicArea: z.string().trim().max(80).optional(),
+  topicArea: z
+    .string()
+    .trim()
+    .max(80)
+    .refine(isPlainText(false), controlCharacterMessage)
+    .optional(),
   language,
   voiceGender,
 });

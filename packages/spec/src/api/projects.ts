@@ -15,8 +15,9 @@ import {
   voiceSpeed,
 } from "../collections/common.ts";
 import type { Job } from "../collections/job.ts";
-import { type Project, projectStage, wizardStep } from "../collections/project.ts";
+import { type Project, projectStage, videoType, wizardStep } from "../collections/project.ts";
 import type { Workspace } from "../collections/workspace.ts";
+import { controlCharacterMessage, isPlainText, stripControlCharacters } from "./text.ts";
 
 const id = z.string().regex(/^[0-9a-f]{24}$/);
 const iso = z.iso.datetime();
@@ -40,6 +41,7 @@ export type ProjectSettingsDto = z.infer<typeof projectSettingsDto>;
 export const projectSummaryDto = z.object({
   id,
   title: z.string(),
+  videoType,
   stage: projectStage,
   wizardStep,
   language,
@@ -66,6 +68,7 @@ export const projectDetailDto = projectSummaryDto.extend({
   settings: projectSettingsDto,
   idea: z.object({
     topic: z.string(),
+    videoType,
     notes: z.string().nullable(),
     goal: goal.nullable(),
     angles: z.array(
@@ -123,11 +126,28 @@ export type DraftSavedDto = z.infer<typeof draftSavedDto>;
 // ---- Requests ----
 
 /** Topic, notes and titles: plain text, trimmed. */
-const topic = z.string().trim().min(3).max(500);
-const notes = z.string().trim().max(5000);
+const plain = (multiline: boolean) => [isPlainText(multiline), controlCharacterMessage] as const;
+const topic = z
+  .string()
+  .trim()
+  .min(3)
+  .max(500)
+  .refine(...plain(true));
+const notes = z
+  .string()
+  .trim()
+  .max(5000)
+  .refine(...plain(true));
+const title = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .refine(...plain(false));
 
 export const createProjectInput = z.object({
   topic,
+  videoType: videoType.optional(),
   notes: notes.optional(),
   goal: goal.optional(),
   settings: projectSettingsDto.partial().optional(),
@@ -136,12 +156,13 @@ export type CreateProjectInput = z.infer<typeof createProjectInput>;
 
 export const updateProjectInput = z
   .object({
-    title: z.string().trim().min(1).max(100).optional(),
+    title: title.optional(),
     wizardStep: wizardStep.optional(),
     settings: projectSettingsDto.partial().optional(),
     idea: z
       .object({
         topic: topic.optional(),
+        videoType: videoType.optional(),
         notes: notes.nullable().optional(),
         goal: goal.nullable().optional(),
         selectedAngleId: z.string().min(1).nullable().optional(),
@@ -149,9 +170,17 @@ export const updateProjectInput = z
       .optional(),
     script: z
       .object({
-        title: z.string().trim().min(1).max(100).optional(),
-        hook: z.string().max(400).optional(),
-        text: z.string().max(1800).optional(),
+        title: title.optional(),
+        hook: z
+          .string()
+          .max(400)
+          .refine(...plain(false))
+          .optional(),
+        text: z
+          .string()
+          .max(1800)
+          .refine(...plain(true))
+          .optional(),
       })
       .optional(),
   })
@@ -178,7 +207,12 @@ const repeatable = <T extends z.ZodType>(item: T) =>
 
 export const listProjectsQuery = z.object({
   stage: repeatable(projectStage).optional(),
-  q: z.string().trim().min(2).max(100).optional(),
+  // Cleaned, not refused: a stray control character must not break a search.
+  q: z
+    .string()
+    .transform(stripControlCharacters)
+    .pipe(z.string().trim().min(2).max(100))
+    .optional(),
   language: language.optional(),
   format: repeatable(videoFormat).optional(),
   sort: z.enum(["updated", "created"]).default("updated"),
@@ -230,6 +264,7 @@ export function toProjectSummaryDto(
   return {
     id: hex(project._id),
     title: project.title,
+    videoType: project.idea.videoType ?? "explainer",
     stage: project.stage,
     wizardStep: project.wizardStep,
     language: project.settings.language,
@@ -270,6 +305,7 @@ export function toProjectDetailDto(project: Project, extras: DetailExtras): Proj
     settings: { ...project.settings },
     idea: {
       topic: project.idea.topic,
+      videoType: project.idea.videoType ?? "explainer",
       notes: project.idea.notes ?? null,
       goal: project.idea.goal ?? null,
       angles: project.idea.angles.map((a) => ({ ...a, outline: [...a.outline] })),

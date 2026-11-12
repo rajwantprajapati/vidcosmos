@@ -10,7 +10,7 @@ describe("VideoCard", () => {
     );
     expect(screen.getAllByText("How UPI moves money")).toHaveLength(2); // thumbnail headline and title
     expect(screen.getByText("Explainer")).toBeInTheDocument();
-    expect(screen.getByText("0:58")).toBeInTheDocument();
+    expect(screen.getByText("0:58")).toBeInTheDocument(); // on the thumbnail
     expect(screen.getByText("ready")).toHaveClass("text-success");
   });
 
@@ -26,6 +26,24 @@ describe("VideoCard", () => {
     );
     expect(screen.getByText("Generating 64%")).toHaveClass("text-brand-text");
     expect(container.querySelector('[style*="width: 64%"]')).not.toBeNull();
+  });
+
+  it("reads its title once: the thumbnail is hidden from assistive tech", () => {
+    render(
+      <VideoCard
+        title="How UPI moves money"
+        type="Explainer"
+        duration="0:58"
+        status="generating"
+        statusLabel="Generating 62%"
+        progress={62}
+        href="/projects/p1"
+      />,
+    );
+    // On screen twice (thumbnail and caption), in the link's name once, with length and status.
+    expect(screen.getByRole("link")).toHaveAccessibleName(
+      /^How UPI moves money\s*Explainer\s*, 0:58 long,\s*Generating 62%$/,
+    );
   });
 
   it("is a link to the editor when given an href", () => {
