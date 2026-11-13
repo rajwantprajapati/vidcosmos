@@ -24,6 +24,8 @@ export const jobType = z.enum([
   "caption",
   "publish",
   "account_delete",
+  // Development only: the fake job behind /dev/jobs (F11). Never created in production.
+  "demo",
 ]);
 
 export const jobStatus = z.enum([

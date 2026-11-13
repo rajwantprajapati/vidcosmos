@@ -37,16 +37,31 @@ export type ProgressBarProps = {
   /** What is happening now, with counts: "Recording narration (4 of 7 scenes)". */
   label?: string;
   showValue?: boolean;
+  /** brand while work runs; danger once it failed; neutral once it stopped. The label says which. */
+  tone?: "brand" | "danger" | "neutral";
+  /** Announce label changes (each new stage) to screen readers; the percentage isn't announced. */
+  live?: boolean;
   className?: string;
 };
 
-export function ProgressBar({ value, label, showValue = true, className }: ProgressBarProps) {
+const fills = { brand: undefined, danger: "bg-danger", neutral: "bg-ink-muted" } as const;
+
+export function ProgressBar({
+  value,
+  label,
+  showValue = true,
+  tone = "brand",
+  live = false,
+  className,
+}: ProgressBarProps) {
   const percent = Math.max(0, Math.min(100, Math.round(value || 0)));
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       {label || showValue ? (
         <div className="flex justify-between gap-3 text-[13px] leading-5">
-          <span className="text-ink-secondary">{label ?? ""}</span>
+          <span className="text-ink-secondary" aria-live={live ? "polite" : undefined}>
+            {label ?? ""}
+          </span>
           {showValue ? (
             <span className="font-semibold tabular-nums text-ink">{percent}%</span>
           ) : null}
@@ -57,6 +72,7 @@ export function ProgressBar({ value, label, showValue = true, className }: Progr
         label={label || "Progress"}
         valueNow={percent}
         valueMax={100}
+        fillClassName={fills[tone]}
       />
     </div>
   );

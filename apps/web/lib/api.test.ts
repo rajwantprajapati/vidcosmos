@@ -10,6 +10,7 @@ vi.mock("@vidcosmos/db", () => ({
   ObjectId: class {},
   IdempotencyError: class extends Error {},
   ProjectError: class extends Error {},
+  JobError: class extends Error {},
 }));
 
 const { ApiError, editorId, idempotencyKey, readJson, readQuery } = await import("./api");

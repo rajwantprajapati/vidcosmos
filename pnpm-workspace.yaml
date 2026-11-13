@@ -1,3 +1,6 @@
 packages:
   - apps/*
   - packages/*
+onlyBuiltDependencies:
+  # Downloads the Inngest Dev Server binary (github.com/inngest/inngest releases) on install.
+  - inngest-cli

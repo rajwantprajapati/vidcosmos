@@ -3,7 +3,7 @@
 // details and request id. Codes for later features join this list with their endpoints.
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { ensureWorkspace, IdempotencyError, ObjectId, ProjectError } from "@vidcosmos/db";
+import { ensureWorkspace, IdempotencyError, JobError, ObjectId, ProjectError } from "@vidcosmos/db";
 import type { Workspace } from "@vidcosmos/spec/collections";
 import type { z } from "zod";
 import { env } from "@/env";
@@ -16,11 +16,16 @@ const errors = {
   UNAUTHENTICATED: { status: 401, message: "Sign in to continue." },
   CSRF_ORIGIN: { status: 403, message: "This request came from another site, so it was refused." },
   FORBIDDEN: { status: 403, message: "You can't do that." },
+  LIMIT_REACHED: { status: 403, message: "You've reached a usage limit." },
   NOT_FOUND: { status: 404, message: "That doesn't exist." },
   REV_CONFLICT: { status: 409, message: "This video changed in another place." },
+  JOB_IN_PROGRESS: { status: 409, message: "Something is already running on this video." },
   STAGE_INVALID: { status: 409, message: "That can't be done at this step." },
   // Not in API §2: two requests with one Idempotency-Key at once (decision log, 12 Nov).
   IDEMPOTENCY_IN_PROGRESS: { status: 409, message: "The same request is still being handled." },
+  NOT_CANCELLABLE: { status: 409, message: "This can't be stopped any more." },
+  // Not in API §2: retrying a job that didn't fail, or failed for good (decision log, 12 Nov).
+  NOT_RETRYABLE: { status: 409, message: "This job can't be tried again." },
   PAYLOAD_TOO_LARGE: { status: 413, message: "That's too much to send at once." },
   IDEMPOTENCY_MISMATCH: {
     status: 422,
@@ -56,11 +61,10 @@ export class ApiError extends Error {
 /** Domain refusals from the database layer, as API errors. */
 function toApiError(error: unknown): ApiError | null {
   if (error instanceof ApiError) return error;
-  if (error instanceof ProjectError || error instanceof IdempotencyError) {
-    return new ApiError(error.code, error.message, {
-      details: error instanceof ProjectError ? error.details : undefined,
-    });
+  if (error instanceof ProjectError || error instanceof JobError) {
+    return new ApiError(error.code, error.message, { details: error.details });
   }
+  if (error instanceof IdempotencyError) return new ApiError(error.code, error.message);
   return null;
 }
 

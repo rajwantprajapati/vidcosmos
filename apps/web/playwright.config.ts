@@ -20,10 +20,20 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 } },
     },
   ],
-  webServer: {
-    command: `pnpm dev --port ${port}`,
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: `pnpm dev --port ${port}`,
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      // The Inngest Dev Server runs the background jobs (F11); `pnpm inngest` starts the same.
+      // Bound to this machine only: the dashboard shows every event and its data.
+      command: `pnpm --workspace-root exec inngest-cli dev -u ${baseURL}/api/inngest --no-discovery --host 127.0.0.1`,
+      url: "http://127.0.0.1:8288",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 });
