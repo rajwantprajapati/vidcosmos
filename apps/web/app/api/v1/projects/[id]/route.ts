@@ -21,7 +21,7 @@ export const GET = apiRoute<Params>(async (context) => {
 export const PATCH = apiRoute<Params>(async (context) => {
   const projectId = parseProjectId(context.params.id);
   const input = await readJson(context.request, updateProjectInput);
-  await requireAllowed([
+  await requireAllowed({ ...ownerOf(context), projectId }, [
     input.title ? { kind: "topic", text: input.title } : null,
     input.idea?.topic ? { kind: "topic", text: input.idea.topic } : null,
     input.idea?.notes ? { kind: "notes", text: input.idea.notes } : null,

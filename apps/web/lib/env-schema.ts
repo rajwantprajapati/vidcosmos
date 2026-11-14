@@ -62,7 +62,7 @@ const schema = z.object({
     .default("gemini"),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-3.8-flash"),
-  GEMINI_MODEL_SMALL: z.string().optional(),
+  GEMINI_MODEL_SMALL: z.string().default("gemini-3.5-flash-lite"),
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().optional(),
   ANTHROPIC_MODEL_SMALL: z.string().optional(),

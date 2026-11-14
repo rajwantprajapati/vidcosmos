@@ -31,7 +31,9 @@ const personas: { value: Persona; title: string; sub: string; icon: LucideIcon }
 
 const sectionTitle = "m-0 font-display text-[20px] leading-[30px] font-bold";
 
-async function send(path: string, method: "PUT" | "POST", body?: object) {
+type Failure = { message: string; code?: string };
+
+async function send(path: string, method: "PUT" | "POST", body?: object): Promise<Failure | null> {
   const response = await fetch(path, {
     method,
     headers: body ? { "Content-Type": "application/json" } : undefined,
@@ -39,9 +41,12 @@ async function send(path: string, method: "PUT" | "POST", body?: object) {
   });
   if (response.ok) return null;
   const payload = (await response.json().catch(() => null)) as {
-    error?: { message?: string };
+    error?: { message?: string; code?: string };
   } | null;
-  return payload?.error?.message ?? "Something went wrong. Try again in a moment.";
+  return {
+    message: payload?.error?.message ?? "Something went wrong. Try again in a moment.",
+    code: payload?.error?.code,
+  };
 }
 
 export function OnboardingForm({
@@ -60,15 +65,23 @@ export function OnboardingForm({
   const [voiceGender, setVoiceGender] = useState<VoiceGender>(defaults.voiceGender);
   const [busy, setBusy] = useState<"save" | "skip" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A refused topic area is shown on its field, which keeps the text and takes focus.
+  const [topicError, setTopicError] = useState<string>();
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
 
-  async function finish(action: "save" | "skip", request: () => Promise<string | null>) {
+  async function finish(action: "save" | "skip", request: () => Promise<Failure | null>) {
     setBusy(action);
     setError(null);
+    setTopicError(undefined);
     const failed = await request();
     if (failed) {
       setBusy(null);
-      setError(failed);
+      if (failed.code === "CONTENT_BLOCKED") {
+        setTopicError(failed.message);
+        document.getElementById("ob-topics")?.focus();
+      } else {
+        setError(failed.message);
+      }
       return;
     }
     router.replace(next);
@@ -171,6 +184,8 @@ export function OnboardingForm({
               label="Topic area (optional)"
               placeholder="Science for school students, personal finance, handmade candles…"
               helper="We use this to suggest ideas and examples."
+              error={topicError}
+              onChange={() => setTopicError(undefined)}
               maxLength={80}
             />
           </div>

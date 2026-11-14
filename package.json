@@ -14,6 +14,7 @@
     "test:e2e": "turbo run test:e2e",
     "format": "prettier --write .",
     "db:migrate": "pnpm --filter @vidcosmos/db migrate",
+    "check:llm": "pnpm --filter @vidcosmos/pipeline check:llm",
     "inngest": "inngest-cli dev -u http://localhost:3000/api/inngest --no-discovery --host 127.0.0.1",
     "tokens": "node --disable-warning=ExperimentalWarning packages/config/src/tailwind-theme.ts"
   },
