@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 12 Nov 2026 · Current focus: **F11 Jobs and background functions** (built, waiting for review)
+Last updated: 13 Nov 2026 · Current focus: **F12 Storage (Cloudflare R2)** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -12,13 +12,13 @@ This file is the single place that says where the build stands. Update it at the
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
-| M2 Create flow | 1 | 7 |
+| M2 Create flow | 2 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **11** | **36** |
+| **Total** | **12** | **36** |
 
 ## Features
 
@@ -35,7 +35,7 @@ This file is the single place that says where the build stands. Update it at the
 | F09 | Library screen | M1 | F07, F08 | Done | 12 Nov 2026 | `/library`: create, search, filters, rename, duplicate, Trash |
 | F10 | Usage and limits (read side) | M1 | F08 | Done | 12 Nov 2026 | `GET /me`, `/usage`; meters; limit state |
 | F11 | Jobs and background functions | M2 | F08 | Done | 12 Nov 2026 | Inngest at `/api/inngest`; `/api/v1/jobs`; `packages/db/src/jobs.ts`; `/dev/jobs` |
-| F12 | Storage (Cloudflare R2) | M2 | F02 | Not started | | |
+| F12 | Storage (Cloudflare R2) | M2 | F02 | Done | 13 Nov 2026 | `ArtifactStore` (R2 and a local stub); key layout; `packages/db/src/assets.ts`; `/dev/storage` |
 | F13 | LLM providers and moderation | M2 | F11 | Not started | | |
 | F14 | New video: idea and angles | M2 | F09, F13 | Not started | | Needs decision D1 |
 | F15 | Script | M2 | F14 | Not started | | |
@@ -65,8 +65,35 @@ This file is the single place that says where the build stands. Update it at the
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
 
+### F12 Storage (Cloudflare R2) · 13 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build` pass. Unit tests: db 167, web 211, integrations 18 plus 1 skipped, spec 25, config 19. `pnpm test:e2e`: 165 passed, 51 skipped.
+- Tests added:
+  - `packages/integrations/src/storage/keys.test.ts` (5):
+    - every key in the DB §7 layout;
+    - parts that could leave their folder are refused (`..`, bad ids or hashes, odd track ids);
+    - only layout keys and prefixes are accepted;
+    - the signed-URL lifetimes;
+    - the download header, including Hindi names and RFC 5987 escaping.
+  - `local.test.ts` (8): put, head, get and delete; layout-only keys; prefix delete; signed GET with Range (206, open-ended, suffix, 416) and HEAD; a signed download name; tampered key, signature or expiry, the wrong method and expired links refused with 403; a signed PUT only with its Content-Type; 404 for a missing file.
+  - `r2.test.ts`: put, head, a signed GET with a download name and Range, a signed PUT, delete and prefix delete against a real bucket. It passes against `vidcosmos-dev`: an Asia-Pacific bucket created 13 Nov, with a token named `vidcosmos-dev` limited to Object Read & Write on that bucket.
+  - `packages/db/src/assets.test.ts` (5):
+    - SHA-256;
+    - the narration hash changes with the text, language, voice, model or speed, and the fields can't run into each other;
+    - lookup by hash within a workspace;
+    - two parallel records give the second the first's asset;
+    - `lastUsedAt` only moves forward.
+  - `e2e/storage.spec.ts`: in the browser the stub's image loads; the audio link returns 200 and a Range request 206; the download is an attachment; a tampered, unsigned or wrong-method link gets 403; axe is clean; no sideways scroll on a phone.
+- Screenshots of `/dev/storage` at 1440×900 and 390×844. There's no design screen for this development page; it uses the tokens and type classes.
+- Fixed after manual QA (another session; no bugs found):
+  - Every stub response now has `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`.
+  - A signed PUT whose declared `Content-Length` is over 200 MB is refused before the body is read; the real size is still checked.
+  - With a production build (`next build`, `next start`), `/dev/storage`, `/api/dev/storage/…`, `/dev/jobs` and `/api/dev/jobs/demo` all return 404.
+  - Tests added: safety headers on 200, 206, 416, 403 and 405 responses, and the early 413, in `local.test.ts`; the e2e checks the headers and HEAD.
+
 ### F11 Jobs and background functions · 12 Nov 2026
 
+- Fixed 14 Nov after CI failed on the F12 pull request: two parallel starts on one video could both succeed. One request claimed the video before inserting its job; the other saw the claim, didn't find the job yet, took it for a left-over claim and cleared it. `createJob` now inserts the job before claiming, deletes it if the claim is refused, and frees the video before deleting a job. The parallel-start test now runs 25 pairs and fails on the old code locally (round 2); it passes on the fix.
 - `pnpm db:migrate` (jobs validator gains `demo`), `pnpm typecheck`, `pnpm lint`, `pnpm test` (db 160, web 203, spec 25, config 19, integrations 5) and `pnpm build` pass. `pnpm test:e2e`: 159 passed, 50 skipped; three `shell.spec.ts` 404 checks timed out once under full parallel load and pass when run again (16 of 16).
 - Tests added:
   - `packages/db/src/jobs.test.ts` (15, in-memory MongoDB):
@@ -299,6 +326,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 13 Nov 2026 | Storage (F12): signed links for preview playback last 1 hour (SDD §12), not the 15 minutes in DB §7; downloads stay 15 minutes. Keys follow DB §7 (`ws/{workspaceId}/narration/{hash}.mp3`, `ws/{workspaceId}/exports/{exportId}/video.mp4`, `audio.mp3`, `cover.jpg`, `captions.srt`, `ws/{workspaceId}/thumbs/{projectId}.jpg`) over SDD §12's layout, plus SDD's shared `music/{trackId}.mp3`. Keys are built from the hash or the export id, so when two steps record the same narration, the loser keeps the R2 object (it's the same file) instead of deleting it as DB §7 says. |
 | 12 Nov 2026 | Jobs (F11): `POST /jobs/{id}/retry` on a job that isn't failed or partial with a retryable error returns `409 NOT_RETRYABLE` with `{ status }` (API §11 didn't name a code). The cancel event is `job/cancel.requested` (API §11) rather than SDD §5's `job/cancelled`. A queued job is cancelled at once. A start event's id is `job-<jobId>`, so sending it twice runs once. The demo job (`type: demo`) and `POST /api/dev/jobs/demo` exist only for development; both 404 in production. |
 | 12 Nov 2026 | At the monthly limit, the Library's Generate video is turned off with the reset date (F10 scope, PRD FR-10.5), although creating a draft doesn't use a video; existing videos stay open to edit, export and post. Reserved videos count as taken. |
 | 12 Nov 2026 | D5: a Hindi topic in the Library prompt box doesn't switch the narration language. New videos use the workspace's default language (English unless the user chose Hindi in onboarding or settings); step 1's Language control changes it per video. Found in manual QA of F09. |
@@ -341,6 +369,16 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **Storage: still to do (F12).**
+  - In the Cloudflare dashboard, set the bucket's CORS: GET and HEAD with Range from the app's origins.
+  - Add the 120-day lifecycle rule on `exports/` (SDD §12).
+  - Project thumbnails get signed URLs once something writes `thumbnailKey` (F26).
+  - The narration step uses `findAsset`, `recordAsset` and `touchAssets` (F20).
+  - The cleanup crons are F35.
+  - The stub keeps files in `apps/web/.storage/` (git-ignored); delete the folder to clear them.
+  - Stub responses have no `Content-Length`. Next.js streams every route-handler response and drops it, in dev and with `next start` (checked with plain string and byte bodies). `Content-Range` still carries the full size, so audio seeks. R2, which serves production files directly, sends `Content-Length`.
+  - With R2 keys in `.env`, `pnpm test` runs the R2 integration test against the real bucket: a few requests per run, within the free tier. CI has no keys, so it skips there.
 
 - **Jobs: parts waiting on later features (F11).**
   - `GET /jobs/{id}/events` (Server-Sent Events) isn't built; the client polls, as SDD §4 describes.

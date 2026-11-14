@@ -56,9 +56,10 @@ export async function getJob(db: Db, workspaceId: ObjectId, jobId: ObjectId): Pr
 // ---- Create ----
 
 /**
- * Claims the project for one job (DB §10). A claim left behind by a job that already finished
- * (or no longer exists) is cleared and claimed again; the stuck-job sweeper (F35) does the
- * same for jobs that died while running.
+ * Claims the project for one job (DB §10). The job is inserted before its claim, and rollbacks
+ * free the project before deleting the job, so a claim whose job is finished or missing really
+ * is left over: it's cleared and claimed again. The stuck-job sweeper (F35) does the same for
+ * jobs that died while running.
  */
 async function claimProject(db: Db, workspaceId: ObjectId, projectId: ObjectId, jobId: ObjectId) {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -120,8 +121,6 @@ export async function createJob(
 ): Promise<Job> {
   const jobId = new ObjectId();
   const { workspaceId } = owner;
-  if (input.projectId) await claimProject(db, workspaceId, input.projectId, jobId);
-
   const job: Job = {
     _id: jobId,
     schemaVersion: 1,
@@ -139,11 +138,16 @@ export async function createJob(
     createdAt: now,
     updatedAt: now,
   };
-  try {
-    await jobs(db).insertOne(job);
-  } catch (error) {
-    await releaseProject(db, job);
-    throw error;
+  // The job first, then the claim: another request that sees this claim also finds the job
+  // (and gets JOB_IN_PROGRESS) instead of taking the claim for a job that seems missing.
+  await jobs(db).insertOne(job);
+  if (input.projectId) {
+    try {
+      await claimProject(db, workspaceId, input.projectId, jobId);
+    } catch (error) {
+      await jobs(db).deleteOne({ workspaceId, _id: jobId });
+      throw error;
+    }
   }
 
   // Counted after the insert, so two requests at once can't both take the last slot: at
@@ -151,8 +155,9 @@ export async function createJob(
   const max = workspace.limits.concurrentJobs;
   const running = await jobs(db).countDocuments({ workspaceId, status: active });
   if (running > max) {
-    await jobs(db).deleteOne({ workspaceId, _id: jobId });
+    // The claim goes before the job, so no claim is ever left pointing at nothing.
     await releaseProject(db, job);
+    await jobs(db).deleteOne({ workspaceId, _id: jobId });
     throw new JobError(
       "LIMIT_REACHED",
       `Up to ${max} videos can be generating or exporting at the same time. Try again when one finishes.`,

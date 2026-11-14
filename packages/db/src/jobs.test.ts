@@ -90,15 +90,30 @@ describe("creating jobs", () => {
   });
 
   it("lets only one of two parallel starts on one project through", async () => {
+    // Many pairs, so an unlucky interleaving shows up here rather than only on CI.
     const owner = await newOwner();
-    const project = await newProject(owner);
-    const results = await Promise.allSettled([
-      createJob(db(), owner, owner.workspace, demo(project._id)),
-      createJob(db(), owner, owner.workspace, demo(project._id)),
-    ]);
-    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    const rejected = results.find((r) => r.status === "rejected");
-    expect((rejected?.reason as JobError).code).toBe("JOB_IN_PROGRESS");
+    owner.workspace.limits.concurrentJobs = 100;
+    for (let round = 0; round < 25; round++) {
+      const project = await newProject(owner);
+      const results = await Promise.allSettled([
+        createJob(db(), owner, owner.workspace, demo(project._id)),
+        createJob(db(), owner, owner.workspace, demo(project._id)),
+      ]);
+      const started = results.filter((r) => r.status === "fulfilled");
+      expect(started, `round ${round}`).toHaveLength(1);
+      const rejected = results.find((r) => r.status === "rejected");
+      expect((rejected?.reason as JobError).code).toBe("JOB_IN_PROGRESS");
+      // The refused job wasn't kept, and the claim is the started job's.
+      const kept = await listJobs(
+        db(),
+        owner.workspaceId,
+        listJobsQuery.parse({ projectId: project._id.toHexString() }),
+      );
+      expect(kept.items.map((j) => j._id)).toEqual([started[0]!.value._id]);
+      expect((await getProject(db(), owner.workspaceId, project._id)).activeJobId).toEqual(
+        started[0]!.value._id,
+      );
+    }
   });
 
   it("clears a claim left by a job that already finished", async () => {
