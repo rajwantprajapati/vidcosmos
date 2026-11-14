@@ -2,3 +2,4 @@
 export const packageName = "@vidcosmos/integrations" as const;
 
 export * from "./email.ts";
+export * from "./storage/index.ts";

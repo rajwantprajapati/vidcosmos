@@ -1,5 +1,13 @@
 /** @vidcosmos/db — MongoDB client settings, the workspace-scoped collection helper, indexes and migrations. */
 export {
+  findAsset,
+  type NarrationInput,
+  narrationHash,
+  recordAsset,
+  sha256Hex,
+  touchAssets,
+} from "./assets.ts";
+export {
   createMongoClient,
   databaseNameFromUri,
   databaseOf,
