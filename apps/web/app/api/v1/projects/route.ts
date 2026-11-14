@@ -21,7 +21,7 @@ export const POST = apiRoute(async (context) => {
     { workspaceId: context.workspace._id, key, route: "POST /projects", body: input },
     async () => {
       // Checked before anything is saved; a refusal saves nothing (API §5).
-      await requireAllowed([
+      await requireAllowed(ownerOf(context), [
         { kind: "topic", text: input.topic },
         input.notes ? { kind: "notes", text: input.notes } : null,
       ]);

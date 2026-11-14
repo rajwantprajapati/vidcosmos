@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 13 Nov 2026 · Current focus: **F12 Storage (Cloudflare R2)** (built, waiting for review)
+Last updated: 14 Nov 2026 · Current focus: **F13 LLM providers and moderation** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -12,13 +12,13 @@ This file is the single place that says where the build stands. Update it at the
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
-| M2 Create flow | 2 | 7 |
+| M2 Create flow | 3 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **12** | **36** |
+| **Total** | **13** | **36** |
 
 ## Features
 
@@ -36,7 +36,7 @@ This file is the single place that says where the build stands. Update it at the
 | F10 | Usage and limits (read side) | M1 | F08 | Done | 12 Nov 2026 | `GET /me`, `/usage`; meters; limit state |
 | F11 | Jobs and background functions | M2 | F08 | Done | 12 Nov 2026 | Inngest at `/api/inngest`; `/api/v1/jobs`; `packages/db/src/jobs.ts`; `/dev/jobs` |
 | F12 | Storage (Cloudflare R2) | M2 | F02 | Done | 13 Nov 2026 | `ArtifactStore` (R2 and a local stub); key layout; `packages/db/src/assets.ts`; `/dev/storage` |
-| F13 | LLM providers and moderation | M2 | F11 | Not started | | |
+| F13 | LLM providers and moderation | M2 | F11 | Done | 14 Nov 2026 | `LlmProvider` (Gemini, Claude, stub) in `packages/pipeline/src/llm`; usage and moderation events; `pnpm check:llm` |
 | F14 | New video: idea and angles | M2 | F09, F13 | Not started | | Needs decision D1 |
 | F15 | Script | M2 | F14 | Not started | | |
 | F16 | Video spec schema and template contracts | M2 | F05 | Not started | | Can run beside F11–F15 |
@@ -64,6 +64,43 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F13 LLM providers and moderation · 14 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build` pass. Unit tests: pipeline 18, db 171, web 219, integrations 21 (with live R2), spec 25, config 19. `pnpm test:e2e`: 167 passed, 53 skipped.
+- `pnpm check:llm` without keys: "skipped: LLM_PROVIDER=gemini needs GEMINI_API_KEY", exit 0. With `LLM_PROVIDER=claude` it names `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`, exit 0. **The live check hasn't run**: `.env` has no Gemini or Claude key.
+- Tests added:
+  - `packages/pipeline/src/llm/gemini.test.ts` (5, mocked HTTP):
+    - the `generateContent` request: JSON mime type, a schema with `const`/`oneOf` rewritten, the system instruction, the thinking level;
+    - thinking tokens counted as output;
+    - a retry with the previous answer and its problems;
+    - semantic problems fed back, and `LLM_INVALID_OUTPUT` after 3 attempts;
+    - 429 and 503 waits, then `LLM_RATE_LIMITED`;
+    - a safety stop becomes `CONTENT_BLOCKED`.
+  - `anthropic.test.ts` (5, mocked HTTP):
+    - JSON-schema output (no tools, no forced `tool_choice`), with limits removed and every object closed;
+    - effort in `output_config`, and the bearer key;
+    - the `server-side-fallback-2026-07-01` beta with `fallbacks: "default"` on Sonnet 5.5, and none on Haiku 5.5;
+    - zod problems fed back;
+    - a refusal recorded, then `CONTENT_BLOCKED`;
+    - 429 becomes `LLM_RATE_LIMITED`;
+    - cost per attempt.
+  - `moderation.test.ts` (7):
+    - the stub's allow and block, naming the refused input;
+    - the model's category, with the reason cut to 200 characters;
+    - a model refusal counts as a block;
+    - texts sent as tagged data;
+    - prices (micro-dollars, Haiku's long-prompt rate, unpriced models);
+    - schema conversion.
+  - `packages/db/src/llm-events.test.ts` (4): a usage event with cost and attempt; blocks kept with a 200-character excerpt and allows only when sampled; the third block in 24 hours flags the workspace once; older blocks don't count.
+  - `apps/web/lib/moderation.test.ts` (5): a block is 422 with its category and is recorded; empty text skipped; moderation errors and timeouts let the request through; it still blocks if recording fails.
+  - `lib/llm.test.ts` (3): a live call becomes a priced usage event; the stub records nothing; a failed write doesn't fail the request.
+  - `e2e/moderation.spec.ts` (desktop): a blocked topic is 422 `CONTENT_BLOCKED` (category `illegal`) and saves nothing; a blocked edit to notes is 422 (category `sexual`) and leaves the video unchanged; the Library's prompt box shows the reason and keeps focus.
+- No UI screens in this feature.
+- Fixed after manual QA (another session):
+  - **Prompt escape.** The moderation prompt wrapped each text in `<text>` tags without escaping, so a topic could close its own tag and leave a blocked word outside every text (QA's repro was saved as a project). The texts now go to the model as one line of JSON, which keeps each text inside its own string; the stub reads the same JSON. Tests: the repro is blocked (unit and e2e), a text containing `</text>` stays one text, and no raw newline or quote from a text reaches the prompt.
+  - **Onboarding topic area.** It's now moderated on save, your choice on 14 Nov: `PUT /me/onboarding` returns 422 `CONTENT_BLOCKED`, and the field shows the reason, keeps the text and takes focus. Covered by an e2e test.
+  - After `pnpm dev` was restarted: `pnpm test:e2e` 168 passed, 54 skipped. Before the restart, the dev server was serving stale pipeline code and let every topic through.
 
 ### F12 Storage (Cloudflare R2) · 13 Nov 2026
 
@@ -326,6 +363,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 14 Nov 2026 | LLM (F13): the Claude provider asks for JSON-schema structured output (`output_config.format`) instead of the prototype's forced tool call, which current Claude models (Sonnet 5.5, Opus 5.5) reject with a 400. On Claude models that support it, Claude's server-side fallback is on (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`): a declined request is re-run on another model within the same call; a refusal that stands is `CONTENT_BLOCKED`. Three moderation blocks in 24 hours flag a workspace for review (DB §4; SDD §15 says 5 a day). The onboarding topic area is moderated on save like a topic (user's choice, after QA). Texts reach the moderation model as escaped JSON, never inside tags. Moderation lets the request through when it errors or takes over 5 s (API §5). The stub blocks "bomb"/"explosive(s)" (illegal) and "porn"/"nsfw"/"nude" (sexual), so the blocked path works without keys. |
 | 13 Nov 2026 | Storage (F12): signed links for preview playback last 1 hour (SDD §12), not the 15 minutes in DB §7; downloads stay 15 minutes. Keys follow DB §7 (`ws/{workspaceId}/narration/{hash}.mp3`, `ws/{workspaceId}/exports/{exportId}/video.mp4`, `audio.mp3`, `cover.jpg`, `captions.srt`, `ws/{workspaceId}/thumbs/{projectId}.jpg`) over SDD §12's layout, plus SDD's shared `music/{trackId}.mp3`. Keys are built from the hash or the export id, so when two steps record the same narration, the loser keeps the R2 object (it's the same file) instead of deleting it as DB §7 says. |
 | 12 Nov 2026 | Jobs (F11): `POST /jobs/{id}/retry` on a job that isn't failed or partial with a retryable error returns `409 NOT_RETRYABLE` with `{ status }` (API §11 didn't name a code). The cancel event is `job/cancel.requested` (API §11) rather than SDD §5's `job/cancelled`. A queued job is cancelled at once. A start event's id is `job-<jobId>`, so sending it twice runs once. The demo job (`type: demo`) and `POST /api/dev/jobs/demo` exist only for development; both 404 in production. |
 | 12 Nov 2026 | At the monthly limit, the Library's Generate video is turned off with the reset date (F10 scope, PRD FR-10.5), although creating a draft doesn't use a video; existing videos stay open to edit, export and post. Reserved videos count as taken. |
@@ -369,6 +407,12 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **LLM: still to do (F13).**
+  - Run `pnpm check:llm` once a `GEMINI_API_KEY` (or `ANTHROPIC_API_KEY` with `ANTHROPIC_MODEL`) is in `.env`; nothing has called a real model yet.
+  - Gemini's paid prices aren't in `pricing.ts`: on the free tier, events record tokens with `costMicroUsd: 0` (DB §4).
+  - The nightly eval on both providers (SDD §8) and the admin cost and moderation views (F34) are later.
+  - The AI steps moderate again when they run (F14 onwards), which catches what was let through while moderation was unavailable.
 
 - **Storage: still to do (F12).**
   - In the Cloudflare dashboard, set the bucket's CORS: GET and HEAD with Range from the app's origins.

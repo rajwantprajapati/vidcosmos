@@ -22,6 +22,14 @@ export {
   withIdempotency,
 } from "./idempotency.ts";
 export {
+  allowedSampleRate,
+  moderationReview,
+  type NewModerationEvent,
+  type NewUsageEvent,
+  recordModeration,
+  recordUsage,
+} from "./llm-events.ts";
+export {
   advanceJob,
   cancelRequested,
   claimStartResend,
