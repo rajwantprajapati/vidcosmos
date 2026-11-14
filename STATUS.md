@@ -93,6 +93,7 @@ For each finished feature, list how it was checked: commands run, tests added, s
 
 ### F11 Jobs and background functions · 12 Nov 2026
 
+- Fixed 14 Nov after CI failed on the F12 pull request: two parallel starts on one video could both succeed. One request claimed the video before inserting its job; the other saw the claim, didn't find the job yet, took it for a left-over claim and cleared it. `createJob` now inserts the job before claiming, deletes it if the claim is refused, and frees the video before deleting a job. The parallel-start test now runs 25 pairs and fails on the old code locally (round 2); it passes on the fix.
 - `pnpm db:migrate` (jobs validator gains `demo`), `pnpm typecheck`, `pnpm lint`, `pnpm test` (db 160, web 203, spec 25, config 19, integrations 5) and `pnpm build` pass. `pnpm test:e2e`: 159 passed, 50 skipped; three `shell.spec.ts` 404 checks timed out once under full parallel load and pass when run again (16 of 16).
 - Tests added:
   - `packages/db/src/jobs.test.ts` (15, in-memory MongoDB):
