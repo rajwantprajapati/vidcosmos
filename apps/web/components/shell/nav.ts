@@ -42,6 +42,13 @@ export function isCurrent(item: NavItem, pathname: string): boolean {
 }
 
 /** "RP" for "Rajwant Prajapati", "A" for "Asha". */
+/**
+ * Create steps fill the screen on phones, with their own header and bottom button, so the top
+ * bar and the tab bar step aside (CLAUDE.md "Design rules").
+ */
+export const isCreateStep = (pathname: string) =>
+  /^\/projects\/(new|[0-9a-f]{24}\/(idea|script|storyboard))\/?$/.test(pathname);
+
 export function initialsOf(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const letters = words.length > 1 ? [words[0], words[words.length - 1]] : words.slice(0, 1);

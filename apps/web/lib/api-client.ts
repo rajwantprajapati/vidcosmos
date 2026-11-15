@@ -15,9 +15,16 @@ export class ApiRequestError extends Error {
 
 export async function apiFetch<T = unknown>(
   path: string,
-  init: { method?: string; body?: unknown; idempotent?: boolean } = {},
+  init: {
+    method?: string;
+    body?: unknown;
+    idempotent?: boolean;
+    /** The editor tab's id, for requests that need the edit lease (API §5). */
+    editorId?: string;
+  } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
+  if (init.editorId) headers["X-Editor-Id"] = init.editorId;
   if (init.body !== undefined) headers["Content-Type"] = "application/json";
   // One key per user action: a retried request can't create twice (API §1).
   if (init.idempotent) headers["Idempotency-Key"] = crypto.randomUUID();

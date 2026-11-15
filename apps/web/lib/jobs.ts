@@ -6,9 +6,9 @@ import "server-only";
 import { claimStartResend, getJob, type Owner } from "@vidcosmos/db";
 import { type JobDto, toJobDto } from "@vidcosmos/spec/api";
 import type { Job } from "@vidcosmos/spec/collections";
-import { demoJobMode } from "@vidcosmos/spec/api";
+import { demoJobMode, requestIdeasInput } from "@vidcosmos/spec/api";
 import { jobEventId } from "@vidcosmos/spec/events";
-import { demoJobRequested, jobCancelRequested } from "@/inngest/events";
+import { demoJobRequested, ideasRequested, jobCancelRequested } from "@/inngest/events";
 import { inngest } from "@/inngest/client";
 import { getDb } from "./db";
 
@@ -35,14 +35,35 @@ function startEvent(job: Job) {
   switch (job.type) {
     case "demo":
       return demoJobRequested.create({ ...data, mode: demoJobMode.parse(job.input.mode) }, options);
+    case "ideas": {
+      const input = requestIdeasInput.parse(job.input);
+      return ideasRequested.create(
+        {
+          ...data,
+          projectId: data.projectId!,
+          count: input.count,
+          ...(input.steer ? { steer: input.steer } : {}),
+        },
+        options,
+      );
+    }
     default:
       throw new Error(`No function runs ${job.type} jobs yet.`);
   }
 }
 
 /** Sends a new job's start event. Sending the same job twice starts one run (the event id). */
-export function sendStart(job: Job): Promise<boolean> {
-  return send(startEvent(job), `the start of job ${job._id.toHexString()}`);
+export async function sendStart(job: Job): Promise<boolean> {
+  let event: ReturnType<typeof startEvent>;
+  try {
+    event = startEvent(job);
+  } catch (error) {
+    // A bug, not an outage: the job stays queued (cancel frees it) rather than failing the
+    // request after the job was already created.
+    console.error(`[jobs] Couldn't build the start of job ${job._id.toHexString()}`, error);
+    return false;
+  }
+  return send(event, `the start of job ${job._id.toHexString()}`);
 }
 
 /**

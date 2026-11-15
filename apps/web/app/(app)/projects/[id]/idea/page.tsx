@@ -1,14 +1,35 @@
-import { ProjectPlaceholder, projectMetadata } from "@/components/shell/project-placeholder";
+// Step 1 of a video: the idea, its settings and the angles (F14).
+import type { Metadata } from "next";
+import { IdeaStep } from "@/components/create/idea-step";
+import { findProject, loadProject, projectDto, stepJob } from "@/lib/create";
+import { requireSession } from "@/lib/session";
 
-export const generateMetadata = projectMetadata("Idea");
+/** The tab title; a missing video gets the 404's own title. */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const { workspace } = await requireSession(`/projects/${id}/idea`);
+  const found = await findProject(workspace, id);
+  return { title: found ? "New video · Vidcosmos" : "Page not found · Vidcosmos" };
+}
 
-// Step 1 arrives in F14.
-export default function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function IdeaPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { workspace } = await requireSession(`/projects/${id}/idea`);
+  const project = await loadProject(workspace, id);
+  const detail = projectDto(project, workspace);
   return (
-    <ProjectPlaceholder
-      params={params}
-      title="Idea"
-      description="Step 1: describe the video and pick one of the suggested angles."
+    <IdeaStep
+      project={detail}
+      defaults={workspace.defaults}
+      ideasJob={await stepJob(workspace._id, project, "ideas")}
+      generations={{
+        used: detail.counters.generationsUsed,
+        max: detail.counters.generationsMax,
+      }}
     />
   );
 }

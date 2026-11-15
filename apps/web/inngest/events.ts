@@ -10,3 +10,7 @@ export const demoJobRequested = eventType("job/demo.requested", {
 export const jobCancelRequested = eventType("job/cancel.requested", {
   schema: eventSchemas["job/cancel.requested"],
 });
+
+export const ideasRequested = eventType("video/ideas.requested", {
+  schema: eventSchemas["video/ideas.requested"],
+});

@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 14 Nov 2026 · Current focus: **F13 LLM providers and moderation** (built, waiting for review)
+Last updated: 15 Nov 2026 · Current focus: **F14 New video: idea and angles** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -12,13 +12,13 @@ This file is the single place that says where the build stands. Update it at the
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
-| M2 Create flow | 3 | 7 |
+| M2 Create flow | 4 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **13** | **36** |
+| **Total** | **14** | **36** |
 
 ## Features
 
@@ -37,7 +37,7 @@ This file is the single place that says where the build stands. Update it at the
 | F11 | Jobs and background functions | M2 | F08 | Done | 12 Nov 2026 | Inngest at `/api/inngest`; `/api/v1/jobs`; `packages/db/src/jobs.ts`; `/dev/jobs` |
 | F12 | Storage (Cloudflare R2) | M2 | F02 | Done | 13 Nov 2026 | `ArtifactStore` (R2 and a local stub); key layout; `packages/db/src/assets.ts`; `/dev/storage` |
 | F13 | LLM providers and moderation | M2 | F11 | Done | 14 Nov 2026 | `LlmProvider` (Gemini, Claude, stub) in `packages/pipeline/src/llm`; usage and moderation events; `pnpm check:llm` |
-| F14 | New video: idea and angles | M2 | F09, F13 | Not started | | Needs decision D1 |
+| F14 | New video: idea and angles | M2 | F09, F13 | Done | 15 Nov 2026 | Step 1 at `/projects/new` and `/projects/[id]/idea`; `POST /projects/{id}/ideas`; `suggestIdeas` |
 | F15 | Script | M2 | F14 | Not started | | |
 | F16 | Video spec schema and template contracts | M2 | F05 | Not started | | Can run beside F11–F15 |
 | F17 | Storyboard | M2 | F15, F16 | Not started | | |
@@ -64,6 +64,40 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F14 New video: idea and angles · 15 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build` pass. Unit tests: db 177, web 225, pipeline 24, spec 25, integrations 21, config 19. `pnpm test:e2e`: 174 passed, 58 skipped. The library filters test failed once under full parallel load and passes on its own.
+- Tests added:
+  - `packages/db/src/ideas.test.ts` (6):
+    - AI requests per video stop at the limit even with 5 parallel reservations against 3;
+    - `LIMIT_REACHED` carries `{ limit: "generationsPerVideo", used, max }`;
+    - finishing gives a failed or cancelled job's request back once, even if repeated, and a succeeded job keeps it;
+    - another workspace gets 404;
+    - angles replace the old ones, clear the pick and move the wizard to `angles`, but a job that no longer holds the project saves nothing;
+    - a picked angle must exist, and null clears it.
+  - `packages/pipeline/src/ideas.test.ts` (4): the request goes in as one JSON line; the count and distinct titles are checked; a wrong count is fed back, then the extra angles are cut; the stub gives 3 to 5 angles from the topic.
+  - `apps/web/inngest/functions/suggest-ideas.test.ts` (4, `@inngest/test`):
+    - a full run (moderation, angles, save, result with the angle ids, usage for both calls);
+    - a blocked topic fails with `CONTENT_BLOCKED`, is recorded and saves no angles;
+    - an LLM rate limit fails with its code and a retryable message;
+    - a cancelled job doesn't run, and a missing project stops it.
+  - `lib/jobs.test.ts` (+2): the ideas start event is built from the job's input; a start that can't be built leaves the job queued instead of returning 500.
+  - `e2e/create-idea.spec.ts`:
+    - **Desktop:** New video fills the topic, notes, type, length, narrator, format, tone and audience, then suggests angles, which creates the project and opens step 1. 4 angles arrive with "AI requests for this video: 1 of 50". After picking one and reloading, everything has persisted and axe is clean. "Suggest new angles" works again (2 of 50, the pick cleared), and "Write the script" opens step 2.
+    - **Second tab:** it opens read-only with "Edit here instead", and taking over works.
+    - **API:** 400 without `X-Editor-Id` or with `count: 7`, 423 `LEASE_HELD` from another tab, 202 with the lease, 409 `JOB_IN_PROGRESS` on a second start, `generationsUsed` 1.
+    - **Phone:** no tab bar; "Step 1 of 4 · Idea"; a settings row opens in place; the bottom button suggests, then writes the script; no sideways scroll; axe clean.
+  - `e2e/shell.spec.ts` updated: step 1 of a missing video is a 404 titled "Page not found", and the phone tab bar is checked on the editor page, because create steps hide it.
+- Screenshots at 1440×900 (with angles) and 390×844 compared with `NewVideo.png` and `MobileNewVideo.png`. The header, stepper, form, chips, settings, angle cards, buttons and phone bottom bar match.
+  - Fixed on the way: after new angles arrived, "Suggest new angles" stayed disabled (the page still held the starting job); the phone grid was 453 px wide because the chip row widened it; stub hooks ended in "….".
+  - Fixed after manual QA (another session):
+    - **Write from the topic.** Before any angles exist, "Write the script from the topic" (desktop) and "Write from the topic" (phone) open step 2. On New video it first creates the project, with no AI request used. It's off at the monthly limit.
+    - **Refused edits.** Suggest and Write the script wait for the autosave. A field holding a refused or unsaved edit stops them, with focus on that field and nothing spent; before, the job ran on the old text and used an AI request.
+    - **Read-only tab.** "Skip angles" and "Write the script" open step 2 without saving anything, instead of doing nothing.
+    - **Feature plan.** It now says 3-5 angles, 4 by default.
+    - **Tests** (e2e): New video "Write the script from the topic" makes the project with `generationsUsed` 0 and no jobs; a refused notes edit then Suggest starts no job and spends nothing; a read-only tab reaches step 2. Afterwards `pnpm test:e2e`: 177 passed, 61 skipped.
+  - Differences kept: on phones the topic is labelled "Topic", not "What is the video about?"; Notes comes before Video type on phones too, so the order is the same for keyboards at every width; the sidebar marks Library on create steps (F07's rule), where the design marks nothing.
 
 ### F13 LLM providers and moderation · 14 Nov 2026
 
@@ -363,6 +397,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 15 Nov 2026 | Angles (F14): "Suggest angles" asks for 4 (3-5 allowed), following API §6 and the NewVideo design, not the 5-10 in PRD FR-1.2, SDD §8 and the feature plan. Each AI step's request is settled by `finishJob`: failed or cancelled jobs give it back, succeeded jobs keep it; retrying a job that used one uses another. On phones, create steps (`/projects/new`, `…/idea`, `…/script`, `…/storyboard`) hide the top bar and tab bar and show their own header and bottom button. |
 | 14 Nov 2026 | LLM (F13): the Claude provider asks for JSON-schema structured output (`output_config.format`) instead of the prototype's forced tool call, which current Claude models (Sonnet 5.5, Opus 5.5) reject with a 400. On Claude models that support it, Claude's server-side fallback is on (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`): a declined request is re-run on another model within the same call; a refusal that stands is `CONTENT_BLOCKED`. Three moderation blocks in 24 hours flag a workspace for review (DB §4; SDD §15 says 5 a day). The onboarding topic area is moderated on save like a topic (user's choice, after QA). Texts reach the moderation model as escaped JSON, never inside tags. Moderation lets the request through when it errors or takes over 5 s (API §5). The stub blocks "bomb"/"explosive(s)" (illegal) and "porn"/"nsfw"/"nude" (sexual), so the blocked path works without keys. |
 | 13 Nov 2026 | Storage (F12): signed links for preview playback last 1 hour (SDD §12), not the 15 minutes in DB §7; downloads stay 15 minutes. Keys follow DB §7 (`ws/{workspaceId}/narration/{hash}.mp3`, `ws/{workspaceId}/exports/{exportId}/video.mp4`, `audio.mp3`, `cover.jpg`, `captions.srt`, `ws/{workspaceId}/thumbs/{projectId}.jpg`) over SDD §12's layout, plus SDD's shared `music/{trackId}.mp3`. Keys are built from the hash or the export id, so when two steps record the same narration, the loser keeps the R2 object (it's the same file) instead of deleting it as DB §7 says. |
 | 12 Nov 2026 | Jobs (F11): `POST /jobs/{id}/retry` on a job that isn't failed or partial with a retryable error returns `409 NOT_RETRYABLE` with `{ status }` (API §11 didn't name a code). The cancel event is `job/cancel.requested` (API §11) rather than SDD §5's `job/cancelled`. A queued job is cancelled at once. A start event's id is `job-<jobId>`, so sending it twice runs once. The demo job (`type: demo`) and `POST /api/dev/jobs/demo` exist only for development; both 404 in production. |
@@ -407,6 +442,12 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **Step 1: what waits (F14).**
+  - "More like this" and the history of earlier angle sets (PRD FR-1.3) aren't in the API or the design; for later.
+  - A failed or cancelled ideas job gives its AI request back, but the page's count only updates when the job is watched to the end; a reload shows the true number.
+  - `POST /jobs/{id}/retry` doesn't check the edit lease (the progress card doesn't send `X-Editor-Id`); the ideas screen retries through `POST /projects/{id}/ideas`, which does.
+  - Twice, after code changes, the running `pnpm dev` kept serving old code (a pipeline file on 14 Nov, `lib/jobs.ts` on 15 Nov) until it was restarted. If it happens again, look at Turbopack's watch root for the workspace packages.
 
 - **LLM: still to do (F13).**
   - Run `pnpm check:llm` once a `GEMINI_API_KEY` (or `ANTHROPIC_API_KEY` with `ANTHROPIC_MODEL`) is in `.env`; nothing has called a real model yet.
@@ -474,5 +515,4 @@ Decisions already made, newest first. Details are in the docs.
 - **Turborepo cache: fixed on 12 Nov.** Each `pnpm build` used to save about 1.2 GB to `.turbo/cache`, because the build outputs in `turbo.json` included `.next/dev`, the running dev server's folder (Next.js 16). That filled the disk. `.next/dev` is now excluded, so a build saves about 7 MB and a cache restore no longer writes old files into the running dev server's folder. The cache can still be deleted at any time.
 - **Usage: write side comes with generation.** Reserving, committing and releasing videos, the conditional month rollover in the database, the daily export counter and the stuck-job release arrive with F20 (and F26 for exports). Until then the counters only change by hand (as the usage e2e tests do).
 - **Settings shows only Usage and Account.** The rest of the Settings design (account form, video defaults, Instagram, notifications, delete) is F30.
-- **F14 must refuse at the limit.** The create step (`/projects/new`, step 1) has to keep refusing new videos at the monthly limit with the reset date, as the Library and the New video placeholder do now (found in QA of F10).
 - **`PATCH /me` is F30.** API §4 lists it (name, time zone, UI language); it returns 405 until the Settings account form arrives.
