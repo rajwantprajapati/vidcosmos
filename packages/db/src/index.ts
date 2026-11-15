@@ -21,6 +21,7 @@ export {
   type IdempotencyErrorCode,
   withIdempotency,
 } from "./idempotency.ts";
+export { readIdeaInputs, saveAngles } from "./ideas.ts";
 export {
   allowedSampleRate,
   moderationReview,
@@ -45,8 +46,11 @@ export {
   listJobs,
   type NewJob,
   parseJobId,
+  releaseJobGeneration,
   requestCancel,
+  reserveGeneration,
   retryJob,
+  returnGeneration,
   startJob,
   startResendMs,
 } from "./jobs.ts";

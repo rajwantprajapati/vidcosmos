@@ -12,7 +12,6 @@ const routes: [path: string, heading: string][] = [
   ["/settings", "Settings"],
   ["/projects/new", "New video"],
   [`/projects/${projectId}`, "Editor"],
-  [`/projects/${projectId}/idea`, "Idea"],
   [`/projects/${projectId}/script`, "Script"],
   [`/projects/${projectId}/storyboard`, "Storyboard"],
   [`/projects/${projectId}/generating`, "Generating"],
@@ -43,6 +42,15 @@ test.describe("app shell", () => {
     }
     await page.getByRole("link", { name: "Go to your library" }).click();
     await expect(page).toHaveURL(/\/library$/);
+  });
+
+  test("step 1 of a video that doesn't exist is a 404", async ({ page }) => {
+    // Step 1 is real since F14. (The sidebar can't tell this id is missing, so it still marks
+    // Library, as on every project page.)
+    const response = await page.goto(`/projects/${projectId}/idea`);
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
+    await expect(page).toHaveTitle("Page not found · Vidcosmos");
   });
 
   test("the 404 keeps a dark theme", async ({ page }) => {
@@ -128,8 +136,9 @@ test.describe("app shell", () => {
     await expect(page).toHaveURL(/\/projects\/new$/);
   });
 
+  // Create steps (idea, script, storyboard) hide the phone's tab bar; the editor keeps it.
   test("project pages count as the library", async ({ page }) => {
-    await page.goto(`/projects/${projectId}/script`);
+    await page.goto(`/projects/${projectId}`);
     const current = page.locator('a[aria-current="page"]:visible');
     await expect(current).toHaveCount(1);
     await expect(current).toContainText("Library");

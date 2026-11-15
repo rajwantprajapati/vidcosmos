@@ -1,10 +1,15 @@
+"use client";
+
 // The top bar on phones (MobileLibrary design): logo and the user's initials. The
 // notifications bell joins it with notifications (F31).
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui";
 import { Avatar } from "./avatar";
+import { isCreateStep } from "./nav";
 
 export function MobileTopBar({ initials }: { initials: string }) {
+  if (isCreateStep(usePathname())) return null;
   return (
     <header className="flex h-14 items-center justify-between pr-2 pl-4 md:hidden">
       <Link href="/" aria-label="Vidcosmos home" className="inline-flex rounded-md">

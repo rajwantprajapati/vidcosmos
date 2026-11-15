@@ -1,14 +1,14 @@
+// New video: step 1 before the project exists (F14). The first "Suggest angles" creates the
+// project and opens its own step 1. At the monthly limit it says so, with the reset date, and
+// won't start (PRD FR-10.5).
 import { toUsageDto } from "@vidcosmos/spec/api";
 import type { Metadata } from "next";
-import { LimitNotice } from "@/components/library/limit-notice";
-import { Placeholder } from "@/components/shell/page-header";
+import { IdeaStep } from "@/components/create/idea-step";
 import { requireSession } from "@/lib/session";
 import { usageView } from "@/lib/usage";
 
 export const metadata: Metadata = { title: "New video · Vidcosmos" };
 
-// F14 turns this into "create the project, then open step 1 (/projects/[id]/idea)", and must
-// refuse at the monthly limit with the reset date, as this placeholder already says.
 export default async function NewVideoPage() {
   const { user, workspace } = await requireSession("/projects/new");
   const { usage, resetsOn, allowance } = usageView(
@@ -16,13 +16,12 @@ export default async function NewVideoPage() {
     user.timeZone,
   );
   return (
-    <>
-      <Placeholder title="New video">
-        Describe a video, pick its type and format, and Vidcosmos writes the script.
-      </Placeholder>
-      {allowance.reached ? (
-        <LimitNotice limit={{ max: usage.videos.max, resetsOn }} className="max-w-reading" />
-      ) : null}
-    </>
+    <IdeaStep
+      project={null}
+      defaults={workspace.defaults}
+      ideasJob={null}
+      generations={{ used: 0, max: workspace.limits.generationsPerVideo }}
+      limit={allowance.reached ? { max: usage.videos.max, resetsOn } : undefined}
+    />
   );
 }

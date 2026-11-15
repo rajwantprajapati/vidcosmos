@@ -320,6 +320,14 @@ export async function updateProject(
   }
 
   if (input.idea) {
+    const picked = input.idea.selectedAngleId;
+    if (picked && !project.idea.angles.some((angle) => angle.id === picked)) {
+      throw new ProjectError("STAGE_INVALID", "That angle isn't one of this video's angles.", {
+        stage: project.stage,
+        wizardStep: project.wizardStep,
+        needs: "angles",
+      });
+    }
     for (const [key, value] of Object.entries(input.idea)) {
       if (value === undefined) continue;
       if (value === null) unset[`idea.${key}`] = "";

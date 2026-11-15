@@ -119,7 +119,7 @@ V1 is built as 36 small features in 8 milestones. Each one ends in something you
 
 ### F14 New video: idea and angles (step 1)
 - **Goal:** step 1 of the create flow.
-- **Scope:** the New video screen: topic, notes, video type chips, format, length, language, narrator, tone and audience; `suggestIdeas` function (5–10 angles with hooks); pick an angle or "Use my idea"; the step indicator; autosave of the step.
+- **Scope:** the New video screen: topic, notes, video type chips, format, length, language, narrator, tone and audience; `suggestIdeas` function (3–5 angles with hooks, 4 by default, per API §6; decision log 15 Nov); pick an angle or "Use my idea"; the step indicator; autosave of the step.
 - **Docs:** PRD F2, M1; API §6 (ideas); SDD §8 (functions).
 - **Design:** `NewVideo.png`, `MobileNewVideo.png`, `Stepper.png`.
 - **Decision needed first:** where the video type is stored (`STATUS.md`, decision D1).

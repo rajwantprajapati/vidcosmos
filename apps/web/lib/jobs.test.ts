@@ -90,3 +90,28 @@ describe("start events", () => {
     expect(send).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("start events for job types", () => {
+  it("builds the ideas event from the job's input", async () => {
+    const job = queued({ type: "ideas", input: { count: 3, steer: "exam questions" } });
+    send.mockResolvedValueOnce({ ids: ["1"] });
+    expect(await sendStart(job)).toBe(true);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "video/ideas.requested",
+        id: `job-${job._id.toHexString()}`,
+        data: expect.objectContaining({
+          count: 3,
+          steer: "exam questions",
+          projectId: job.projectId!.toHexString(),
+        }),
+      }),
+    );
+  });
+
+  it("keeps the job queued, without throwing, when its start can't be built", async () => {
+    const job = queued({ type: "export" });
+    expect(await sendStart(job)).toBe(false);
+    expect(send).not.toHaveBeenCalled();
+  });
+});

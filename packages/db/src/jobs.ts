@@ -105,6 +105,8 @@ export type NewJob = {
   projectId: ObjectId | null;
   input: Record<string, unknown>;
   idempotencyKey?: string;
+  /** The job uses one of the project's AI requests, given back if it fails (`ideas.ts`). */
+  reservesGeneration?: boolean;
 };
 
 /**
@@ -133,7 +135,7 @@ export async function createJob(
     input: input.input,
     ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
     inngest: { eventId: jobEventId(jobId.toHexString()) },
-    usage: { reserved: false, committed: false, released: false },
+    usage: { reserved: Boolean(input.reservesGeneration), committed: false, released: false },
     attempts: 0,
     createdAt: now,
     updatedAt: now,
@@ -257,13 +259,23 @@ export async function retryJob(
   if ((job.status !== "failed" && job.status !== "partial") || !job.error?.retryable) {
     throw new JobError("NOT_RETRYABLE", "This job can't be tried again.", { status: job.status });
   }
-  return createJob(
-    db,
-    owner,
-    workspace,
-    { type: job.type, projectId: job.projectId, input: job.input },
-    now,
-  );
+  // A job that used one of the project's AI requests uses another (API §11: the same checks).
+  const reserves = job.usage.reserved && job.projectId !== null;
+  if (reserves) {
+    await reserveGeneration(db, owner, job.projectId!, workspace.limits.generationsPerVideo);
+  }
+  try {
+    return await createJob(
+      db,
+      owner,
+      workspace,
+      { type: job.type, projectId: job.projectId, input: job.input, reservesGeneration: reserves },
+      now,
+    );
+  } catch (error) {
+    if (reserves) await returnGeneration(db, owner, job.projectId!);
+    throw error;
+  }
 }
 
 // ---- Start events that didn't arrive ----
@@ -405,6 +417,88 @@ export async function finishJob(
   const finished =
     (await jobs(db).findOneAndUpdate(filter, { $set: set }, { returnDocument: "after" })) ??
     (await jobs(db).findOne({ workspaceId: ref.workspaceId, _id: ref.jobId }));
-  if (finished && isJobFinished(finished.status)) await releaseProject(db, finished);
+  if (finished && isJobFinished(finished.status)) {
+    await releaseProject(db, finished);
+    await settleGeneration(db, finished);
+  }
   return finished;
+}
+
+// ---- AI requests used by jobs (API §6) ----
+
+/** Uses one AI request on the project, or refuses with `403 LIMIT_REACHED`. */
+export async function reserveGeneration(
+  db: Db,
+  owner: { workspaceId: ObjectId },
+  projectId: ObjectId,
+  max: number,
+): Promise<void> {
+  const reserved = await projects(db).updateOne(
+    {
+      workspaceId: owner.workspaceId,
+      _id: projectId,
+      deletedAt: null,
+      generationsUsed: { $lt: max },
+    },
+    { $inc: { generationsUsed: 1 } },
+  );
+  if (reserved.matchedCount === 1) return;
+  const project = await projects(db).findOne(
+    { workspaceId: owner.workspaceId, _id: projectId, deletedAt: null },
+    { projection: { generationsUsed: 1 } },
+  );
+  if (!project) throw new JobError("NOT_FOUND", "That video doesn't exist.");
+  throw new JobError("LIMIT_REACHED", `This video has used all ${max} of its AI requests.`, {
+    limit: "generationsPerVideo",
+    used: project.generationsUsed,
+    max,
+    resetsAt: null,
+  });
+}
+
+/** Gives an AI request back to the project (the job that would have used it never started). */
+export async function returnGeneration(
+  db: Db,
+  owner: { workspaceId: ObjectId },
+  projectId: ObjectId,
+): Promise<void> {
+  await projects(db).updateOne(
+    { workspaceId: owner.workspaceId, _id: projectId, generationsUsed: { $gt: 0 } },
+    { $inc: { generationsUsed: -1 } },
+  );
+}
+
+/**
+ * A failed or cancelled job gives its AI request back. Repeating it (Inngest steps may run
+ * more than once) changes nothing; a job that succeeded keeps it.
+ */
+export async function releaseJobGeneration(db: Db, ref: JobRef): Promise<boolean> {
+  const released = await jobs(db).findOneAndUpdate(
+    {
+      workspaceId: ref.workspaceId,
+      _id: ref.jobId,
+      "usage.reserved": true,
+      "usage.committed": false,
+      "usage.released": false,
+    },
+    { $set: { "usage.released": true } },
+    { projection: { projectId: 1 } },
+  );
+  if (!released?.projectId) return false;
+  await returnGeneration(db, ref, released.projectId);
+  return true;
+}
+
+/** Settles a finished job's AI request: kept when it succeeded, given back otherwise. */
+async function settleGeneration(db: Db, job: Job) {
+  if (!job.usage.reserved) return;
+  const ref = { workspaceId: job.workspaceId, jobId: job._id };
+  if (job.status === "succeeded" || job.status === "partial") {
+    await jobs(db).updateOne(
+      { workspaceId: job.workspaceId, _id: job._id, "usage.released": false },
+      { $set: { "usage.committed": true } },
+    );
+  } else {
+    await releaseJobGeneration(db, ref);
+  }
 }

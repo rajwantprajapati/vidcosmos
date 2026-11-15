@@ -17,6 +17,12 @@ export type JobEventData = z.infer<typeof jobEventData>;
 export const eventSchemas = {
   /** Development only: the demo job with fake steps (F11). */
   "job/demo.requested": jobEventData.extend({ mode: demoJobMode }),
+  /** Suggest angles for the project's topic (API §6, `suggestIdeas`). */
+  "video/ideas.requested": jobEventData.extend({
+    projectId: id,
+    count: z.int().min(3).max(5),
+    steer: z.string().max(200).optional(),
+  }),
   /** Stops the job's run at the next step boundary (API §11 "Cancel"). */
   "job/cancel.requested": z.object({ workspaceId: id, jobId: id }),
 } as const;
