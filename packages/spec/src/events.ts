@@ -23,6 +23,13 @@ export const eventSchemas = {
     count: z.int().min(3).max(5),
     steer: z.string().max(200).optional(),
   }),
+  /**
+   * Write the script (API §6, `writeScript`). Ids only: the function reads the job's input
+   * (angle, instructions) from MongoDB (API §15).
+   */
+  "video/script.requested": jobEventData.extend({ projectId: id }),
+  /** Rewrite all or part of the script (API §6). Ids only, like the script event. */
+  "video/script.rewrite.requested": jobEventData.extend({ projectId: id }),
   /** Stops the job's run at the next step boundary (API §11 "Cancel"). */
   "job/cancel.requested": z.object({ workspaceId: id, jobId: id }),
 } as const;

@@ -23,6 +23,15 @@ export {
 } from "./idempotency.ts";
 export { readIdeaInputs, saveAngles } from "./ideas.ts";
 export {
+  checkRewriteRequest,
+  checkScriptRequest,
+  readScriptInputs,
+  saveScript,
+  type ScriptSave,
+  scriptEdited,
+  undoneRewriteSource,
+} from "./script.ts";
+export {
   allowedSampleRate,
   moderationReview,
   type NewModerationEvent,
@@ -75,6 +84,7 @@ export {
   restoreProject,
   saveDraft,
   takeLease,
+  type UpdateOptions,
   textHash,
   trashDays,
   updateProject,

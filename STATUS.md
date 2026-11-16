@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 15 Nov 2026 · Current focus: **F14 New video: idea and angles** (built, waiting for review)
+Last updated: 16 Nov 2026 · Current focus: **F15 Script** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -12,13 +12,13 @@ This file is the single place that says where the build stands. Update it at the
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
-| M2 Create flow | 4 | 7 |
+| M2 Create flow | 5 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **14** | **36** |
+| **Total** | **15** | **36** |
 
 ## Features
 
@@ -38,7 +38,7 @@ This file is the single place that says where the build stands. Update it at the
 | F12 | Storage (Cloudflare R2) | M2 | F02 | Done | 13 Nov 2026 | `ArtifactStore` (R2 and a local stub); key layout; `packages/db/src/assets.ts`; `/dev/storage` |
 | F13 | LLM providers and moderation | M2 | F11 | Done | 14 Nov 2026 | `LlmProvider` (Gemini, Claude, stub) in `packages/pipeline/src/llm`; usage and moderation events; `pnpm check:llm` |
 | F14 | New video: idea and angles | M2 | F09, F13 | Done | 15 Nov 2026 | Step 1 at `/projects/new` and `/projects/[id]/idea`; `POST /projects/{id}/ideas`; `suggestIdeas` |
-| F15 | Script | M2 | F14 | Not started | | |
+| F15 | Script | M2 | F14 | Done | 16 Nov 2026 | Step 2 at `/projects/[id]/script`; `POST /projects/{id}/script` and `/script/rewrite`; `writeScript`, `rewriteScript` |
 | F16 | Video spec schema and template contracts | M2 | F05 | Not started | | Can run beside F11–F15 |
 | F17 | Storyboard | M2 | F15, F16 | Not started | | |
 | F18 | Remotion package and first 4 templates | M3 | F16 | Not started | | Can start after F16 |
@@ -64,6 +64,71 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F15 Script · 16 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: db 189, web 232, pipeline 33, spec 32, integrations 21, config 19, video 1. `pnpm test:e2e`: 185 passed, 69 skipped (each test runs at the screen size it's written for).
+- Built:
+  - `@vidcosmos/spec/api` `script.ts`: `countWords` (a dash or a danda standing alone isn't a word), `scriptStats`, `targetWords`, `scriptFit` (within 15% either way, PRD FR-2.4), `firstSentence` (the hook), `requestScriptInput`, `rewriteScriptInput`. `scriptStats` moved here from `projects.ts`.
+  - `@vidcosmos/pipeline` `script.ts`: `writeScript`, with the prototype's rules and the request as a JSON line, a ±10% length check and one retry (SDD §8); `rewriteScript` for all of the script or a selected part, checking that "shorter" and "longer" went the right way. Stub answers `submit_script` (sized to the target, English or Hindi, from the angle's hook) and `submit_rewrite`. The pipeline now depends on `@vidcosmos/spec`.
+  - `@vidcosmos/db` `script.ts`:
+    - `checkScriptRequest`: an unknown angle is refused, and so is a new script over an edited one without `overwrite` (`409 STAGE_INVALID`, `needs: 'overwrite'`);
+    - `checkRewriteRequest`: there must be a script, and the selection must be inside it;
+    - `saveScript`: saves only while the job holds the project. It records `stageHashes.idea`, moves the wizard to `script`, and takes the script's title unless the video was renamed. A rewrite is saved only over the text it started from.
+    - Editing the script by PATCH now moves the hook with the text.
+  - Events `video/script.requested` and `video/script.rewrite.requested` carry ids only; the functions read the job's input (API §15).
+  - Functions `write-script` and `rewrite-script`:
+    - they moderate what was typed, then the AI's script;
+    - the rewrite keeps the script it started from in the job's input, for "Undo last rewrite";
+    - a script edited while a rewrite ran keeps the edit: the job ends cancelled and gives its request back.
+  - Routes `POST /projects/{id}/script` and `/script/rewrite`: edit lease, Idempotency-Key, AI request reserved and given back on failure, one job per video.
+  - The step 2 page:
+    - the editor saves as you type and shows the word count, the estimated length and a fit badge;
+    - over the target it offers "Trim to fit" and "Use 90 s";
+    - rewrite chips, a "Custom…" dialog, a selection rewrites only that part, and "Undo last rewrite";
+    - the overwrite question, and the stale banner with "Write a new script";
+    - a read-only second tab, the settings and angle cards, and "Build the storyboard";
+    - on phones, its own header, scrolling chips and a bottom button.
+  - Step 1's "Write the script" / "Write the script from the topic" now start the script job and open step 2. A video that already has a script just opens it.
+- Tests added:
+  - `packages/spec/src/api/script.test.ts` (7): word counts in English, Hindi and Hinglish; 2.5 and 2.2 words a second; targets of 75/150/225 and 66/132/198 words; the 15% fit edges; the hook in both languages; the rewrite request's checks.
+  - `packages/pipeline/src/script.test.ts` (8): the length check and its message; the request stays data; one retry with the length fed back, and the second try is kept even if still off; the stub fits every length within 10% in both languages and starts from the angle's hook; a rewritten part goes back in place; "shorter" and "longer" are checked; the stub's rewrites.
+  - `packages/db/src/script.test.ts` (7): saving with the idea hash, the title and the wizard step; a renamed video keeps its title; nothing is saved once the job has lost the project; a rewrite isn't saved over an edit made meanwhile; an edit becomes `ai_edited` and moves the hook; overwrite, angle and selection checks; editing the notes marks the script stale and a settings change doesn't.
+  - `apps/web/inngest/functions/script-jobs.test.ts` (6): a full write, with the script sized, checked and saved; a blocked topic; an LLM failure, with "The AI couldn't write the script this time"; a rewrite of the selected part; a rewrite whose script was edited ends cancelled; a blocked custom instruction.
+  - `e2e/create-script.spec.ts`:
+    - **Desktop:** step 1 starts the script, and step 2 shows "N words · about N s with an Indian female voice" and "Fits your 60 s target". An edit autosaves ("Saved just now") and survives a reload as `ai_edited`. "Longer", then "Undo last rewrite". A selected sentence changes alone. "Custom…" refuses empty text, then rewrites. That makes 4 AI requests, axe is clean, and "Build the storyboard" opens step 3.
+    - **Stale:** an edited script, then a notes change on step 1. Going back to step 2 shows the stale banner and spends nothing. "Write a new script" asks first; "Keep my script" keeps it; confirming writes a fresh `ai` script, which clears the banner.
+    - **Too long:** a long script shows "Longer than your 60 s target" and "Trim to fit"; "Use 90 s" changes the length.
+    - **API:** 400 without `X-Editor-Id`; a rewrite with no script is 409 `needs: 'script'`; a custom rewrite with no words is 400; an unknown angle is 409; a write is 202 and uses 1 request.
+    - **Phone:** "Step 2 of 4", no tab bar, the chip toolbar, "N words · about N s", "Fits 60 s"; no sideways scroll; axe clean; the bottom button opens step 3.
+  - Updated:
+    - `e2e/create-idea.spec.ts`: "Write the script from the topic" now uses 1 AI request and starts one `script` job.
+    - `e2e/shell.spec.ts`: step 2 of a missing video is a 404 too.
+    - `e2e/auth.spec.ts`: the sign-in return test uses a real video's step 2.
+- Screenshots at 1440×900 and 390×844 compared with `Script.png` and `MobileScript.png`. The header (← Idea, title, stepper, save status), the chips, the editor card, the stats line and badge, the three side cards and the phone header, bars, chips, stats row and bottom button match.
+  - Fixed on the way: the editor card was 66 px narrower than the design (its 760 px limit doesn't count padding there); the save status was empty until the first save.
+  - Differences kept: the sidebar marks Library (F07's rule); the phone chips don't wrap "More engaging" onto two lines.
+- Fixed after manual QA (another session, 16 Nov):
+  - **A tab that lost editing saved over the other tab.** A script PATCH now needs the editor tab's id (`X-Editor-Id`) and its lease (`423 LEASE_HELD` otherwise). Any PATCH that sends the id is checked the same way, and both steps now send it. A refused save turns the tab read-only with "Another tab took over editing, so your last change wasn't saved here." "Edit here instead" reloads the saved script, and the box stays read-only until it has. On retest: when the lease renewal finds the takeover before a save is sent, the status said "Saving…" for good. It now says "Not saved" with the same message (e2e with Playwright's clock). The truncated title has its full text as a tooltip.
+  - **An edit made while a new script was written was lost.** The write job now keeps the script it started from (`previousText` in its input), like the rewrite does. It saves only over that; otherwise the edit stays and the job ends cancelled, giving its request back.
+  - **The header jumped 37 px on each save with a long title.** The status now has a fixed width, the title truncates, and the status reads "Saving…" as soon as there's something unsaved.
+  - **"Keep this script" only hid the banner** until a reload. It's now "Dismiss", with focus back in the script.
+  - **Undo of a rewrite of the AI's own script left it `ai_edited`**, so a new script asked about overwriting. The PATCH puts back the earlier source when the text is exactly what the latest rewrite replaced, and the script hasn't changed since.
+  - **An empty script could be rewritten.** A script with no words is refused (`409`, `needs: 'script'`), and the chips are disabled. Separately, the stub read the whole retry prompt as JSON, so any stub retry became `INTERNAL`; it now reads only the request line (moderation, ideas and script).
+  - **A script written from an angle other than the picked one** was stale at once; that angle now becomes the picked one.
+  - **Focus:** it goes back to the script after "Use 90 s" and "Dismiss", and the Custom… dialog's error clears as you type.
+  - **Phone chips** are at least 44 px tall.
+  - **Tests:**
+    - db (+5): the write guard; the angle used; an empty script refused; an update from a tab without the lease refused; the undo source.
+    - pipeline (+1): the stub answers a retry prompt.
+    - jobs (+1): a write whose script was edited meanwhile ends cancelled.
+    - e2e (+2 tests, more checks):
+      - a tab that lost editing goes read-only and the other tab's script stays;
+      - the editor doesn't move while saving;
+      - an empty script disables the chips;
+      - Dismiss comes back after a reload;
+      - phone chips are 44 px or taller;
+      - `projects-api` expects 400 for a script PATCH without a tab id.
 
 ### F14 New video: idea and angles · 15 Nov 2026
 
@@ -397,6 +462,8 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 16 Nov 2026 | Edit lease on PATCH (F15 QA): a `PATCH /projects/{id}` that changes the script needs `X-Editor-Id` and the lease (`423 LEASE_HELD`); any PATCH that sends `X-Editor-Id` is checked the same way. A PATCH without it, such as the library's rename, works as before. API §5 says only one editor tab may change a project. |
+| 16 Nov 2026 | Script (F15): step 1's "Write the script" (and "… from the topic") starts the first script and opens step 2, so it uses 1 AI request; a video that has a script just opens it (your choice, 15 Nov). The fit badge allows 15% either way (PRD FR-2.4). The hook is the script's first sentence, kept in step with the text. Rewrite chips follow the design: Shorter, Longer, Simpler, More engaging, Custom… (`more_formal` is in the API only). A rewrite whose script was edited while it ran ends cancelled, so the edit stays. Script events carry ids only (API §15). |
 | 15 Nov 2026 | Angles (F14): "Suggest angles" asks for 4 (3-5 allowed), following API §6 and the NewVideo design, not the 5-10 in PRD FR-1.2, SDD §8 and the feature plan. Each AI step's request is settled by `finishJob`: failed or cancelled jobs give it back, succeeded jobs keep it; retrying a job that used one uses another. On phones, create steps (`/projects/new`, `…/idea`, `…/script`, `…/storyboard`) hide the top bar and tab bar and show their own header and bottom button. |
 | 14 Nov 2026 | LLM (F13): the Claude provider asks for JSON-schema structured output (`output_config.format`) instead of the prototype's forced tool call, which current Claude models (Sonnet 5.5, Opus 5.5) reject with a 400. On Claude models that support it, Claude's server-side fallback is on (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`): a declined request is re-run on another model within the same call; a refusal that stands is `CONTENT_BLOCKED`. Three moderation blocks in 24 hours flag a workspace for review (DB §4; SDD §15 says 5 a day). The onboarding topic area is moderated on save like a topic (user's choice, after QA). Texts reach the moderation model as escaped JSON, never inside tags. Moderation lets the request through when it errors or takes over 5 s (API §5). The stub blocks "bomb"/"explosive(s)" (illegal) and "porn"/"nsfw"/"nude" (sexual), so the blocked path works without keys. |
 | 13 Nov 2026 | Storage (F12): signed links for preview playback last 1 hour (SDD §12), not the 15 minutes in DB §7; downloads stay 15 minutes. Keys follow DB §7 (`ws/{workspaceId}/narration/{hash}.mp3`, `ws/{workspaceId}/exports/{exportId}/video.mp4`, `audio.mp3`, `cover.jpg`, `captions.srt`, `ws/{workspaceId}/thumbs/{projectId}.jpg`) over SDD §12's layout, plus SDD's shared `music/{trackId}.mp3`. Keys are built from the hash or the export id, so when two steps record the same narration, the loser keeps the R2 object (it's the same file) instead of deleting it as DB §7 says. |
@@ -442,6 +509,16 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **Step 2: what waits (F15).**
+  - The editor is a plain text box, not rich text (PRD FR-2.4); nothing in the script needs formatting yet.
+  - "Undo last rewrite" lasts until the next edit, and isn't offered after a reload during a running rewrite.
+  - "Trim to fit" is a "shorter" rewrite: one try, not a loop to the exact length. "Use 30 s" isn't offered for a short script.
+  - Hindi narration with an English script (PRD edge case "language doesn't match") isn't detected yet.
+  - "Build the storyboard" opens step 3, still a placeholder until F17.
+  - A third time (16 Nov, the stub LLM), the running `pnpm dev` served old workspace-package code until it was restarted.
+  - The stale banner's "Dismiss" isn't remembered: the banner returns on reload while the script is stale. Accepting a stale script for good would need an API field.
+  - Step 1's "Edit here instead" doesn't reload the fields the other tab may have changed (step 2's does).
 
 - **Step 1: what waits (F14).**
   - "More like this" and the history of earlier angle sets (PRD FR-1.3) aren't in the API or the design; for later.

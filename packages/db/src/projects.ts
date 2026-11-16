@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import {
   type CreateProjectInput,
+  firstSentence,
   type ListProjectsQuery,
   type SaveDraftInput,
   scriptStats,
@@ -260,6 +261,16 @@ export function wizardStepNeeds(project: Project, step: Project["wizardStep"]): 
   }
 }
 
+export type UpdateOptions = {
+  /**
+   * The editor tab's lease holder: the update is refused (`423 LEASE_HELD`) while another tab
+   * holds the lease (API §5 "Edit lease"), so a tab that lost it can't save over the other.
+   */
+  holder?: string;
+  /** A script edit that puts back what a rewrite replaced keeps that script's source. */
+  scriptSource?: NonNullable<Project["script"]>["source"];
+};
+
 /** Applies the update rules of API §5 and returns the project as it is now. */
 export async function updateProject(
   db: Db,
@@ -267,6 +278,7 @@ export async function updateProject(
   projectId: ObjectId,
   input: UpdateProjectInput,
   now = new Date(),
+  options: UpdateOptions = {},
 ): Promise<Project> {
   const project = await getProject(db, owner.workspaceId, projectId);
   const set: Record<string, unknown> = { updatedAt: now };
@@ -345,14 +357,18 @@ export async function updateProject(
     }
     const text = input.script.text ?? project.script.text;
     const language = settings.language ?? project.settings.language;
+    // The hook is the first sentence: it follows the text unless it's set on its own.
+    const hook =
+      input.script.hook ??
+      (input.script.text !== undefined ? firstSentence(text) : project.script.hook);
     set.script = {
       ...project.script,
       ...(input.script.title !== undefined ? { title: input.script.title } : {}),
-      ...(input.script.hook !== undefined ? { hook: input.script.hook } : {}),
+      hook,
       text,
       ...scriptStats(text, language),
       // The user's own words: an AI script becomes "ai_edited"; their own stays "user".
-      source: project.script.source === "user" ? "user" : "ai_edited",
+      source: options.scriptSource ?? (project.script.source === "user" ? "user" : "ai_edited"),
       updatedAt: now,
     };
   }
@@ -365,13 +381,24 @@ export async function updateProject(
   if (Object.keys(unset).length) update.$unset = unset;
   if (draftChanged) update.$inc = { "draft.rev": 1 };
 
-  const updated = await projects(db).findOneAndUpdate(
-    { workspaceId: owner.workspaceId, _id: projectId, deletedAt: null },
-    update,
-    { returnDocument: "after" },
-  );
-  if (!updated) throw notFound();
-  return updated;
+  const filter: Filter<Project> & { workspaceId: ObjectId } = {
+    workspaceId: owner.workspaceId,
+    _id: projectId,
+    deletedAt: null,
+  };
+  if (options.holder) {
+    filter.$or = [
+      { lease: null },
+      { "lease.expiresAt": { $lt: now } },
+      { "lease.holderSessionId": options.holder },
+    ];
+  }
+  const updated = await projects(db).findOneAndUpdate(filter, update, {
+    returnDocument: "after",
+  });
+  if (updated) return updated;
+  if (options.holder) throw await leaseHeldError(db, owner, projectId, now);
+  throw notFound();
 }
 
 // ---- Edit lease (DB §11) ----

@@ -3,4 +3,5 @@ export * from "./ideas.ts";
 export * from "./jobs.ts";
 export * from "./me.ts";
 export * from "./projects.ts";
+export * from "./script.ts";
 export * from "./text.ts";

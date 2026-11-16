@@ -2,8 +2,9 @@
 
 // The edit lease for a project (API §5 "Edit lease"): only one tab changes a video at a time.
 // The tab's editor id lives in sessionStorage, so a reload keeps the lease. Taken on open,
-// renewed every 30 s (it lasts 60), given up with a beacon when the tab closes. Held elsewhere:
-// the page goes read-only and offers "Edit here instead".
+// renewed every 30 s (it lasts 60), given up with a beacon when the tab closes. Held elsewhere
+// (found on renewal, or when a save is refused with 423): the page goes read-only and offers
+// "Edit here instead".
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 
@@ -82,5 +83,10 @@ export function useEditLease(projectId: string | null) {
     };
   }, [projectId, take]);
 
-  return { state, editorId, takeover: () => take(true) };
+  /** A save was refused with LEASE_HELD: another tab took over, so this one is read-only. */
+  const lost = useCallback((details?: Record<string, unknown>) => {
+    setState({ status: "elsewhere", byYou: details?.heldBy !== "other" });
+  }, []);
+
+  return { state, editorId, takeover: () => take(true), lost };
 }

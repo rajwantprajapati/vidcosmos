@@ -3,7 +3,8 @@
 // Step 1 of making a video (NewVideo and MobileNewVideo designs, API §5-6): the topic, notes,
 // video type and settings, saved as you go, and the angles. "Suggest angles" starts an `ideas`
 // job (one AI request) and shows its progress; the angles replace any earlier ones. Picking
-// one saves it; "Write the script" goes on to step 2, "Skip angles" goes there without one.
+// one saves it; "Write the script" starts the script job (F15) and opens step 2, "Skip angles"
+// does the same from the topic alone. A video that has a script already just opens step 2.
 //
 // On /projects/new there is no project yet: the first "Suggest angles" creates it, then opens
 // its own step 1, which picks the running job up again.
@@ -17,6 +18,7 @@ import { useJob } from "@/components/jobs/use-job";
 import { LimitNotice, type VideoLimit } from "@/components/library/limit-notice";
 import { Button, Chip, cn, Icon, ProgressBar, SegmentedControl, TextField } from "@/components/ui";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
+import { Notice } from "./notice";
 import { StepBars, Stepper } from "./stepper";
 import { useEditLease } from "./use-edit-lease";
 
@@ -130,6 +132,7 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
   const router = useRouter();
   const projectId = project?.id ?? null;
   const lease = useEditLease(projectId);
+  const { editorId: tabId, lost: leaseLost } = lease;
   const [draft, setDraft] = useState<Draft>(() => draftOf(project, defaults));
   const saved = useRef<Draft>(draftOf(project, defaults));
   const [angles, setAngles] = useState<Angle[]>(project?.idea.angles ?? []);
@@ -141,6 +144,7 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
   const [error, setError] = useState<string | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
 
+  const hasScript = Boolean(project?.script);
   const readOnly = lease.state.status === "elsewhere";
   const outOfRequests = used >= generations.max;
   const blockedByLimit = !projectId && Boolean(limit);
@@ -155,7 +159,7 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
     if (!body) return true;
     const snapshot = draft;
     try {
-      await apiFetch(`/projects/${projectId}`, { method: "PATCH", body });
+      await apiFetch(`/projects/${projectId}`, { method: "PATCH", body, editorId: tabId });
       saved.current = {
         ...snapshot,
         topic: snapshot.topic.trim().length >= 3 ? snapshot.topic : saved.current.topic,
@@ -163,7 +167,11 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
       setError(null);
       return true;
     } catch (failure) {
-      if (failure instanceof ApiRequestError && failure.code === "CONTENT_BLOCKED") {
+      if (failure instanceof ApiRequestError && failure.code === "LEASE_HELD") {
+        // Another tab took over: this one goes read-only and says what wasn't saved.
+        leaseLost(failure.details);
+        setError("Another tab took over editing, so your last change wasn’t saved here.");
+      } else if (failure instanceof ApiRequestError && failure.code === "CONTENT_BLOCKED") {
         if ((body.idea as { notes?: unknown } | undefined)?.notes !== undefined) {
           setNotesError(failure.message);
         } else {
@@ -178,7 +186,7 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
       }
       return false;
     }
-  }, [projectId, draft]);
+  }, [projectId, draft, tabId, leaseLost]);
 
   useEffect(() => {
     if (!projectId || !changes(saved.current, draft)) return;
@@ -284,8 +292,12 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
       await apiFetch(`/projects/${projectId}`, {
         method: "PATCH",
         body: { idea: { selectedAngleId: id } },
+        editorId: lease.editorId,
       });
     } catch (failure) {
+      if (failure instanceof ApiRequestError && failure.code === "LEASE_HELD") {
+        lease.lost(failure.details);
+      }
       setError(failure instanceof ApiRequestError ? failure.message : "Couldn't save your pick.");
     }
   }
@@ -304,8 +316,15 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
     setBusy("next");
     try {
       if (!projectId) {
-        // /projects/new without angles: the project is made, no AI request is used.
-        router.push(`/projects/${await createProject()}/script`);
+        // /projects/new without angles: make the project, start its script, open step 2.
+        const id = await createProject();
+        await apiFetch(`/projects/${id}/lease`, {
+          method: "POST",
+          body: {},
+          editorId: lease.editorId,
+        });
+        await startScript(id);
+        router.push(`/projects/${id}/script`);
         return;
       }
       if (!(await save())) {
@@ -316,12 +335,31 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
         await apiFetch(`/projects/${projectId}`, {
           method: "PATCH",
           body: { idea: { selectedAngleId: null } },
+          editorId: lease.editorId,
         });
       }
+      // The first script is written now (one AI request). A script that exists already opens
+      // as it is; step 2 says so if the idea changed since it was written.
+      if (!hasScript) await startScript(projectId);
       router.push(`/projects/${projectId}/script`);
     } catch (failure) {
       setBusy(null);
-      showFailure(failure, "Couldn't save. Try again.");
+      showFailure(failure, "Couldn't start the script. Try again.");
+    }
+  }
+
+  /** Starts the script job. One already running is fine: step 2 shows it. */
+  async function startScript(id: string) {
+    try {
+      await apiFetch(`/projects/${id}/script`, {
+        method: "POST",
+        idempotent: true,
+        body: {},
+        editorId: lease.editorId,
+      });
+    } catch (failure) {
+      if (failure instanceof ApiRequestError && failure.code === "JOB_IN_PROGRESS") return;
+      throw failure;
     }
   }
 
@@ -531,21 +569,6 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
 
 const isActive = (job: JobDto | null) =>
   Boolean(job && (job.status === "queued" || job.status === "running"));
-
-function Notice({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      role="status"
-      className={cn(
-        "flex flex-wrap items-center gap-3 rounded-[12px] bg-warning-soft px-3.5 py-3 text-[14px] leading-5 text-ink",
-        className,
-      )}
-    >
-      <Icon name="alert" size={18} className="shrink-0 text-warning" />
-      {children}
-    </div>
-  );
-}
 
 // ---- Settings: a grid on desktop, rows that open in place on phones ----
 

@@ -92,7 +92,8 @@ export function createSuggestIdeas(inngest: Inngest, deps: SuggestIdeasDeps) {
             error: { code: "CONTENT_BLOCKED", message: result.reason, retryable: false },
           };
         } catch (error) {
-          if (isLlmError(error)) return { halt: "failed", error: llmJobError(error, "angles") };
+          if (isLlmError(error))
+            return { halt: "failed", error: llmJobError(error, "suggest angles") };
           throw error;
         }
       });
@@ -115,7 +116,7 @@ export function createSuggestIdeas(inngest: Inngest, deps: SuggestIdeasDeps) {
           return { angles };
         } catch (error) {
           if (isLlmError(error)) {
-            return { halt: "failed", error: llmJobError(error, "angles") } satisfies Halt;
+            return { halt: "failed", error: llmJobError(error, "suggest angles") } satisfies Halt;
           }
           throw error;
         }

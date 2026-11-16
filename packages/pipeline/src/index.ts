@@ -3,3 +3,4 @@ export const packageName = "@vidcosmos/pipeline" as const;
 
 export * from "./ideas.ts";
 export * from "./llm/index.ts";
+export * from "./script.ts";

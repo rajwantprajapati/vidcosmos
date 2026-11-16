@@ -124,16 +124,20 @@ test.describe("route protection", () => {
     const email = newEmail("next");
     await signUp(page, email);
     await skipOnboarding(page);
+    // A real video, so its step 2 page opens once signed in.
+    const created = await page.request.post("/api/v1/projects", {
+      headers: { Origin: new URL(page.url()).origin, "Idempotency-Key": crypto.randomUUID() },
+      data: { topic: "Why the sky is blue" },
+    });
+    const { id } = await created.json();
     await page.context().clearCookies();
 
-    const script = "/projects/6740a1b2c3d4e5f601234567/script";
+    const script = `/projects/${id}/script`;
     await page.goto(script);
-    await expect(page).toHaveURL(
-      /\/sign-in\?next=%2Fprojects%2F6740a1b2c3d4e5f601234567%2Fscript$/,
-    );
+    await expect(page).toHaveURL(new RegExp(`/sign-in\\?next=%2Fprojects%2F${id}%2Fscript$`));
     await signIn(page, email);
     await expect(page).toHaveURL(new RegExp(`${script}$`));
-    await expect(page.getByRole("heading", { name: "Script" })).toBeVisible();
+    await expect(page.getByText("There’s no script yet.", { exact: false })).toBeVisible();
   });
 
   test("a forged session cookie does not open the app", async ({ page, context }) => {

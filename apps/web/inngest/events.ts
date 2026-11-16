@@ -14,3 +14,11 @@ export const jobCancelRequested = eventType("job/cancel.requested", {
 export const ideasRequested = eventType("video/ideas.requested", {
   schema: eventSchemas["video/ideas.requested"],
 });
+
+export const scriptRequested = eventType("video/script.requested", {
+  schema: eventSchemas["video/script.requested"],
+});
+
+export const scriptRewriteRequested = eventType("video/script.rewrite.requested", {
+  schema: eventSchemas["video/script.rewrite.requested"],
+});
