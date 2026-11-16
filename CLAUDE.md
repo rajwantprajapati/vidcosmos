@@ -100,4 +100,6 @@ Create steps (F14): step pages (`/projects/new`, `/projects/[id]/idea`, `…/scr
 
 Script (F15): count words and estimate length only with `countWords`, `scriptStats`, `targetWords` and `scriptFit` from `@vidcosmos/spec/api` (English 2.5, Hindi 2.2 words a second). The step 2 jobs are in `inngest/functions/script-jobs.ts` with `ScriptStore` (`inngest/script-store.ts`); save scripts only through `saveScript` from `@vidcosmos/db`, which records `stageHashes.idea` so idea edits mark the script stale.
 
+Video spec (F16): the `VideoSpec`, its 12 templates, the rules, hashes, `migrateSpec` and the revision operations are in `@vidcosmos/spec/video`. Validate with `videoSpec`, then `specIssues`; change a spec only with `applyOperations` (or by hand followed by `reconcileTiming`), so a scene whose narration or voice changed loses its audio. Template examples for tests and previews are in `examples.ts`.
+
 Added by later features: `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).

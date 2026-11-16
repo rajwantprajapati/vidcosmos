@@ -1,0 +1,103 @@
+{
+  "title": "How plants make food from light",
+  "palette": "ocean",
+  "scenes": [
+    {
+      "id": "s1",
+      "template": "title",
+      "narration": "Every leaf on Earth is a tiny solar-powered kitchen. Here is how plants turn sunlight into food.",
+      "content": {
+        "heading": "Leaves are solar kitchens",
+        "subheading": "How photosynthesis turns light into food",
+        "icon": "Leaf",
+        "headingTrigger": "Every leaf",
+        "subheadingTrigger": "Here is how"
+      }
+    },
+    {
+      "id": "s2",
+      "template": "bullets",
+      "narration": "A plant needs three ingredients. Sunlight, water pulled up from the roots, and carbon dioxide taken in from the air.",
+      "content": {
+        "heading": "The three ingredients",
+        "items": [
+          { "text": "Sunlight", "icon": "Sun", "trigger": "Sunlight" },
+          { "text": "Water from the roots", "icon": "Droplet", "trigger": "water" },
+          { "text": "Carbon dioxide from air", "icon": "Wind", "trigger": "carbon dioxide" }
+        ]
+      }
+    },
+    {
+      "id": "s3",
+      "template": "flowchart",
+      "narration": "Inside the leaf, chlorophyll captures the light. That energy splits water, releasing oxygen. Then the plant uses carbon dioxide to build glucose, its food.",
+      "content": {
+        "heading": "Inside the leaf",
+        "layout": "linear",
+        "steps": [
+          {
+            "label": "Chlorophyll captures light",
+            "icon": "Sun",
+            "trigger": "chlorophyll captures"
+          },
+          { "label": "Water is split", "icon": "Droplet", "trigger": "splits water" },
+          { "label": "Oxygen is released", "icon": "Wind", "trigger": "releasing oxygen" },
+          { "label": "Glucose is built", "icon": "Sprout", "trigger": "build glucose" }
+        ]
+      }
+    },
+    {
+      "id": "s4",
+      "template": "comparison",
+      "narration": "Plants and animals run opposite trades. Plants take in carbon dioxide and give out oxygen. Animals breathe in oxygen and breathe out carbon dioxide.",
+      "content": {
+        "heading": "Opposite trades",
+        "left": {
+          "title": "Plants",
+          "icon": "Leaf",
+          "titleTrigger": "Plants take",
+          "points": [
+            { "text": "Take in CO₂", "trigger": "take in carbon" },
+            { "text": "Give out O₂", "trigger": "give out oxygen" }
+          ]
+        },
+        "right": {
+          "title": "Animals",
+          "icon": "Heart",
+          "titleTrigger": "Animals breathe",
+          "points": [
+            { "text": "Breathe in O₂", "trigger": "breathe in oxygen" },
+            { "text": "Breathe out CO₂", "trigger": "breathe out" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "template": "flowchart",
+      "narration": "Together they form a cycle. Plants make oxygen, animals use it, animals release carbon dioxide, and plants use that again.",
+      "content": {
+        "heading": "A living cycle",
+        "layout": "cycle",
+        "steps": [
+          { "label": "Plants make oxygen", "icon": "Leaf", "trigger": "Plants make oxygen" },
+          { "label": "Animals use it", "icon": "Heart", "trigger": "animals use it" },
+          { "label": "CO₂ released", "icon": "Wind", "trigger": "release carbon" },
+          { "label": "Plants reuse it", "icon": "Recycle", "trigger": "plants use that" }
+        ]
+      }
+    },
+    {
+      "id": "s6",
+      "template": "title",
+      "narration": "So next time you breathe in, thank a leaf. It cooked your oxygen with sunlight.",
+      "content": {
+        "heading": "Thank a leaf",
+        "subheading": "Your oxygen was made with sunlight",
+        "icon": "Sparkles",
+        "headingTrigger": "thank a leaf",
+        "subheadingTrigger": "cooked your oxygen"
+      }
+    }
+  ]
+}
