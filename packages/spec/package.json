@@ -8,7 +8,8 @@
     "./api": "./src/api/index.ts",
     "./collections": "./src/collections/index.ts",
     "./time": "./src/time.ts",
-    "./events": "./src/events.ts"
+    "./events": "./src/events.ts",
+    "./video": "./src/video/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -16,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@noble/hashes": "2.4.0",
     "bson": "7.3.4",
     "zod": "4.6.7"
   },

@@ -1,0 +1,69 @@
+{
+  "title": "UPI पेमेंट कैसे काम करता है",
+  "palette": "sunset",
+  "scenes": [
+    {
+      "id": "s1",
+      "template": "title",
+      "narration": "आप एक QR कोड स्कैन करते हैं, और दो सेकंड में पैसे पहुँच जाते हैं। आखिर ये होता कैसे है?",
+      "content": {
+        "heading": "दो सेकंड में पेमेंट",
+        "subheading": "UPI के पीछे क्या चलता है",
+        "icon": "Smartphone",
+        "headingTrigger": "QR कोड",
+        "subheadingTrigger": "ये होता कैसे"
+      }
+    },
+    {
+      "id": "s2",
+      "template": "flowchart",
+      "narration": "आपका ऐप रिक्वेस्ट NPCI को भेजता है। NPCI आपके बैंक से पैसे निकलवाता है। फिर वो पैसे दुकानदार के बैंक में जमा होते हैं।",
+      "content": {
+        "heading": "पैसे का सफ़र",
+        "layout": "linear",
+        "steps": [
+          { "label": "आपका ऐप", "icon": "Smartphone", "trigger": "आपका ऐप" },
+          { "label": "NPCI", "icon": "Server", "trigger": "NPCI को" },
+          { "label": "आपका बैंक", "icon": "Building2", "trigger": "आपके बैंक" },
+          { "label": "दुकानदार का बैंक", "icon": "Store", "trigger": "दुकानदार के" }
+        ]
+      }
+    },
+    {
+      "id": "s3",
+      "template": "comparison",
+      "narration": "पहले बैंक ट्रांसफर में घंटों लगते थे। UPI में ये काम सेकंडों में हो जाता है, और हर दिन, हर समय।",
+      "content": {
+        "heading": "पहले और अब",
+        "left": {
+          "title": "बैंक ट्रांसफर",
+          "icon": "Hourglass",
+          "titleTrigger": "बैंक ट्रांसफर",
+          "points": [{ "text": "घंटों का इंतज़ार", "trigger": "घंटों" }]
+        },
+        "right": {
+          "title": "UPI",
+          "icon": "Zap",
+          "titleTrigger": "UPI में",
+          "points": [
+            { "text": "कुछ ही सेकंड", "trigger": "सेकंडों में" },
+            { "text": "24×7", "trigger": "हर समय" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "template": "bullets",
+      "narration": "सुरक्षित रहने के लिए तीन बातें याद रखें। अपना PIN किसी को न बताएँ। पैसे लेने के लिए PIN कभी नहीं डालना होता। और अनजान QR कोड से बचें।",
+      "content": {
+        "heading": "तीन ज़रूरी बातें",
+        "items": [
+          { "text": "PIN किसी को न बताएँ", "icon": "Lock", "trigger": "PIN किसी" },
+          { "text": "पैसे लेने पर PIN नहीं", "icon": "Shield", "trigger": "पैसे लेने" },
+          { "text": "अनजान QR से बचें", "icon": "CircleAlert", "trigger": "अनजान QR" }
+        ]
+      }
+    }
+  ]
+}

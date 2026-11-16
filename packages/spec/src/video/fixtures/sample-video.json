@@ -1,0 +1,835 @@
+{
+  "version": 1,
+  "title": "How plants make food from light",
+  "language": "en",
+  "theme": {
+    "palette": "ocean",
+    "captionStyle": "highlight"
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "narration": "Every leaf on Earth is a tiny solar-powered kitchen. Here is how plants turn sunlight into food.",
+      "timing": {
+        "audioSrc": "audio/s1.mp3",
+        "audioDurationMs": 5461,
+        "durationMs": 6161,
+        "leadInMs": 300,
+        "words": [
+          {
+            "word": "Every",
+            "startMs": 24,
+            "endMs": 360
+          },
+          {
+            "word": "leaf",
+            "startMs": 360,
+            "endMs": 640
+          },
+          {
+            "word": "on",
+            "startMs": 640,
+            "endMs": 808
+          },
+          {
+            "word": "Earth",
+            "startMs": 808,
+            "endMs": 1144
+          },
+          {
+            "word": "is",
+            "startMs": 1144,
+            "endMs": 1312
+          },
+          {
+            "word": "a",
+            "startMs": 1312,
+            "endMs": 1424
+          },
+          {
+            "word": "tiny",
+            "startMs": 1424,
+            "endMs": 1704
+          },
+          {
+            "word": "solar-powered",
+            "startMs": 1704,
+            "endMs": 2488
+          },
+          {
+            "word": "kitchen.",
+            "startMs": 2488,
+            "endMs": 2992
+          },
+          {
+            "word": "Here",
+            "startMs": 3117,
+            "endMs": 3373
+          },
+          {
+            "word": "is",
+            "startMs": 3373,
+            "endMs": 3526
+          },
+          {
+            "word": "how",
+            "startMs": 3526,
+            "endMs": 3730
+          },
+          {
+            "word": "plants",
+            "startMs": 3730,
+            "endMs": 4088
+          },
+          {
+            "word": "turn",
+            "startMs": 4088,
+            "endMs": 4344
+          },
+          {
+            "word": "sunlight",
+            "startMs": 4344,
+            "endMs": 4804
+          },
+          {
+            "word": "into",
+            "startMs": 4804,
+            "endMs": 5059
+          },
+          {
+            "word": "food.",
+            "startMs": 5059,
+            "endMs": 5366
+          }
+        ],
+        "timingSource": "estimated"
+      },
+      "template": "title",
+      "content": {
+        "heading": "Leaves are solar kitchens",
+        "subheading": "How photosynthesis turns light into food",
+        "icon": "Leaf",
+        "headingTrigger": "Every leaf",
+        "subheadingTrigger": "Here is how",
+        "headingAtMs": 324,
+        "subheadingAtMs": 3417
+      }
+    },
+    {
+      "id": "s2",
+      "narration": "A plant needs three ingredients. Sunlight, water pulled up from the roots, and carbon dioxide taken in from the air.",
+      "timing": {
+        "audioSrc": "audio/s2.mp3",
+        "audioDurationMs": 6784,
+        "durationMs": 7484,
+        "leadInMs": 300,
+        "words": [
+          {
+            "word": "A",
+            "startMs": 11,
+            "endMs": 110
+          },
+          {
+            "word": "plant",
+            "startMs": 110,
+            "endMs": 407
+          },
+          {
+            "word": "needs",
+            "startMs": 407,
+            "endMs": 704
+          },
+          {
+            "word": "three",
+            "startMs": 704,
+            "endMs": 1001
+          },
+          {
+            "word": "ingredients.",
+            "startMs": 1001,
+            "endMs": 1645
+          },
+          {
+            "word": "Sunlight,",
+            "startMs": 1742,
+            "endMs": 2332
+          },
+          {
+            "word": "water",
+            "startMs": 2332,
+            "endMs": 2686
+          },
+          {
+            "word": "pulled",
+            "startMs": 2686,
+            "endMs": 3099
+          },
+          {
+            "word": "up",
+            "startMs": 3099,
+            "endMs": 3276
+          },
+          {
+            "word": "from",
+            "startMs": 3276,
+            "endMs": 3571
+          },
+          {
+            "word": "the",
+            "startMs": 3571,
+            "endMs": 3807
+          },
+          {
+            "word": "roots,",
+            "startMs": 3807,
+            "endMs": 4220
+          },
+          {
+            "word": "and",
+            "startMs": 4220,
+            "endMs": 4456
+          },
+          {
+            "word": "carbon",
+            "startMs": 4456,
+            "endMs": 4869
+          },
+          {
+            "word": "dioxide",
+            "startMs": 4869,
+            "endMs": 5341
+          },
+          {
+            "word": "taken",
+            "startMs": 5341,
+            "endMs": 5695
+          },
+          {
+            "word": "in",
+            "startMs": 5695,
+            "endMs": 5872
+          },
+          {
+            "word": "from",
+            "startMs": 5872,
+            "endMs": 6167
+          },
+          {
+            "word": "the",
+            "startMs": 6167,
+            "endMs": 6403
+          },
+          {
+            "word": "air.",
+            "startMs": 6403,
+            "endMs": 6698
+          }
+        ],
+        "timingSource": "estimated"
+      },
+      "template": "bullets",
+      "content": {
+        "heading": "The three ingredients",
+        "items": [
+          {
+            "text": "Sunlight",
+            "icon": "Sun",
+            "trigger": "Sunlight",
+            "atMs": 2042
+          },
+          {
+            "text": "Water from the roots",
+            "icon": "Droplet",
+            "trigger": "water",
+            "atMs": 2632
+          },
+          {
+            "text": "Carbon dioxide from air",
+            "icon": "Wind",
+            "trigger": "carbon dioxide",
+            "atMs": 4756
+          }
+        ]
+      }
+    },
+    {
+      "id": "s3",
+      "narration": "Inside the leaf, chlorophyll captures the light. That energy splits water, releasing oxygen. Then the plant uses carbon dioxide to build glucose, its food.",
+      "timing": {
+        "audioSrc": "audio/s3.mp3",
+        "audioDurationMs": 9067,
+        "durationMs": 9767,
+        "leadInMs": 300,
+        "words": [
+          {
+            "word": "Inside",
+            "startMs": 25,
+            "endMs": 382
+          },
+          {
+            "word": "the",
+            "startMs": 382,
+            "endMs": 587
+          },
+          {
+            "word": "leaf,",
+            "startMs": 587,
+            "endMs": 893
+          },
+          {
+            "word": "chlorophyll",
+            "startMs": 893,
+            "endMs": 1506
+          },
+          {
+            "word": "captures",
+            "startMs": 1506,
+            "endMs": 1965
+          },
+          {
+            "word": "the",
+            "startMs": 1965,
+            "endMs": 2169
+          },
+          {
+            "word": "light.",
+            "startMs": 2169,
+            "endMs": 2526
+          },
+          {
+            "word": "That",
+            "startMs": 2637,
+            "endMs": 2924
+          },
+          {
+            "word": "energy",
+            "startMs": 2924,
+            "endMs": 3325
+          },
+          {
+            "word": "splits",
+            "startMs": 3325,
+            "endMs": 3725
+          },
+          {
+            "word": "water,",
+            "startMs": 3725,
+            "endMs": 4126
+          },
+          {
+            "word": "releasing",
+            "startMs": 4126,
+            "endMs": 4699
+          },
+          {
+            "word": "oxygen.",
+            "startMs": 4699,
+            "endMs": 5158
+          },
+          {
+            "word": "Then",
+            "startMs": 5285,
+            "endMs": 5577
+          },
+          {
+            "word": "the",
+            "startMs": 5577,
+            "endMs": 5812
+          },
+          {
+            "word": "plant",
+            "startMs": 5812,
+            "endMs": 6163
+          },
+          {
+            "word": "uses",
+            "startMs": 6163,
+            "endMs": 6456
+          },
+          {
+            "word": "carbon",
+            "startMs": 6456,
+            "endMs": 6865
+          },
+          {
+            "word": "dioxide",
+            "startMs": 6865,
+            "endMs": 7334
+          },
+          {
+            "word": "to",
+            "startMs": 7334,
+            "endMs": 7509
+          },
+          {
+            "word": "build",
+            "startMs": 7509,
+            "endMs": 7861
+          },
+          {
+            "word": "glucose,",
+            "startMs": 7861,
+            "endMs": 8388
+          },
+          {
+            "word": "its",
+            "startMs": 8388,
+            "endMs": 8622
+          },
+          {
+            "word": "food.",
+            "startMs": 8622,
+            "endMs": 8973
+          }
+        ],
+        "timingSource": "estimated"
+      },
+      "template": "flowchart",
+      "content": {
+        "heading": "Inside the leaf",
+        "layout": "linear",
+        "steps": [
+          {
+            "label": "Chlorophyll captures light",
+            "icon": "Sun",
+            "trigger": "chlorophyll captures",
+            "atMs": 1193
+          },
+          {
+            "label": "Water is split",
+            "icon": "Droplet",
+            "trigger": "splits water",
+            "atMs": 3625
+          },
+          {
+            "label": "Oxygen is released",
+            "icon": "Wind",
+            "trigger": "releasing oxygen",
+            "atMs": 4426
+          },
+          {
+            "label": "Glucose is built",
+            "icon": "Sprout",
+            "trigger": "build glucose",
+            "atMs": 7809
+          }
+        ]
+      }
+    },
+    {
+      "id": "s4",
+      "narration": "Plants and animals run opposite trades. Plants take in carbon dioxide and give out oxygen. Animals breathe in oxygen and breathe out carbon dioxide.",
+      "timing": {
+        "audioSrc": "audio/s4.mp3",
+        "audioDurationMs": 9408,
+        "durationMs": 10108,
+        "leadInMs": 300,
+        "words": [
+          {
+            "word": "Plants",
+            "startMs": 24,
+            "endMs": 413
+          },
+          {
+            "word": "and",
+            "startMs": 413,
+            "endMs": 635
+          },
+          {
+            "word": "animals",
+            "startMs": 635,
+            "endMs": 1079
+          },
+          {
+            "word": "run",
+            "startMs": 1079,
+            "endMs": 1301
+          },
+          {
+            "word": "opposite",
+            "startMs": 1301,
+            "endMs": 1801
+          },
+          {
+            "word": "trades.",
+            "startMs": 1801,
+            "endMs": 2245
+          },
+          {
+            "word": "Plants",
+            "startMs": 2349,
+            "endMs": 2792
+          },
+          {
+            "word": "take",
+            "startMs": 2792,
+            "endMs": 3108
+          },
+          {
+            "word": "in",
+            "startMs": 3108,
+            "endMs": 3298
+          },
+          {
+            "word": "carbon",
+            "startMs": 3298,
+            "endMs": 3740
+          },
+          {
+            "word": "dioxide",
+            "startMs": 3740,
+            "endMs": 4246
+          },
+          {
+            "word": "and",
+            "startMs": 4246,
+            "endMs": 4499
+          },
+          {
+            "word": "give",
+            "startMs": 4499,
+            "endMs": 4815
+          },
+          {
+            "word": "out",
+            "startMs": 4815,
+            "endMs": 5068
+          },
+          {
+            "word": "oxygen.",
+            "startMs": 5068,
+            "endMs": 5573
+          },
+          {
+            "word": "Animals",
+            "startMs": 5664,
+            "endMs": 6170
+          },
+          {
+            "word": "breathe",
+            "startMs": 6170,
+            "endMs": 6677
+          },
+          {
+            "word": "in",
+            "startMs": 6677,
+            "endMs": 6867
+          },
+          {
+            "word": "oxygen",
+            "startMs": 6867,
+            "endMs": 7310
+          },
+          {
+            "word": "and",
+            "startMs": 7310,
+            "endMs": 7563
+          },
+          {
+            "word": "breathe",
+            "startMs": 7563,
+            "endMs": 8069
+          },
+          {
+            "word": "out",
+            "startMs": 8069,
+            "endMs": 8323
+          },
+          {
+            "word": "carbon",
+            "startMs": 8323,
+            "endMs": 8766
+          },
+          {
+            "word": "dioxide.",
+            "startMs": 8766,
+            "endMs": 9336
+          }
+        ],
+        "timingSource": "estimated"
+      },
+      "template": "comparison",
+      "content": {
+        "heading": "Opposite trades",
+        "left": {
+          "title": "Plants",
+          "icon": "Leaf",
+          "titleTrigger": "Plants take",
+          "titleAtMs": 2649,
+          "points": [
+            {
+              "text": "Take in CO₂",
+              "trigger": "take in carbon",
+              "atMs": 3092
+            },
+            {
+              "text": "Give out O₂",
+              "trigger": "give out oxygen",
+              "atMs": 4799
+            }
+          ]
+        },
+        "right": {
+          "title": "Animals",
+          "icon": "Heart",
+          "titleTrigger": "Animals breathe",
+          "titleAtMs": 5964,
+          "points": [
+            {
+              "text": "Breathe in O₂",
+              "trigger": "breathe in oxygen",
+              "atMs": 6470
+            },
+            {
+              "text": "Breathe out CO₂",
+              "trigger": "breathe out",
+              "atMs": 7863
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "narration": "Together they form a cycle. Plants make oxygen, animals use it, animals release carbon dioxide, and plants use that again.",
+      "timing": {
+        "audioSrc": "audio/s5.mp3",
+        "audioDurationMs": 7808,
+        "durationMs": 8508,
+        "leadInMs": 300,
+        "words": [
+          {
+            "word": "Together",
+            "startMs": 12,
+            "endMs": 484
+          },
+          {
+            "word": "they",
+            "startMs": 484,
+            "endMs": 746
+          },
+          {
+            "word": "form",
+            "startMs": 746,
+            "endMs": 1008
+          },
+          {
+            "word": "a",
+            "startMs": 1008,
+            "endMs": 1113
+          },
+          {
+            "word": "cycle.",
+            "startMs": 1113,
+            "endMs": 1480
+          },
+          {
+            "word": "Plants",
+            "startMs": 1599,
+            "endMs": 2050
+          },
+          {
+            "word": "make",
+            "startMs": 2050,
+            "endMs": 2372
+          },
+          {
+            "word": "oxygen,",
+            "startMs": 2372,
+            "endMs": 2887
+          },
+          {
+            "word": "animals",
+            "startMs": 2887,
+            "endMs": 3402
+          },
+          {
+            "word": "use",
+            "startMs": 3402,
+            "endMs": 3660
+          },
+          {
+            "word": "it,",
+            "startMs": 3660,
+            "endMs": 3918
+          },
+          {
+            "word": "animals",
+            "startMs": 3918,
+            "endMs": 4433
+          },
+          {
+            "word": "release",
+            "startMs": 4433,
+            "endMs": 4948
+          },
+          {
+            "word": "carbon",
+            "startMs": 4948,
+            "endMs": 5399
+          },
+          {
+            "word": "dioxide,",
+            "startMs": 5399,
+            "endMs": 5979
+          },
+          {
+            "word": "and",
+            "startMs": 5979,
+            "endMs": 6236
+          },
+          {
+            "word": "plants",
+            "startMs": 6236,
+            "endMs": 6687
+          },
+          {
+            "word": "use",
+            "startMs": 6687,
+            "endMs": 6945
+          },
+          {
+            "word": "that",
+            "startMs": 6945,
+            "endMs": 7267
+          },
+          {
+            "word": "again.",
+            "startMs": 7267,
+            "endMs": 7717
+          }
+        ],
+        "timingSource": "estimated"
+      },
+      "template": "flowchart",
+      "content": {
+        "heading": "A living cycle",
+        "layout": "cycle",
+        "steps": [
+          {
+            "label": "Plants make oxygen",
+            "icon": "Leaf",
+            "trigger": "Plants make oxygen",
+            "atMs": 1899
+          },
+          {
+            "label": "Animals use it",
+            "icon": "Heart",
+            "trigger": "animals use it",
+            "atMs": 3187
+          },
+          {
+            "label": "CO₂ released",
+            "icon": "Wind",
+            "trigger": "release carbon",
+            "atMs": 4733
+          },
+          {
+            "label": "Plants reuse it",
+            "icon": "Recycle",
+            "trigger": "plants use that",
+            "atMs": 6536
+          }
+        ]
+      }
+    },
+    {
+      "id": "s6",
+      "narration": "So next time you breathe in, thank a leaf. It cooked your oxygen with sunlight.",
+      "timing": {
+        "audioSrc": "audio/s6.mp3",
+        "audioDurationMs": 4096,
+        "durationMs": 4796,
+        "leadInMs": 300,
+        "words": [
+          {
+            "word": "So",
+            "startMs": 24,
+            "endMs": 168
+          },
+          {
+            "word": "next",
+            "startMs": 168,
+            "endMs": 409
+          },
+          {
+            "word": "time",
+            "startMs": 409,
+            "endMs": 650
+          },
+          {
+            "word": "you",
+            "startMs": 650,
+            "endMs": 842
+          },
+          {
+            "word": "breathe",
+            "startMs": 842,
+            "endMs": 1228
+          },
+          {
+            "word": "in,",
+            "startMs": 1228,
+            "endMs": 1420
+          },
+          {
+            "word": "thank",
+            "startMs": 1420,
+            "endMs": 1709
+          },
+          {
+            "word": "a",
+            "startMs": 1709,
+            "endMs": 1805
+          },
+          {
+            "word": "leaf.",
+            "startMs": 1805,
+            "endMs": 2094
+          },
+          {
+            "word": "It",
+            "startMs": 2228,
+            "endMs": 2369
+          },
+          {
+            "word": "cooked",
+            "startMs": 2369,
+            "endMs": 2698
+          },
+          {
+            "word": "your",
+            "startMs": 2698,
+            "endMs": 2933
+          },
+          {
+            "word": "oxygen",
+            "startMs": 2933,
+            "endMs": 3262
+          },
+          {
+            "word": "with",
+            "startMs": 3262,
+            "endMs": 3497
+          },
+          {
+            "word": "sunlight.",
+            "startMs": 3497,
+            "endMs": 3966
+          }
+        ],
+        "timingSource": "estimated"
+      },
+      "template": "title",
+      "content": {
+        "heading": "Thank a leaf",
+        "subheading": "Your oxygen was made with sunlight",
+        "icon": "Sparkles",
+        "headingTrigger": "thank a leaf",
+        "subheadingTrigger": "cooked your oxygen",
+        "headingAtMs": 1720,
+        "subheadingAtMs": 2669
+      }
+    }
+  ]
+}

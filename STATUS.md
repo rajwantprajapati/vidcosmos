@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 16 Nov 2026 · Current focus: **F15 Script** (built, waiting for review)
+Last updated: 16 Nov 2026 · Current focus: **F16 Video spec schema and template contracts** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -12,13 +12,13 @@ This file is the single place that says where the build stands. Update it at the
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
-| M2 Create flow | 5 | 7 |
+| M2 Create flow | 6 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **15** | **36** |
+| **Total** | **16** | **36** |
 
 ## Features
 
@@ -39,7 +39,7 @@ This file is the single place that says where the build stands. Update it at the
 | F13 | LLM providers and moderation | M2 | F11 | Done | 14 Nov 2026 | `LlmProvider` (Gemini, Claude, stub) in `packages/pipeline/src/llm`; usage and moderation events; `pnpm check:llm` |
 | F14 | New video: idea and angles | M2 | F09, F13 | Done | 15 Nov 2026 | Step 1 at `/projects/new` and `/projects/[id]/idea`; `POST /projects/{id}/ideas`; `suggestIdeas` |
 | F15 | Script | M2 | F14 | Done | 16 Nov 2026 | Step 2 at `/projects/[id]/script`; `POST /projects/{id}/script` and `/script/rewrite`; `writeScript`, `rewriteScript` |
-| F16 | Video spec schema and template contracts | M2 | F05 | Not started | | Can run beside F11–F15 |
+| F16 | Video spec schema and template contracts | M2 | F05 | Done | 16 Nov 2026 | `@vidcosmos/spec/video`: `videoSpec`, 12 templates, rules, hashes, `migrateSpec`, operations |
 | F17 | Storyboard | M2 | F15, F16 | Not started | | |
 | F18 | Remotion package and first 4 templates | M3 | F16 | Not started | | Can start after F16 |
 | F19 | The other 8 templates | M3 | F18 | Not started | | |
@@ -64,6 +64,46 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F16 Video spec schema and template contracts · 16 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: spec 70, db 189, web 232, pipeline 33, integrations 21, config 19, video 1. No UI, so no e2e run or screenshots.
+- Built, in `packages/spec/src/video/` (`@vidcosmos/spec/video`):
+  - `icons.ts`: the prototype's closed list of 102 Lucide icon names.
+  - `templates.ts`: content schemas for all 12 templates, with DB §6's limits. Element objects carry `trigger` and `atMs?`; single fields carry `<field>Trigger` and `<field>AtMs`, as in the prototype. `triggersOf` lists them in a fixed on-screen order, whatever order the fields were written in.
+  - `schema.ts`:
+    - `videoSpec`: version, format, title, language, voice (`eleven_multilingual_v2`, speed 0.85-1.15), theme, music or null, and 2-10 scenes;
+    - scenes are a union on `template`, with `content`, `userEdited` (default false) and `timing` (default null);
+    - timing holds the asset id as hex, never a URL, and its `narrationHash`;
+    - `formats`: the canvases and safe areas; `videoTiming`: 30 fps, 300 ms lead-in, 400 ms tail, 20-100 s in total.
+  - `checks.ts`:
+    - `specIssues`: triggers spoken in their scene, in order; unique scene ids; length once timed; narration against the script (≥95% covered, ≤5% extra) on generation;
+    - `reconcileTiming` clears timing whose hash no longer matches.
+  - `hash.ts`: `narrationHash` (narration, language, voice id, model and speed, but not the format), `canonicalJson`, `specHash`. Both use `@noble/hashes` 2.4.0, so they also work in the browser.
+  - `migrate.ts`: `migrateSpec` reads the prototype's finished spec and its storyboards. A missing format becomes 9:16; language and voice come from defaults, or it says which is missing; audio file paths are dropped, so those scenes get new audio.
+  - `operations.ts`: the 9 operations as a zod union (`updateScene`, `addScene`, `removeScene`, `moveScene`, `setFormat`, `setTheme`, `setVoice`, `setMusic`, `rewriteAll`). `applyOperations` works on a copy, refuses unknown scenes and invalid results (`SpecOperationError`, with the operation's index), and returns `affectedSceneIds`, `needsNarration` and the rule `issues`.
+  - `text.ts`: word helpers ported from the prototype. `examples.ts`: one valid scene per template, for tests and later previews. `testing.ts`: test specs, with matching timing.
+  - The prototype's three samples are in `src/video/fixtures/`.
+- Tests added:
+  - `templates.test.ts` (5): each template's example is valid; 33 limit breaks are refused and the edges allowed; the closed icon list; content from another template, or an unknown template, is refused; trigger order is independent of field order.
+  - `checks.test.ts` (15): the spec's own limits (scene count, format, voice model, speed, narration length, no URL in timing); triggers missing or out of order; Hindi and case-insensitive matching; duplicate ids; 20-100 s only once timed; narration against the script; `narrationHash` inputs, but not the format; `specHash` ignores key order and changes with format or theme; `reconcileTiming`; all three prototype samples migrate and pass every rule; a current spec migrates unchanged; missing defaults are named.
+  - `operations.test.ts` (11):
+    - `setFormat` keeps every scene's `narrationHash` and audio;
+    - `updateScene`: new narration needs new audio, new content alone doesn't; a template change needs its content;
+    - `addScene`, first or after another, with a fresh `sc_` id;
+    - `removeScene` keeps 2 scenes at least; `moveScene` either way;
+    - `setTheme` and `setMusic`; `setVoice` needs new audio for every scene;
+    - `rewriteAll` names each scene once and re-records only the changed ones;
+    - unknown scenes are refused and the original stays untouched; issues are reported without refusing; only the nine operations are accepted.
+- Fixed after manual QA (another session, 16 Nov):
+  - **Text:** on-screen text and triggers are trimmed, can't be blank, and refuse control characters and line breaks (`lineText`). The title does the same. Narration may have line breaks but no control characters.
+  - **Trigger matching:** curly and straight apostrophes are the same (apostrophes are dropped on both sides), and hyphens and dashes split words, so "It’s" matches "It's" and "step-by-step" matches "step by step".
+  - **`setVoice`:** a new gender without a voice id is refused ("A new narrator needs its voice id."); the voice id is what the audio was made with.
+  - **Trigger order (your choice, 16 Nov):** only each list's items (items, steps, a side's points, events, bars, slices, options) must follow the narration's order. Headings, titles and other single fields may be said anywhere, so "Cash versus UPI…" passes.
+  - **Timing:** `durationMs` must be at least lead-in + audio, and words must end after they start and come in spoken order.
+  - **Smaller:** `specHash` leaves out `userEdited` (it changes no frame); `migrateSpec` refuses versions other than 1; the operations refuse fields they don't know (strict objects, since they come from the LLM); the icon count is 102.
+  - **On retest:** a quiz's reveal and a recap's call to action are no longer "said anywhere": each must come after the last option or point it closes (`TRIGGER_OUT_OF_ORDER` otherwise), so the answer can't show before the choices.
+  - **Tests (+7):** the reveal and call to action after their lists; blank text, control characters and trimming; apostrophes and hyphens; titles anywhere but lists in order; inconsistent timing; `setVoice` without a voice id; unknown version; `userEdited` not in `specHash`; unknown operation fields.
 
 ### F15 Script · 16 Nov 2026
 
@@ -462,6 +502,8 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 16 Nov 2026 | Trigger order (F16 QA, your choice): each list's items (items, steps, a side's points, events, bars, slices, options) must follow the narration's order; headings, titles and other single fields only need to be said somewhere in the scene, except a quiz's reveal and a recap's call to action, which come after the list they close. DB §6 says "in order across the scene"; the prototype only checked that each trigger was said. |
+| 16 Nov 2026 | VideoSpec (F16): template fields sit under `scene.content`, as in the prototype and SDD §7 (DB §6's type is ambiguous about it). `userEdited` is a boolean (DB §6), not SDD's list of edited paths. The total length is 20-100 s (DB §6), not SDD §10's 30-90 s. A comparison side has 1-4 points, not DB's 2-4, so the prototype's Hindi UPI sample (one point on a side) validates, as the feature plan asks. A heading on a non-title template may have no trigger, and then it's on screen from the start, as in the prototype. Where DB §6 gives no limit, the prototype's or a nearby one is used (`limits` in `templates.ts`). The asset id in `timing` is stored as hex text, so the spec stays plain JSON. |
 | 16 Nov 2026 | Edit lease on PATCH (F15 QA): a `PATCH /projects/{id}` that changes the script needs `X-Editor-Id` and the lease (`423 LEASE_HELD`); any PATCH that sends `X-Editor-Id` is checked the same way. A PATCH without it, such as the library's rename, works as before. API §5 says only one editor tab may change a project. |
 | 16 Nov 2026 | Script (F15): step 1's "Write the script" (and "… from the topic") starts the first script and opens step 2, so it uses 1 AI request; a video that has a script just opens it (your choice, 15 Nov). The fit badge allows 15% either way (PRD FR-2.4). The hook is the script's first sentence, kept in step with the text. Rewrite chips follow the design: Shorter, Longer, Simpler, More engaging, Custom… (`more_formal` is in the API only). A rewrite whose script was edited while it ran ends cancelled, so the edit stays. Script events carry ids only (API §15). |
 | 15 Nov 2026 | Angles (F14): "Suggest angles" asks for 4 (3-5 allowed), following API §6 and the NewVideo design, not the 5-10 in PRD FR-1.2, SDD §8 and the feature plan. Each AI step's request is settled by `finishJob`: failed or cancelled jobs give it back, succeeded jobs keep it; retrying a job that used one uses another. On phones, create steps (`/projects/new`, `…/idea`, `…/script`, `…/storyboard`) hide the top bar and tab bar and show their own header and bottom button. |
@@ -509,6 +551,12 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **Video spec: what waits (F16).**
+  - The API still stores and returns the loose spec shape: the draft PUT, the project DTO and the MongoDB validator. F17 switches the draft to `videoSpec` (and its issue codes), and `migrateSpec` should run where specs are read.
+  - `atMs` fields are allowed but not used: SDD §7 derives element times from `timing.words` when playing (F18-F21).
+  - Timing sent by a browser can't be trusted even when it's consistent: when F17 makes the draft PUT take a full spec, the server must keep its own timing per scene (`carryTiming` in `packages/db/src/projects.ts` does this today) and never take the client's.
+  - The icon list is the prototype's (102 names, PascalCase). Remotion maps them to Lucide components in F18.
 
 - **Step 2: what waits (F15).**
   - The editor is a plain text box, not rich text (PRD FR-2.4); nothing in the script needs formatting yet.
