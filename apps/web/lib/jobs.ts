@@ -8,7 +8,13 @@ import { type JobDto, toJobDto } from "@vidcosmos/spec/api";
 import type { Job } from "@vidcosmos/spec/collections";
 import { demoJobMode, requestIdeasInput } from "@vidcosmos/spec/api";
 import { jobEventId } from "@vidcosmos/spec/events";
-import { demoJobRequested, ideasRequested, jobCancelRequested } from "@/inngest/events";
+import {
+  demoJobRequested,
+  ideasRequested,
+  jobCancelRequested,
+  scriptRequested,
+  scriptRewriteRequested,
+} from "@/inngest/events";
 import { inngest } from "@/inngest/client";
 import { getDb } from "./db";
 
@@ -47,6 +53,10 @@ function startEvent(job: Job) {
         options,
       );
     }
+    case "script":
+      return scriptRequested.create({ ...data, projectId: data.projectId! }, options);
+    case "script_rewrite":
+      return scriptRewriteRequested.create({ ...data, projectId: data.projectId! }, options);
     default:
       throw new Error(`No function runs ${job.type} jobs yet.`);
   }

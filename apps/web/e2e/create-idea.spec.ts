@@ -97,7 +97,7 @@ test.describe("step 1 on desktop", () => {
     await other.close();
   });
 
-  test("write from the topic: New video makes the project and opens step 2, using no AI request", async ({
+  test("write from the topic: New video makes the project, starts its script and opens step 2", async ({
     page,
   }) => {
     await signUpReady(page, "create-skip");
@@ -108,9 +108,10 @@ test.describe("step 1 on desktop", () => {
     const id = /projects\/([0-9a-f]{24})/.exec(page.url())![1];
     const project = await (await page.request.get(`/api/v1/projects/${id}`)).json();
     expect(project.idea.topic).toBe("My own idea about monsoon farming");
-    expect(project.counters.generationsUsed).toBe(0);
+    // No angles were suggested: the one AI request is the script (F15).
+    expect(project.counters.generationsUsed).toBe(1);
     const jobs = await (await page.request.get(`/api/v1/jobs?projectId=${id}`)).json();
-    expect(jobs.items).toEqual([]);
+    expect(jobs.items.map((job: { type: string }) => job.type)).toEqual(["script"]);
   });
 
   test("a refused edit stops Suggest: no job, no AI request, focus on the field", async ({

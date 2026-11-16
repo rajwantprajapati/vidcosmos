@@ -5,10 +5,10 @@ import { LlmError } from "@vidcosmos/pipeline";
 
 export type JobErrorInfo = { code: string; message: string; retryable: boolean };
 
-/** What the step was making, for LLM_INVALID_OUTPUT, e.g. "angles" or "a script". */
+/** What the step was doing, for LLM_INVALID_OUTPUT, e.g. "suggest angles" or "write the script". */
 export function llmJobError(error: LlmError, what: string): JobErrorInfo {
   const message = {
-    LLM_INVALID_OUTPUT: `The AI couldn't suggest ${what} this time. Try again.`,
+    LLM_INVALID_OUTPUT: `The AI couldn't ${what} this time. Try again.`,
     LLM_RATE_LIMITED: "The AI service is busy. Try again in a minute.",
     LLM_UNAVAILABLE: "The AI service is having trouble. Try again shortly.",
     CONTENT_BLOCKED: "This can't be made into a video.",

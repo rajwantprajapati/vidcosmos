@@ -225,16 +225,6 @@ export const listProjectsQuery = z.object({
 });
 export type ListProjectsQuery = z.infer<typeof listProjectsQuery>;
 
-// ---- Derived values ----
-
-/** Words per second of narration (DB §5: en 2.5, hi 2.2). */
-const wordsPerSecond = { en: 2.5, hi: 2.2 } as const;
-
-export function scriptStats(text: string, lang: "en" | "hi") {
-  const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
-  return { wordCount, estDurationSec: Math.round((wordCount / wordsPerSecond[lang]) * 10) / 10 };
-}
-
 // ---- Mappers ----
 
 type HasHex = { toHexString(): string };

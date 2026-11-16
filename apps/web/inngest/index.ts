@@ -6,11 +6,37 @@ import { getLlm, recordLlmUsage } from "@/lib/llm";
 import { inngest } from "./client";
 import { createDemoJob } from "./functions/demo-job";
 import { createJobCancelled } from "./functions/job-cancelled";
+import { createRewriteScript, createWriteScript } from "./functions/script-jobs";
 import { createSuggestIdeas } from "./functions/suggest-ideas";
 import { mongoIdeasStore } from "./ideas-store";
 import { mongoJobStore } from "./job-store";
+import { mongoScriptStore } from "./script-store";
 
 const store = mongoJobStore(getDb);
+
+/** Records each LLM call of a project job as a usage event. */
+const usageFor = (
+  job: { workspaceId: string; projectId: string; jobId: string },
+  userId: string,
+  operation: Parameters<typeof recordLlmUsage>[1],
+) =>
+  recordLlmUsage(
+    {
+      workspaceId: new ObjectId(job.workspaceId),
+      userId: new ObjectId(userId),
+      projectId: new ObjectId(job.projectId),
+      jobId: new ObjectId(job.jobId),
+    },
+    operation,
+  );
+
+const scriptDeps = {
+  jobs: store,
+  scripts: mongoScriptStore(getDb),
+  llm: () => getLlm("main"),
+  small: () => getLlm("small"),
+  usage: usageFor,
+};
 
 export const functions = [
   createDemoJob(inngest, store, { pause: "1s" }),
@@ -20,17 +46,10 @@ export const functions = [
     ideas: mongoIdeasStore(getDb),
     llm: () => getLlm("main"),
     small: () => getLlm("small"),
-    usage: (job, userId, operation) =>
-      recordLlmUsage(
-        {
-          workspaceId: new ObjectId(job.workspaceId),
-          userId: new ObjectId(userId),
-          projectId: new ObjectId(job.projectId),
-          jobId: new ObjectId(job.jobId),
-        },
-        operation,
-      ),
+    usage: usageFor,
   }),
+  createWriteScript(inngest, scriptDeps),
+  createRewriteScript(inngest, scriptDeps),
 ];
 
 export { inngest };

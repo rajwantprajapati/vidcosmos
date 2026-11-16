@@ -343,7 +343,16 @@ test.describe("projects API", () => {
       details: { stage: "draft", wizardStep: "idea", needs: "version" },
     });
 
-    const noScript = await api.send("PATCH", path, { script: { text: "Hello" } });
+    // Script edits come from an editor tab (F15): without its id, 400.
+    expect((await api.send("PATCH", path, { script: { text: "Hello" } })).status()).toBe(400);
+    const noScript = await api.send(
+      "PATCH",
+      path,
+      { script: { text: "Hello" } },
+      {
+        "X-Editor-Id": "tab-a",
+      },
+    );
     expect(noScript.status()).toBe(409);
     expect((await json(noScript)).error.code).toBe("STAGE_INVALID");
     expect((await api.send("PATCH", path, {})).status()).toBe(400);

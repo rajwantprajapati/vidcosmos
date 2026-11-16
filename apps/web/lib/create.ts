@@ -45,24 +45,49 @@ export function projectDto(project: Project, workspace: Workspace): ProjectDetai
 }
 
 /**
- * The job of this type to show on the step: the one running on the project, or else the
- * latest one if it failed (so a reload still shows the error and "Try again").
+ * The job to show on the step: the one running on the project if it's one of `types`, or else
+ * the latest of those types if it failed (so a reload still shows the error and "Try again").
  */
 export async function stepJob(
   workspaceId: ObjectId,
   project: Project,
-  type: Job["type"],
+  types: Job["type"] | Job["type"][],
 ): Promise<JobDto | null> {
+  const wanted = Array.isArray(types) ? types : [types];
   const db = getDb();
   if (project.activeJobId) {
     const active = await getJob(db, workspaceId, project.activeJobId).catch(() => null);
-    if (active?.type === type) return toJobDto(active);
+    if (active && wanted.includes(active.type)) return toJobDto(active);
   }
-  const recent = await listJobs(
-    db,
-    workspaceId,
-    listJobsQuery.parse({ projectId: project._id.toHexString(), limit: "10" }),
-  );
-  const latest = recent.items.find((job) => job.type === type);
+  const latest = (await recentJobs(workspaceId, project)).find((job) => wanted.includes(job.type));
   return latest?.status === "failed" ? toJobDto(latest) : null;
+}
+
+const recentJobs = async (workspaceId: ObjectId, project: Project) =>
+  (
+    await listJobs(
+      getDb(),
+      workspaceId,
+      listJobsQuery.parse({ projectId: project._id.toHexString(), limit: "10" }),
+    )
+  ).items;
+
+/**
+ * The script before the last rewrite, while "Undo last rewrite" can still put it back: the
+ * latest script job was a rewrite that succeeded, and the script hasn't changed since.
+ */
+export async function undoableRewrite(
+  workspaceId: ObjectId,
+  project: Project,
+): Promise<{ text: string } | null> {
+  if (!project.script) return null;
+  const latest = (await recentJobs(workspaceId, project)).find(
+    (job) => job.type === "script" || job.type === "script_rewrite",
+  );
+  if (latest?.type !== "script_rewrite" || latest.status !== "succeeded" || !latest.finishedAt) {
+    return null;
+  }
+  if (project.script.updatedAt > latest.finishedAt) return null;
+  const previous = (latest.input as { previous?: { text?: unknown } }).previous;
+  return typeof previous?.text === "string" ? { text: previous.text } : null;
 }

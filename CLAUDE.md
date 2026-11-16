@@ -98,4 +98,6 @@ LLM (F13): every model call goes through an `LlmProvider` from `@vidcosmos/pipel
 
 Create steps (F14): step pages (`/projects/new`, `/projects/[id]/idea`, `…/script`, `…/storyboard`) load the project with `loadProject` and `stepJob` from `lib/create.ts` and render a client step component from `components/create/` (the `Stepper`, `useEditLease`, autosave by PATCH). On phones they hide the app's top bar and tab bar (`isCreateStep` in `components/shell/nav.ts`) and bring their own header and bottom button. An AI step's route takes the lease (`takeLease`), reserves an AI request (`reserveGeneration`) and creates the job with `reservesGeneration: true`; `finishJob` gives the request back if the job fails.
 
+Script (F15): count words and estimate length only with `countWords`, `scriptStats`, `targetWords` and `scriptFit` from `@vidcosmos/spec/api` (English 2.5, Hindi 2.2 words a second). The step 2 jobs are in `inngest/functions/script-jobs.ts` with `ScriptStore` (`inngest/script-store.ts`); save scripts only through `saveScript` from `@vidcosmos/db`, which records `stageHashes.idea` so idea edits mark the script stale.
+
 Added by later features: `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).
