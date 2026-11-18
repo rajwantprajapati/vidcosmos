@@ -30,6 +30,11 @@ export const eventSchemas = {
   "video/script.requested": jobEventData.extend({ projectId: id }),
   /** Rewrite all or part of the script (API §6). Ids only, like the script event. */
   "video/script.rewrite.requested": jobEventData.extend({ projectId: id }),
+  /**
+   * Split the script into scenes (API §6, `buildStoryboard`). Ids only: the function reads
+   * the script and the draft's rev it was asked over from the job's input.
+   */
+  "video/storyboard.requested": jobEventData.extend({ projectId: id }),
   /** Stops the job's run at the next step boundary (API §11 "Cancel"). */
   "job/cancel.requested": z.object({ workspaceId: id, jobId: id }),
 } as const;

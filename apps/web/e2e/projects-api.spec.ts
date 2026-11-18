@@ -16,7 +16,19 @@ import {
   projectDetailDto,
   projectSummaryDto,
 } from "@vidcosmos/spec/api";
+import { exampleScenes } from "@vidcosmos/spec/video";
 import { signUpReady } from "./helpers";
+
+/** A valid two-scene draft spec. */
+const draftSpec = () => ({
+  version: 1,
+  format: "9:16",
+  title: "Draft",
+  language: "en",
+  voice: { gender: "female", voiceId: "voice_female_1", model: "eleven_multilingual_v2", speed: 1 },
+  theme: { palette: "midnight", captionStyle: "highlight" },
+  scenes: [exampleScenes.title, exampleScenes.recap],
+});
 
 // The API doesn't depend on the screen size: one run is enough.
 test.beforeEach(({}, testInfo) => {
@@ -196,12 +208,7 @@ test.describe("projects API", () => {
       await theirs.send("POST", `${path}/restore`),
       await theirs.send("POST", `${path}/duplicate`, undefined, { "Idempotency-Key": key() }),
       await theirs.send("POST", `${path}/lease`, {}, tab),
-      await theirs.send(
-        "PUT",
-        `${path}/draft`,
-        { baseRev: 0, spec: { version: 1, scenes: [] } },
-        tab,
-      ),
+      await theirs.send("PUT", `${path}/draft`, { baseRev: 0, spec: draftSpec() }, tab),
     ];
     for (const response of attempts) {
       expect(response.status(), response.url()).toBe(404);
@@ -265,13 +272,14 @@ test.describe("projects API", () => {
     const detail = projectDetailDto.parse(await (await api.get(path, tabB)).json());
     expect(detail.lease).toMatchObject({ heldByMe: false, holderName: "Asha Rao" });
 
-    const spec = { version: 1, title: "Draft", scenes: [{ id: "sc_one", narration: "Hello." }] };
+    const spec = draftSpec();
     const saved = await api.send("PUT", `${path}/draft`, { baseRev: 0, spec }, tabA);
     expect(saved.status()).toBe(200);
+    // Two short scenes: saved, with the issue that it's under 20 s by its words.
     expect(draftSavedDto.parse(await json(saved))).toMatchObject({
       rev: 1,
       staleSceneIds: [],
-      issues: [],
+      issues: [{ code: "DURATION_OUT_OF_RANGE", sceneId: null }],
     });
 
     const stale = await api.send("PUT", `${path}/draft`, { baseRev: 0, spec }, tabA);
@@ -305,11 +313,14 @@ test.describe("projects API", () => {
     expect(badSpec.status()).toBe(400);
 
     // More than 10 scenes is a shape error: nothing is saved (API §5).
-    const scenes = Array.from({ length: 11 }, (_, i) => ({ id: `sc_${i}`, narration: "Hi." }));
+    const scenes = Array.from({ length: 11 }, (_, i) => ({
+      ...exampleScenes.title,
+      id: `sc_${i}`,
+    }));
     const eleven = await api.send(
       "PUT",
       `${path}/draft`,
-      { baseRev: 2, spec: { version: 1, scenes } },
+      { baseRev: 2, spec: { ...spec, scenes } },
       tabB,
     );
     expect(eleven.status()).toBe(400);

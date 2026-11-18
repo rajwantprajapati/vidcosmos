@@ -5,7 +5,8 @@
 // chosen length. Rewrite chips change all of it, or only the selected part (one AI request
 // each); "Undo last rewrite" puts the script back. Writing a new script over one the person
 // edited asks first. When the topic, notes or angle changed after the script was written, a
-// banner offers a new one. "Build the storyboard" goes on to step 3.
+// banner offers a new one. "Build the storyboard" goes on to step 3, building the first
+// storyboard (one AI request) when there's none yet.
 //
 // Step 1's "Write the script" starts the first script and opens this step, which picks the
 // running job up. Opened without a script and without a job, it offers "Write the script".
@@ -81,6 +82,7 @@ export function ScriptStep({ project, job: initialJob, undo: initialUndo }: Scri
 
   const [title, setTitle] = useState(project.title);
   const [hasScript, setHasScript] = useState(project.script !== null);
+  const hasStoryboard = project.draft.spec !== null;
   const [text, setText] = useState(project.script?.text ?? "");
   const [savedText, setSavedText] = useState(project.script?.text ?? "");
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -325,6 +327,25 @@ export function ScriptStep({ project, job: initialJob, undo: initialUndo }: Scri
     }
     if (!(await readyToGo())) return;
     setBusy("next");
+    // The first storyboard is built now (one AI request). One that exists already opens as it
+    // is; step 3 says so if the script changed since it was made.
+    if (!hasStoryboard) {
+      try {
+        await apiFetch(`/projects/${projectId}/storyboard`, {
+          method: "POST",
+          idempotent: true,
+          body: {},
+          editorId: lease.editorId,
+        });
+      } catch (failure) {
+        // One already running is fine: step 3 shows it.
+        if (!(failure instanceof ApiRequestError && failure.code === "JOB_IN_PROGRESS")) {
+          setBusy(null);
+          showFailure(failure, "Couldn't start the storyboard. Try again.");
+          return;
+        }
+      }
+    }
     router.push(`/projects/${projectId}/storyboard`);
   }
 

@@ -3,12 +3,14 @@
 // - each trigger's words appear in its scene's narration, and each list's items in the order
 //   they're said;
 // - scene ids are unique;
-// - once every scene has timing, the video lasts 20-100 s;
+// - once every scene has timing, the video lasts 20-100 s; before that, its estimate from the
+//   words is 20-110 s;
 // - on generation, the scenes' narration reproduces the approved script (at least 95% of
 //   its words, at most 5% extra).
 // A scene whose timing no longer matches its narration and voice loses it
 // (`reconcileTiming`), so it is recorded again.
 import { narrationHash } from "./hash.ts";
+import { estimatedVideoMs } from "./scenes.ts";
 import type { VideoSpec } from "./schema.ts";
 import { videoTiming } from "./schema.ts";
 import { triggersOf } from "./templates.ts";
@@ -63,7 +65,7 @@ function triggerIssues(scene: VideoSpec["scenes"][number]): SpecIssue[] {
         code: "TRIGGER_NOT_IN_NARRATION",
         sceneId: scene.id,
         path,
-        message: `"${trigger}" isn't in this scene's narration. Use words the narrator says.`,
+        message: `“${trigger}” isn’t in this scene’s narration. Use words the narrator says.`,
       });
       continue;
     }
@@ -75,7 +77,7 @@ function triggerIssues(scene: VideoSpec["scenes"][number]): SpecIssue[] {
           code: "TRIGGER_OUT_OF_ORDER",
           sceneId: scene.id,
           path,
-          message: `"${trigger}" must be said after the last ${closes === "options" ? "option" : "point"}, so it comes once the list is complete.`,
+          message: `“${trigger}” must be said after the last ${closes === "options" ? "option" : "point"}, so it comes once the list is complete.`,
         });
       }
       continue;
@@ -89,7 +91,7 @@ function triggerIssues(scene: VideoSpec["scenes"][number]): SpecIssue[] {
         code: "TRIGGER_OUT_OF_ORDER",
         sceneId: scene.id,
         path,
-        message: `"${trigger}" is said before the item above it. A list's items must follow the narration's order.`,
+        message: `“${trigger}” is said before the item above it. A list’s items must follow the narration’s order.`,
       });
       continue;
     }
@@ -119,7 +121,7 @@ export function narrationIssues(spec: VideoSpec, script: string): SpecIssue[] {
     {
       code: "NARRATION_MISMATCH",
       sceneId: null,
-      message: `The scenes' narration must reproduce the script word for word: it covers ${Math.round(coverage * 100)}% of the script and adds ${Math.round(extra * 100)}% other words.`,
+      message: `The scenes’ narration must reproduce the script word for word: it covers ${Math.round(coverage * 100)}% of the script and adds ${Math.round(extra * 100)}% other words.`,
     },
   ];
 }
@@ -136,7 +138,7 @@ export function specIssues(spec: VideoSpec, options: { script?: string } = {}): 
       issues.push({
         code: "DUPLICATE_SCENE_ID",
         sceneId: scene.id,
-        message: `Two scenes have the id "${scene.id}"; each needs its own.`,
+        message: `Two scenes have the id “${scene.id}”; each needs its own.`,
       });
     }
     seen.add(scene.id);
@@ -149,6 +151,24 @@ export function specIssues(spec: VideoSpec, options: { script?: string } = {}): 
       sceneId: null,
       message: `The video lasts ${Math.round(total / 1000)} s; it needs to be ${videoTiming.minTotalMs / 1000}-${videoTiming.maxTotalMs / 1000} s.`,
     });
+  } else if (total === null) {
+    // Not recorded yet: the estimate from the words, with a margin for its roughness, so
+    // narration isn't recorded for a video that can't be made.
+    const estimate = estimatedVideoMs(spec);
+    const seconds = Math.round(estimate / 1000);
+    if (estimate > videoTiming.maxTotalMs + videoTiming.estimateMarginMs) {
+      issues.push({
+        code: "DURATION_OUT_OF_RANGE",
+        sceneId: null,
+        message: `About ${seconds} s of narration: a video can be at most ${videoTiming.maxTotalMs / 1000} s. Shorten some scenes.`,
+      });
+    } else if (estimate < videoTiming.minTotalMs) {
+      issues.push({
+        code: "DURATION_OUT_OF_RANGE",
+        sceneId: null,
+        message: `About ${seconds} s of narration: a video needs at least ${videoTiming.minTotalMs / 1000} s. Add to the narration.`,
+      });
+    }
   }
   if (options.script !== undefined) issues.push(...narrationIssues(spec, options.script));
   return issues;

@@ -3,19 +3,34 @@
 import { createHash } from "node:crypto";
 import {
   type CreateProjectInput,
+  draftSpec,
   firstSentence,
   type ListProjectsQuery,
   type SaveDraftInput,
+  scriptMaxChars,
   scriptStats,
   singleLine,
+  specSettings,
   type UpdateProjectInput,
 } from "@vidcosmos/spec/api";
 import type { Project, Workspace } from "@vidcosmos/spec/collections";
+import {
+  canonicalJson,
+  reconcileTiming,
+  type SpecIssue,
+  specIssues,
+  type VideoSpec,
+} from "@vidcosmos/spec/video";
 import { type Db, type Filter, ObjectId, type UpdateFilter } from "mongodb";
 import { workspaceCollection } from "./scoped.ts";
 
 export type ProjectErrorCode =
-  "NOT_FOUND" | "REV_CONFLICT" | "LEASE_HELD" | "STAGE_INVALID" | "INVALID_CURSOR";
+  | "NOT_FOUND"
+  | "REV_CONFLICT"
+  | "LEASE_HELD"
+  | "STAGE_INVALID"
+  | "INVALID_CURSOR"
+  | "VALIDATION_FAILED";
 
 /** A refusal the API turns into its error envelope (API §2). */
 export class ProjectError extends Error {
@@ -269,6 +284,8 @@ export type UpdateOptions = {
   holder?: string;
   /** A script edit that puts back what a rewrite replaced keeps that script's source. */
   scriptSource?: NonNullable<Project["script"]>["source"];
+  /** Each narrator's voice id: a new narrator puts its id in the draft's voice. */
+  voiceIds?: Record<"female" | "male", string>;
 };
 
 /** Applies the update rules of API §5 and returns the project as it is now. */
@@ -325,7 +342,11 @@ export async function updateProject(
       (settings.voiceGender !== undefined &&
         settings.voiceGender !== project.settings.voiceGender) ||
       (settings.voiceSpeed !== undefined && settings.voiceSpeed !== project.settings.voiceSpeed);
-    if (settings.voiceGender !== undefined) set["draft.spec.voice.gender"] = settings.voiceGender;
+    if (settings.voiceGender !== undefined) {
+      set["draft.spec.voice.gender"] = settings.voiceGender;
+      if (options.voiceIds)
+        set["draft.spec.voice.voiceId"] = options.voiceIds[settings.voiceGender];
+    }
     if (settings.voiceSpeed !== undefined) set["draft.spec.voice.speed"] = settings.voiceSpeed;
     if (voiceChanged && spec.scenes.length > 0) set["draft.spec.scenes.$[].timing"] = null;
     draftChanged = Object.keys(set).some((key) => key.startsWith("draft.spec"));
@@ -467,41 +488,95 @@ export async function releaseLease(db: Db, owner: Owner, projectId: ObjectId, ho
 
 // ---- Draft autosave (DB §11) ----
 
-type Scene = Record<string, unknown> & { id?: unknown; narration?: unknown; timing?: unknown };
-
 /**
- * Keeps the stored timing of each scene whose narration and voice are unchanged, and clears
- * the rest, so a client can't forge timing (API §5). Returns the scenes that lost it.
- * F16/F20 replace the narration comparison with `narrationHash`.
+ * The spec as saved: each scene keeps the timing stored for it (never the client's), and loses
+ * it once its narration or the voice no longer match the recording (`narrationHash`), so a
+ * client can't forge timing (API §5). A scene the person changed, or added, is marked
+ * `userEdited`. Returns the scenes that lost their recording.
  */
-function carryTiming(stored: Project["draft"]["spec"], incoming: SaveDraftInput["spec"]) {
-  const before = new Map<unknown, Scene>(
-    ((stored?.scenes ?? []) as Scene[]).map((scene) => [scene.id, scene]),
-  );
-  const sameVoice =
-    JSON.stringify((stored as { voice?: unknown } | null)?.voice ?? null) ===
-    JSON.stringify((incoming as { voice?: unknown }).voice ?? null);
-  const stale: string[] = [];
-  const scenes = (incoming.scenes as Scene[]).map((scene) => {
+function carryTiming(stored: VideoSpec | null, incoming: VideoSpec) {
+  const before = new Map((stored?.scenes ?? []).map((scene) => [scene.id, scene]));
+  const scenes = incoming.scenes.map((scene) => {
     const previous = before.get(scene.id);
-    const keep = previous && sameVoice && previous.narration === scene.narration;
-    const timing = keep ? (previous.timing ?? null) : null;
-    if (!keep && previous?.timing) stale.push(String(scene.id));
-    return { ...scene, timing };
+    if (!previous) return { ...scene, timing: null, userEdited: true };
+    const changed =
+      previous.template !== scene.template ||
+      previous.narration !== scene.narration ||
+      canonicalJson(previous.content) !== canonicalJson(scene.content);
+    return {
+      ...scene,
+      timing: previous.timing,
+      userEdited: previous.userEdited || changed,
+    } as VideoSpec["scenes"][number];
   });
-  return { spec: { ...incoming, scenes }, stale };
+  const { spec, cleared } = reconcileTiming({ ...incoming, scenes });
+  return { spec, stale: cleared };
 }
 
+/** The script the scenes say: one paragraph a scene. */
+const narrationText = (spec: VideoSpec) =>
+  spec.scenes.map((scene) => scene.narration.trim()).join("\n\n");
+
+/**
+ * The script after a storyboard save. Narration edited in the storyboard is the script
+ * (PRD FR-3.5): the script becomes the scenes' narration, and the storyboard stays made from
+ * it. Not when the script changed after the storyboard was made: that edit is the person's
+ * own, so the storyboard shows as stale instead (DB §5).
+ */
+function scriptAfter(current: Project, stored: VideoSpec | null, spec: VideoSpec, now: Date) {
+  const script = current.script;
+  if (!script || !stored || narrationText(stored) === narrationText(spec)) return null;
+  if (current.stageHashes.script !== textHash(script.text)) return null;
+  const text = narrationText(spec);
+  if (text.length > scriptMaxChars) {
+    throw new ProjectError(
+      "VALIDATION_FAILED",
+      `The scenes’ narration is longer than a script can be (${scriptMaxChars.toLocaleString("en-IN")} characters). Shorten a scene.`,
+    );
+  }
+  return {
+    ...script,
+    text,
+    hook: firstSentence(text),
+    ...scriptStats(text, current.settings.language),
+    source: script.source === "user" ? "user" : "ai_edited",
+    updatedAt: now,
+  } satisfies NonNullable<Project["script"]>;
+}
+
+export type DraftSave = {
+  rev: number;
+  updatedAt: Date;
+  staleSceneIds: string[];
+  /** The rules zod can't express (DB §6): saved anyway, so the person can keep typing. */
+  issues: SpecIssue[];
+};
+
+/**
+ * Autosaves the draft (API §5): the scenes and title from the client, the rest from the
+ * settings; the stored timing; edited narration synced to the script. Refused without the
+ * lease (423) or over a newer rev (409).
+ */
 export async function saveDraft(
   db: Db,
   owner: Owner,
   projectId: ObjectId,
   holder: string,
   input: SaveDraftInput,
-  now = new Date(),
-): Promise<{ rev: number; updatedAt: Date; staleSceneIds: string[] }> {
+  now: Date,
+  /** Each narrator's voice id, for the draft's voice. */
+  options: { voiceIds: Record<"female" | "male", string> },
+): Promise<DraftSave> {
   const current = await getProject(db, owner.workspaceId, projectId);
-  const { spec, stale } = carryTiming(current.draft.spec, input.spec);
+  const stored = draftSpec(current);
+  // The client sends the scenes and the title; the settings own the rest (API §5), so a save
+  // can't change the language, narrator, format, theme or music around their rules.
+  const incoming: VideoSpec = {
+    ...input.spec,
+    ...specSettings(current.settings, options.voiceIds, stored?.music ?? null),
+  };
+  const { spec, stale } = carryTiming(stored, incoming);
+  const script = scriptAfter(current, stored, spec, now);
   const updated = await projects(db).findOneAndUpdate(
     {
       workspaceId: owner.workspaceId,
@@ -509,19 +584,29 @@ export async function saveDraft(
       deletedAt: null,
       "draft.rev": input.baseRev,
       "lease.holderSessionId": holder,
+      // The script synced from the narration replaces only the one it was made from.
+      ...(script ? { "script.text": current.script!.text } : {}),
     },
     {
       $set: {
         "draft.spec": spec,
         "draft.updatedAt": now,
         "draft.updatedBy": owner.userId,
+        ...(script ? { script, "stageHashes.script": textHash(script.text) } : {}),
         updatedAt: now,
       },
       $inc: { "draft.rev": 1 },
     },
     { returnDocument: "after", projection: { "draft.rev": 1 } },
   );
-  if (updated) return { rev: updated.draft.rev, updatedAt: now, staleSceneIds: stale };
+  if (updated) {
+    return {
+      rev: updated.draft.rev,
+      updatedAt: now,
+      staleSceneIds: stale,
+      issues: specIssues(spec),
+    };
+  }
 
   // Nothing matched: say why, lease first (the editor goes read-only), then the revision.
   const project = await getProject(db, owner.workspaceId, projectId);

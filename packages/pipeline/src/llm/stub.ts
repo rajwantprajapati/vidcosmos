@@ -3,7 +3,17 @@
 // storyboard). The stub moderator refuses a few obvious phrases, so the blocked path can be
 // tried and tested without a key.
 import { ideasRequestLabel } from "../ideas.ts";
+import {
+  clipText,
+  convertScene,
+  limits,
+  narrationKeywords,
+  type Scene,
+  type TemplateName,
+  tokenize,
+} from "@vidcosmos/spec/video";
 import { scriptRequestLabel } from "../script.ts";
+import { storyboardRequestLabel } from "../storyboard.ts";
 import type { LlmProvider, StructuredRequest } from "./provider.ts";
 import {
   type ContentClassification,
@@ -206,6 +216,113 @@ function rewriteInStub(request: StructuredRequest) {
   }
 }
 
+/** Sentences of a text (Latin or Devanagari full stops), each at most `max` characters. */
+function sentencesOf(text: string, max: number): string[] {
+  const sentences =
+    text
+      .replace(/\s+/g, " ")
+      .match(/[^.!?।]+[.!?।]+["”’]*|[^.!?।]+$/gu)
+      ?.map((s) => s.trim())
+      .filter(Boolean) ?? [];
+  // A sentence too long for one scene is cut between words.
+  return sentences.flatMap((sentence) => {
+    const parts: string[] = [];
+    let part = "";
+    for (const word of sentence.split(" ")) {
+      if (part && part.length + word.length + 1 > max) {
+        parts.push(part);
+        part = word;
+      } else part = part ? `${part} ${word}` : word;
+    }
+    return part ? [...parts, part] : parts;
+  });
+}
+
+/** The middle scenes' templates, in turn, and the different words each needs. */
+const stubTemplates: { template: TemplateName; words: number }[] = [
+  { template: "bullets", words: 3 },
+  { template: "flowchart", words: 4 },
+  { template: "keyTerm", words: 2 },
+  { template: "iconGrid", words: 5 },
+  { template: "comparison", words: 5 },
+];
+
+/**
+ * A storyboard of the script: its sentences in 2-10 scenes of about even length, a title scene
+ * first, a recap last when there's room, and elements on words each scene says. Valid for
+ * every script the script step accepts, so the flow works without keys.
+ */
+function storyboardInStub(request: StructuredRequest) {
+  const data = JSON.parse(jsonLine(request.prompt, storyboardRequestLabel) ?? "{}") as {
+    title?: string;
+    script?: string;
+    scenes?: { min: number; max: number };
+  };
+  const script = data.script ?? "";
+  const range = data.scenes ?? { min: 2, max: 10 };
+  const maxChars = 380;
+  const sentences = sentencesOf(script, maxChars);
+  const words = tokenize(script).length;
+  const wanted = Math.min(range.max, Math.max(range.min, Math.round(words / 18)));
+  // The sentences in `wanted` groups of about even length, in order.
+  const count = Math.max(1, Math.min(wanted, sentences.length));
+  const total = sentences.reduce((sum, sentence) => sum + sentence.length, 0);
+  const buckets: string[][] = Array.from({ length: count }, () => []);
+  let before = 0;
+  for (const sentence of sentences) {
+    buckets[Math.min(count - 1, Math.floor((before / total) * count))]!.push(sentence);
+    before += sentence.length;
+  }
+  const groups = buckets.filter((bucket) => bucket.length > 0).map((bucket) => bucket.join(" "));
+  // A scene says at most 400 characters: split any longer group between sentences.
+  for (let i = 0; i < groups.length && groups.length < 10; i++) {
+    const parts = sentencesOf(groups[i]!, maxChars);
+    if (groups[i]!.length <= 400 || parts.length < 2) continue;
+    const half = Math.ceil(parts.length / 2);
+    groups.splice(i, 1, parts.slice(0, half).join(" "), parts.slice(half).join(" "));
+    i -= 1;
+  }
+  if (groups.length < 2) {
+    const all = (groups[0] ?? script).split(" ");
+    const half = Math.ceil(all.length / 2);
+    groups.splice(0, groups.length, all.slice(0, half).join(" "), all.slice(half).join(" "));
+  }
+
+  const scenes = groups.map((narration, index) => {
+    const unique = new Set(tokenize(narration)).size;
+    const last = index === groups.length - 1;
+    const pick =
+      index === 0
+        ? null
+        : last && unique >= 4
+          ? "recap"
+          : stubTemplates[(index - 1) % stubTemplates.length]!;
+    const template: TemplateName =
+      pick === null
+        ? "title"
+        : pick === "recap"
+          ? "recap"
+          : unique >= pick.words + 1
+            ? pick.template
+            : "title";
+    const first = sentencesOf(narration, 200)[0] ?? narration;
+    const seed: Scene = {
+      id: "sc_stub",
+      template: "title",
+      narration,
+      userEdited: false,
+      timing: null,
+      content: {
+        heading: clipText(index === 0 && data.title ? data.title : first, limits.heading),
+        headingTrigger: narrationKeywords(narration, 1)[0]!.trigger,
+      },
+    };
+    const built = convertScene(seed, template);
+    return { template: built.template, narration, content: built.content };
+  });
+  return { scenes };
+}
+
 /** A rough token count (4 characters a token), so stub usage looks plausible. */
 const roughTokens = (text: string) => Math.ceil(text.length / 4);
 
@@ -215,6 +332,7 @@ export function createStubLlm(handlers: Record<string, StubHandler> = {}): LlmPr
     submit_angles: anglesInStub,
     submit_script: scriptInStub,
     submit_rewrite: rewriteInStub,
+    submit_storyboard: storyboardInStub,
     ...handlers,
   };
   return {

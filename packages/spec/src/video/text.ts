@@ -47,3 +47,43 @@ export function orderedCoverage(a: string[], b: string[]): number {
   }
   return previous[b.length]! / a.length;
 }
+
+/** A word of a text and where it sits: `start` and `end` are character offsets. */
+export type WordSpan = { word: string; start: number; end: number };
+
+/**
+ * The words of a text with their places, normalised as `tokenize` does (and in the same
+ * order), so a match found in `tokenize(text)` can be shown in the text itself.
+ */
+export function wordSpans(text: string): WordSpan[] {
+  const spans: WordSpan[] = [];
+  const pattern = /[^\s\-‐-―−]+/gu;
+  for (const match of text.matchAll(pattern)) {
+    const word = normalizeWord(match[0]);
+    if (!word) continue;
+    // Leave punctuation around the word out of the highlight ("money." shows "money").
+    const lead = /^[^\p{L}\p{M}\p{N}]*/u.exec(match[0])![0].length;
+    const trail = /[^\p{L}\p{M}\p{N}]*$/u.exec(match[0])![0].length;
+    spans.push({ word, start: match.index + lead, end: match.index + match[0].length - trail });
+  }
+  return spans;
+}
+
+/**
+ * Where each trigger is said in the narration, as character ranges, in the order given;
+ * null for a trigger that isn't there. Each one is looked for from the start, as the checks
+ * do for single fields.
+ */
+export function triggerRanges(
+  narration: string,
+  triggers: string[],
+): ({ start: number; end: number } | null)[] {
+  const spans = wordSpans(narration);
+  const words = spans.map((span) => span.word);
+  return triggers.map((trigger) => {
+    const needle = tokenize(trigger);
+    const at = findSequence(words, needle);
+    if (at === -1) return null;
+    return { start: spans[at]!.start, end: spans[at + needle.length - 1]!.end };
+  });
+}

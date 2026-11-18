@@ -14,6 +14,7 @@ import {
   jobCancelRequested,
   scriptRequested,
   scriptRewriteRequested,
+  storyboardRequested,
 } from "@/inngest/events";
 import { inngest } from "@/inngest/client";
 import { getDb } from "./db";
@@ -57,6 +58,8 @@ function startEvent(job: Job) {
       return scriptRequested.create({ ...data, projectId: data.projectId! }, options);
     case "script_rewrite":
       return scriptRewriteRequested.create({ ...data, projectId: data.projectId! }, options);
+    case "storyboard":
+      return storyboardRequested.create({ ...data, projectId: data.projectId! }, options);
     default:
       throw new Error(`No function runs ${job.type} jobs yet.`);
   }

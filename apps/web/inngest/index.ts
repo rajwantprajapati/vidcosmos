@@ -7,10 +7,13 @@ import { inngest } from "./client";
 import { createDemoJob } from "./functions/demo-job";
 import { createJobCancelled } from "./functions/job-cancelled";
 import { createRewriteScript, createWriteScript } from "./functions/script-jobs";
+import { createBuildStoryboard } from "./functions/storyboard-jobs";
 import { createSuggestIdeas } from "./functions/suggest-ideas";
 import { mongoIdeasStore } from "./ideas-store";
 import { mongoJobStore } from "./job-store";
 import { mongoScriptStore } from "./script-store";
+import { mongoStoryboardStore } from "./storyboard-store";
+import { voiceIds } from "@/lib/voices";
 
 const store = mongoJobStore(getDb);
 
@@ -50,6 +53,13 @@ export const functions = [
   }),
   createWriteScript(inngest, scriptDeps),
   createRewriteScript(inngest, scriptDeps),
+  createBuildStoryboard(inngest, {
+    jobs: store,
+    storyboards: mongoStoryboardStore(getDb, voiceIds),
+    llm: () => getLlm("main"),
+    small: () => getLlm("small"),
+    usage: usageFor,
+  }),
 ];
 
 export { inngest };

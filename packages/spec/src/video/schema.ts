@@ -173,6 +173,14 @@ export const videoTiming = {
   /** A whole video, once every scene has timing (DB §6). */
   minTotalMs: 20_000,
   maxTotalMs: 100_000,
+  /**
+   * Before narration is recorded, the length is estimated from the words, so it may run this
+   * far over before Generate waits: a 90 s script at the long end of what step 2 accepts
+   * estimates at about 100-106 s (decision log, 18 Nov).
+   */
+  estimateMarginMs: 10_000,
+  /** A scene that takes longer to say is worth splitting (PRD FR-3.1). */
+  maxSceneMs: 15_000,
 } as const;
 
 export const msToFrame = (ms: number) => Math.round((ms / 1000) * videoTiming.fps);

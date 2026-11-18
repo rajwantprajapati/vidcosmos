@@ -9,6 +9,7 @@ import {
   toProjectSummaryDto,
 } from "@vidcosmos/spec/api";
 import type { Project, Workspace } from "@vidcosmos/spec/collections";
+import { narrationHash, type VideoSpec, videoSpec } from "@vidcosmos/spec/video";
 import { ObjectId } from "mongodb";
 import { beforeAll, describe, expect, it } from "vitest";
 import { migrate } from "./migrate.ts";
@@ -71,6 +72,68 @@ async function refused(promise: Promise<unknown>, code: string) {
 }
 
 /** Gives a project a script and a two-scene draft with timing, as generation will. */
+const voice = {
+  gender: "female",
+  voiceId: "voice_female_1",
+  model: "eleven_multilingual_v2",
+  speed: 1,
+} as const;
+const sceneOne = "Every UPI payment makes three hops.";
+const sceneTwo = "Your app asks your bank, and the bank pays.";
+const scriptText = `${sceneOne}\n\n${sceneTwo}`;
+const assetId = new ObjectId().toHexString();
+
+/** A valid two-scene draft; the first scene has its recording. */
+function draftOf(): VideoSpec {
+  return videoSpec.parse({
+    version: 1,
+    format: "9:16",
+    title: "How UPI moves money",
+    language: "en",
+    voice,
+    theme: { palette: "midnight", captionStyle: "highlight" },
+    scenes: [
+      {
+        id: "sc_one",
+        template: "title",
+        narration: sceneOne,
+        content: { heading: "Three hops", headingTrigger: "three hops" },
+        timing: {
+          narrationAssetId: assetId,
+          narrationHash: narrationHash(sceneOne, "en", voice),
+          audioDurationMs: 1500,
+          leadInMs: 300,
+          durationMs: 2200,
+          words: [],
+          timingSource: "provider",
+        },
+      },
+      {
+        id: "sc_two",
+        template: "bullets",
+        narration: sceneTwo,
+        content: {
+          heading: "Two steps",
+          items: [
+            { text: "Your app asks", trigger: "Your app" },
+            { text: "The bank pays", trigger: "bank pays" },
+          ],
+        },
+      },
+    ],
+  });
+}
+
+const voiceIds = { female: "voice_female_1", male: "voice_male_1" };
+
+/** A draft save now, with the test narrators' voice ids. */
+const saveNow = (
+  owner: Owner,
+  projectId: ObjectId,
+  holder: string,
+  input: Parameters<typeof saveDraft>[4],
+) => saveDraft(db(), owner, projectId, holder, input, new Date(), { voiceIds });
+
 async function withScriptAndDraft(project: Project) {
   const now = new Date();
   await workspaceCollection(db(), "projects").updateOne(
@@ -79,24 +142,15 @@ async function withScriptAndDraft(project: Project) {
       $set: {
         script: {
           title: "How UPI moves money",
-          hook: "Three hops.",
-          text: "Every UPI payment makes three hops.",
-          wordCount: 6,
-          estDurationSec: 2.4,
+          hook: sceneOne,
+          text: scriptText,
+          wordCount: 15,
+          estDurationSec: 6,
           source: "ai",
           updatedAt: now,
         },
-        stageHashes: { script: textHash("Every UPI payment makes three hops.") },
-        "draft.spec": {
-          version: 1,
-          format: "9:16",
-          voice: { gender: "female", speed: 1 },
-          theme: { palette: "midnight", captionStyle: "highlight" },
-          scenes: [
-            { id: "sc_one", narration: "Every UPI payment", timing: { durationMs: 2000 } },
-            { id: "sc_two", narration: "makes three hops.", timing: { durationMs: 1500 } },
-          ],
-        },
+        stageHashes: { script: textHash(scriptText) },
+        "draft.spec": draftOf(),
       },
     },
   );
@@ -157,10 +211,7 @@ describe("ownership: another workspace's project is not found", () => {
     await refused(updateProject(db(), mine, project._id, { title: "Mine now" }), "NOT_FOUND");
     await refused(takeLease(db(), mine, project._id, holder), "NOT_FOUND");
     await refused(takeLease(db(), mine, project._id, holder, { takeover: true }), "NOT_FOUND");
-    await refused(
-      saveDraft(db(), mine, project._id, holder, { baseRev: 0, spec: { version: 1, scenes: [] } }),
-      "NOT_FOUND",
-    );
+    await refused(saveNow(mine, project._id, holder, { baseRev: 0, spec: draftOf() }), "NOT_FOUND");
     await refused(duplicateProject(db(), mine, project._id), "NOT_FOUND");
     await refused(deleteProject(db(), mine, project._id), "NOT_FOUND");
     await refused(restoreProject(db(), mine, project._id), "NOT_FOUND");
@@ -245,21 +296,27 @@ describe("draft autosave", () => {
     return { owner, project, holder };
   }
 
+  const stored = async (owner: Owner, project: Project) =>
+    getProject(db(), owner.workspaceId, project._id);
+  const sceneOf = (spec: VideoSpec, id: string) => spec.scenes.find((s) => s.id === id)!;
+
   it("saves with the current rev and returns the next one", async () => {
     const { owner, project, holder } = await editing();
-    const spec = { ...project.draft.spec!, title: "New title" };
-    const saved = await saveDraft(db(), owner, project._id, holder, { baseRev: 0, spec });
-    expect(saved.rev).toBe(1);
-    const again = await saveDraft(db(), owner, project._id, holder, { baseRev: 1, spec });
+    const spec = { ...draftOf(), title: "New title" };
+    const saved = await saveNow(owner, project._id, holder, { baseRev: 0, spec });
+    expect(saved).toMatchObject({ rev: 1, staleSceneIds: [] });
+    // Two short scenes: saved, with the one issue that it's under 20 s by its words.
+    expect(saved.issues.map((issue) => issue.code)).toEqual(["DURATION_OUT_OF_RANGE"]);
+    const again = await saveNow(owner, project._id, holder, { baseRev: 1, spec });
     expect(again.rev).toBe(2);
   });
 
   it("an old rev is 409 REV_CONFLICT with the current one", async () => {
     const { owner, project, holder } = await editing();
-    const spec = project.draft.spec!;
-    await saveDraft(db(), owner, project._id, holder, { baseRev: 0, spec });
+    const spec = draftOf();
+    await saveNow(owner, project._id, holder, { baseRev: 0, spec });
     const conflict = await refused(
-      saveDraft(db(), owner, project._id, holder, { baseRev: 0, spec }),
+      saveNow(owner, project._id, holder, { baseRev: 0, spec }),
       "REV_CONFLICT",
     );
     expect(conflict.details).toEqual({ currentRev: 1 });
@@ -269,35 +326,140 @@ describe("draft autosave", () => {
     const { owner, project } = await editing();
     // Another tab of the same user; the first tab still holds the lease.
     const held = await refused(
-      saveDraft(db(), owner, project._id, leaseHolder("s1", "tab-b"), {
+      saveNow(owner, project._id, leaseHolder("s1", "tab-b"), {
         baseRev: 0,
-        spec: { version: 1, scenes: [] },
+        spec: draftOf(),
       }),
       "LEASE_HELD",
     );
     expect(held.details).toMatchObject({ heldBy: "you_elsewhere" });
-    expect((await getProject(db(), owner.workspaceId, project._id)).draft.rev).toBe(0);
+    expect((await stored(owner, project)).draft.rev).toBe(0);
   });
 
-  it("keeps stored timing only where the narration is unchanged", async () => {
+  it("keeps the stored recording, never the client's, until the words change", async () => {
     const { owner, project, holder } = await editing();
-    const [one, two] = project.draft.spec!.scenes as Record<string, unknown>[];
-    const spec = {
-      ...project.draft.spec!,
-      scenes: [
-        { ...one, timing: { durationMs: 99_999 } }, // forged: the stored timing comes back
-        { ...two, narration: "makes four hops.", timing: { durationMs: 1500 } }, // new words
-        { id: "sc_new", narration: "And arrives.", timing: { durationMs: 10 } },
-      ],
+    const recorded = sceneOf(draftOf(), "sc_one").timing!;
+    const forged = { ...recorded, durationMs: 99_999 };
+    const spec = draftOf();
+    spec.scenes[0] = { ...spec.scenes[0]!, timing: forged };
+    spec.scenes[1] = { ...spec.scenes[1]!, timing: { ...forged, narrationHash: "f".repeat(64) } };
+    const kept = await saveNow(owner, project._id, holder, { baseRev: 0, spec });
+    expect(kept.staleSceneIds).toEqual([]);
+    let draft = (await stored(owner, project)).draft.spec as VideoSpec;
+    expect(sceneOf(draft, "sc_one").timing).toEqual(recorded);
+    expect(sceneOf(draft, "sc_two").timing).toBeNull();
+
+    // New words: the recording no longer matches.
+    const changed = draftOf();
+    changed.scenes[0] = { ...changed.scenes[0]!, narration: "Every UPI payment makes four hops." };
+    const saved = await saveNow(owner, project._id, holder, { baseRev: 1, spec: changed });
+    expect(saved.staleSceneIds).toEqual(["sc_one"]);
+    draft = (await stored(owner, project)).draft.spec as VideoSpec;
+    expect(sceneOf(draft, "sc_one").timing).toBeNull();
+  });
+
+  it("takes the language, narrator, format, theme and music from the settings, not the client", async () => {
+    const { owner, project, holder } = await editing();
+    const forged = {
+      ...draftOf(),
+      title: "A new title",
+      language: "hi",
+      format: "16:9",
+      voice: { ...voice, voiceId: "attacker-chosen-voice", speed: 1.15 },
+      theme: { palette: "sunset", captionStyle: "none" },
+      music: { trackId: "any-track", volume: 1, duck: false },
+    } as VideoSpec;
+    const saved = await saveNow(owner, project._id, holder, { baseRev: 0, spec: forged });
+    // The recording still matches: the voice it was made with is the one kept.
+    expect(saved.staleSceneIds).toEqual([]);
+    const draft = (await stored(owner, project)).draft.spec as VideoSpec;
+    const { settings } = project;
+    expect(draft).toMatchObject({
+      title: "A new title",
+      language: settings.language,
+      format: settings.format,
+      voice: { gender: settings.voiceGender, voiceId: voiceIds[settings.voiceGender], speed: 1 },
+      theme: { palette: settings.palette, captionStyle: settings.captionStyle },
+      music: null,
+    });
+  });
+
+  it("marks the scenes the person changed, and only those", async () => {
+    const { owner, project, holder } = await editing();
+    const spec = draftOf();
+    spec.scenes[1] = {
+      ...spec.scenes[1]!,
+      content: { ...spec.scenes[1]!.content, heading: "How it pays" },
+    } as VideoSpec["scenes"][number];
+    await saveNow(owner, project._id, holder, { baseRev: 0, spec });
+    const draft = (await stored(owner, project)).draft.spec as VideoSpec;
+    expect(draft.scenes.map((s) => s.userEdited)).toEqual([false, true]);
+  });
+
+  it("narration edited in the storyboard becomes the script (PRD FR-3.5)", async () => {
+    const { owner, project, holder } = await editing();
+    const spec = draftOf();
+    spec.scenes[1] = {
+      ...spec.scenes[1]!,
+      narration: "Your app asks your bank, and the bank pays at once.",
     };
-    const saved = await saveDraft(db(), owner, project._id, holder, { baseRev: 0, spec });
-    expect(saved.staleSceneIds).toEqual(["sc_two"]);
-    const stored = (await getProject(db(), owner.workspaceId, project._id)).draft.spec!.scenes;
-    expect(stored.map((s) => (s as { timing: unknown }).timing)).toEqual([
-      { durationMs: 2000 },
-      null,
-      null,
+    await saveNow(owner, project._id, holder, { baseRev: 0, spec });
+    const after = await stored(owner, project);
+    expect(after.script).toMatchObject({
+      text: `${sceneOne}\n\nYour app asks your bank, and the bank pays at once.`,
+      hook: sceneOne,
+      wordCount: 17,
+      source: "ai_edited",
+    });
+    // Still made from the script, so not stale.
+    expect(projectStale(after).storyboard).toBe(false);
+  });
+
+  it("leaves a script edited after the storyboard alone: the storyboard is stale instead", async () => {
+    const { owner, project, holder } = await editing();
+    await workspaceCollection(db(), "projects").updateOne(
+      { workspaceId: owner.workspaceId, _id: project._id },
+      { $set: { "script.text": "A different script." } },
+    );
+    const spec = draftOf();
+    spec.scenes[1] = { ...spec.scenes[1]!, narration: "Your app asks your bank. The bank pays." };
+    await saveNow(owner, project._id, holder, { baseRev: 0, spec });
+    const after = await stored(owner, project);
+    expect(after.script?.text).toBe("A different script.");
+    expect(projectStale(after).storyboard).toBe(true);
+  });
+
+  it("refuses narration longer than a script can be", async () => {
+    const { owner, project, holder } = await editing();
+    const long = `${"Payments move quickly between banks today. ".repeat(9)}`.trim();
+    const spec = draftOf();
+    spec.scenes = Array.from({ length: 5 }, (_, i) => ({
+      ...spec.scenes[0]!,
+      id: `sc_long${i}`,
+      narration: long,
+      timing: null,
+      content: { heading: "Payments", headingTrigger: "Payments" },
+    })) as VideoSpec["scenes"];
+    await refused(saveNow(owner, project._id, holder, { baseRev: 0, spec }), "VALIDATION_FAILED");
+    expect((await stored(owner, project)).draft.rev).toBe(0);
+  });
+
+  it("saves a trigger the narrator doesn't say, and returns it as an issue", async () => {
+    const { owner, project, holder } = await editing();
+    const spec = draftOf();
+    spec.scenes[0] = {
+      ...spec.scenes[0]!,
+      content: { heading: "Three hops", headingTrigger: "secure" },
+    } as VideoSpec["scenes"][number];
+    const saved = await saveNow(owner, project._id, holder, { baseRev: 0, spec });
+    expect(saved.issues.filter((issue) => issue.sceneId !== null)).toEqual([
+      expect.objectContaining({
+        code: "TRIGGER_NOT_IN_NARRATION",
+        sceneId: "sc_one",
+        path: "headingTrigger",
+      }),
     ]);
+    expect(saved.rev).toBe(1);
   });
 });
 
@@ -388,22 +550,29 @@ describe("update rules (PATCH)", () => {
     });
     expect(updated.draft.rev).toBe(1);
     expect(updated.draft.spec).toMatchObject({ format: "1:1", theme: { palette: "ocean" } });
-    expect((updated.draft.spec!.scenes[0] as { timing: unknown }).timing).toEqual({
-      durationMs: 2000,
-    });
+    expect((updated.draft.spec!.scenes[0] as { timing: unknown }).timing).toEqual(
+      draftOf().scenes[0]!.timing,
+    );
   });
 
   it("a new voice clears every scene's timing", async () => {
     const owner = await newOwner();
     const project = await withScriptAndDraft(await create(owner));
-    const updated = await updateProject(db(), owner, project._id, {
-      settings: { voiceGender: "male" },
-    });
+    const updated = await updateProject(
+      db(),
+      owner,
+      project._id,
+      { settings: { voiceGender: "male" } },
+      new Date(),
+      { voiceIds: { female: "voice_female_1", male: "voice_male_1" } },
+    );
     expect(updated.draft.spec!.scenes.map((s) => (s as { timing: unknown }).timing)).toEqual([
       null,
       null,
     ]);
-    expect(updated.draft.spec).toMatchObject({ voice: { gender: "male" } });
+    expect(updated.draft.spec).toMatchObject({
+      voice: { gender: "male", voiceId: "voice_male_1" },
+    });
   });
 
   it("editing the script marks it the user's and the storyboard stale", async () => {

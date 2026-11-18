@@ -8,7 +8,6 @@ import {
   language,
   lengthSec,
   palette,
-  storedVideoSpec,
   tone,
   videoFormat,
   voiceGender,
@@ -17,6 +16,8 @@ import {
 import type { Job } from "../collections/job.ts";
 import { type Project, projectStage, videoType, wizardStep } from "../collections/project.ts";
 import type { Workspace } from "../collections/workspace.ts";
+import type { SpecIssueCode } from "../video/checks.ts";
+import { type VideoSpec, videoSpec } from "../video/schema.ts";
 import { controlCharacterMessage, isPlainText, stripControlCharacters } from "./text.ts";
 
 const id = z.string().regex(/^[0-9a-f]{24}$/);
@@ -92,8 +93,7 @@ export const projectDetailDto = projectSummaryDto.extend({
       updatedAt: iso,
     })
     .nullable(),
-  // The full VideoSpec schema arrives in F16; until then the stored top-level shape.
-  draft: z.object({ spec: storedVideoSpec.nullable(), rev: z.int(), updatedAt: iso }),
+  draft: z.object({ spec: videoSpec.nullable(), rev: z.int(), updatedAt: iso }),
   audio: z.record(id, signedUrl),
   stale: z.object({ script: z.boolean(), storyboard: z.boolean() }),
   lease: leaseDto.nullable(),
@@ -116,7 +116,17 @@ export const draftSavedDto = z.object({
   issues: z.array(
     z.object({
       sceneId: z.string().nullable(),
-      code: z.enum(["TRIGGER_NOT_IN_NARRATION", "TEXT_TOO_LONG", "DURATION_OUT_OF_RANGE"]),
+      // The rules in DB §6 (`specIssues`). Text over its limit is a shape error (400), and the
+      // editor's fields stop at the limit, so there is no TEXT_TOO_LONG (decision log, 17 Nov).
+      code: z.enum([
+        "TRIGGER_NOT_IN_NARRATION",
+        "TRIGGER_OUT_OF_ORDER",
+        "DUPLICATE_SCENE_ID",
+        "DURATION_OUT_OF_RANGE",
+        "NARRATION_MISMATCH",
+      ] satisfies SpecIssueCode[]),
+      /** Where in the scene's content, e.g. "items[2].trigger". */
+      path: z.string().optional(),
       message: z.string(),
     }),
   ),
@@ -189,14 +199,20 @@ export const updateProjectInput = z
   });
 export type UpdateProjectInput = z.infer<typeof updateProjectInput>;
 
-/** A video has at most 10 scenes (DB §6); more is a shape error and nothing is saved (API §5). */
-export const maxScenes = 10;
-
+/**
+ * The whole draft spec (API §5). A wrong shape (types, missing fields, text over its limit,
+ * more than 10 scenes) is `400 VALIDATION_FAILED` and nothing is saved; the rules zod can't
+ * express come back as `issues`.
+ */
 export const saveDraftInput = z.object({
   baseRev: z.int().min(0),
-  spec: storedVideoSpec.extend({ scenes: z.array(z.looseObject({})).max(maxScenes) }),
+  spec: videoSpec,
 });
 export type SaveDraftInput = z.infer<typeof saveDraftInput>;
+
+/** `POST /projects/{id}/storyboard` (API §6): replacing a storyboard needs `overwrite`. */
+export const requestStoryboardInput = z.object({ overwrite: z.boolean().optional() }).default({});
+export type RequestStoryboardInput = z.infer<typeof requestStoryboardInput>;
 
 export const takeLeaseInput = z.object({ takeover: z.boolean().optional() }).default({});
 export const releaseLeaseInput = z.object({ editorId: z.string().min(1).max(100) });
@@ -240,6 +256,50 @@ function specDurationMs(spec: Project["draft"]["spec"]): number | null {
     total += timing.durationMs;
   }
   return total;
+}
+
+/**
+ * The draft spec as the API shows it: a full `VideoSpec`. The collection's validator only
+ * checks the top level (DB §13), so a stored spec that doesn't parse (written before F17) is
+ * shown as no storyboard, and step 3 offers to build one.
+ */
+export function draftSpec(project: Pick<Project, "draft">): VideoSpec | null {
+  if (!project.draft.spec) return null;
+  const parsed = videoSpec.safeParse(project.draft.spec);
+  return parsed.success ? parsed.data : null;
+}
+
+/** Background music starts at this volume, ducked under the narrator (DB §6). */
+export const defaultMusicVolume = 0.25;
+
+/**
+ * The spec fields the project's settings own: format, language, narrator (with its ElevenLabs
+ * voice id), theme and music. A new storyboard takes them from the settings, and so does every
+ * draft save, whatever the client sent: they change only through the settings (PATCH), which
+ * keep the draft in step. Music keeps its stored volume while the track is the same.
+ */
+export function specSettings(
+  settings: Project["settings"],
+  voiceIds: Record<"female" | "male", string>,
+  storedMusic: VideoSpec["music"] = null,
+): Pick<VideoSpec, "format" | "language" | "voice" | "theme" | "music"> {
+  const trackId = settings.musicTrackId;
+  return {
+    format: settings.format,
+    language: settings.language,
+    voice: {
+      gender: settings.voiceGender,
+      voiceId: voiceIds[settings.voiceGender],
+      model: "eleven_multilingual_v2",
+      speed: settings.voiceSpeed,
+    },
+    theme: { palette: settings.palette, captionStyle: settings.captionStyle },
+    music: trackId
+      ? storedMusic?.trackId === trackId
+        ? storedMusic
+        : { trackId, volume: defaultMusicVolume, duck: true }
+      : null,
+  };
 }
 
 export type SummaryExtras = {
@@ -303,7 +363,7 @@ export function toProjectDetailDto(project: Project, extras: DetailExtras): Proj
     },
     script: script ? { ...script, updatedAt: script.updatedAt.toISOString() } : null,
     draft: {
-      spec: project.draft.spec,
+      spec: draftSpec(project),
       rev: project.draft.rev,
       updatedAt: project.draft.updatedAt.toISOString(),
     },

@@ -205,9 +205,11 @@ describe("applyOperations", () => {
     const result = applyOperations(testSpec(), [
       { op: "updateScene", sceneId: "sc_title001", narration: "Something else entirely here." },
     ]);
+    // The sample is short, so it's also under 20 s by its words.
     expect(result.issues.map((i) => i.code)).toEqual([
       "TRIGGER_NOT_IN_NARRATION",
       "TRIGGER_NOT_IN_NARRATION",
+      "DURATION_OUT_OF_RANGE",
     ]);
   });
 

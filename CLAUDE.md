@@ -102,4 +102,6 @@ Script (F15): count words and estimate length only with `countWords`, `scriptSta
 
 Video spec (F16): the `VideoSpec`, its 12 templates, the rules, hashes, `migrateSpec` and the revision operations are in `@vidcosmos/spec/video`. Validate with `videoSpec`, then `specIssues`; change a spec only with `applyOperations` (or by hand followed by `reconcileTiming`), so a scene whose narration or voice changed loses its audio. Template examples for tests and previews are in `examples.ts`.
 
+Storyboard (F17): `buildStoryboard` (`@vidcosmos/pipeline`) runs in `inngest/functions/storyboard-jobs.ts` with `StoryboardStore`; save it only through `saveStoryboard` from `@vidcosmos/db`, which records `stageHashes.script`. Draft saves go through `saveDraft` (server timing by `narrationHash`, `userEdited`, narration edits synced to the script). Show and edit scenes with `templateLabels`, `sceneElements`, `triggerRanges`, `sceneForm`, `valueAt`/`withValueAt` and `convertScene` from `@vidcosmos/spec/video`; read a project's draft with `draftSpec`. Narrator voice ids come from `voiceIds()` in `lib/voices.ts`.
+
 Added by later features: `pnpm video:studio` and `pnpm video:stills` (F18), `pnpm check:llm` (F13).

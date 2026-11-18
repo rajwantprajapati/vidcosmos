@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 16 Nov 2026 · Current focus: **F16 Video spec schema and template contracts** (built, waiting for review)
+Last updated: 17 Nov 2026 · Current focus: **F17 Storyboard** (done)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -12,13 +12,13 @@ This file is the single place that says where the build stands. Update it at the
 | --- | --- | --- |
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
-| M2 Create flow | 6 | 7 |
+| M2 Create flow | 7 | 7 |
 | M3 Video | 0 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **16** | **36** |
+| **Total** | **17** | **36** |
 
 ## Features
 
@@ -40,7 +40,7 @@ This file is the single place that says where the build stands. Update it at the
 | F14 | New video: idea and angles | M2 | F09, F13 | Done | 15 Nov 2026 | Step 1 at `/projects/new` and `/projects/[id]/idea`; `POST /projects/{id}/ideas`; `suggestIdeas` |
 | F15 | Script | M2 | F14 | Done | 16 Nov 2026 | Step 2 at `/projects/[id]/script`; `POST /projects/{id}/script` and `/script/rewrite`; `writeScript`, `rewriteScript` |
 | F16 | Video spec schema and template contracts | M2 | F05 | Done | 16 Nov 2026 | `@vidcosmos/spec/video`: `videoSpec`, 12 templates, rules, hashes, `migrateSpec`, operations |
-| F17 | Storyboard | M2 | F15, F16 | Not started | | |
+| F17 | Storyboard | M2 | F15, F16 | Done | 17 Nov 2026 | Step 3 at `/projects/[id]/storyboard`; `POST /projects/{id}/storyboard`; `buildStoryboard`; draft PUT takes a full `VideoSpec` |
 | F18 | Remotion package and first 4 templates | M3 | F16 | Not started | | Can start after F16 |
 | F19 | The other 8 templates | M3 | F18 | Not started | | |
 | F20 | Narration and generate video | M3 | F12, F17, F18 | Not started | | |
@@ -64,6 +64,71 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F17 Storyboard · 17 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: spec 83, pipeline 38, db 200, web 237, integrations 21, config 19, video 1.
+- `pnpm test:e2e`: 189 passed, 73 skipped (each test runs at one of the two sizes), with `pnpm dev` restarted and the Inngest Dev Server running.
+- Built:
+  - `@vidcosmos/spec/video`:
+    - `scenes.ts`: template names, a scene's headline and elements, length estimates and `convertScene`, which switches template by hand with no AI. It keeps what fits and fills the rest from words the narrator says.
+    - `form.ts`: the edit panel's fields for each template.
+    - `text.ts`: `wordSpans` and `triggerRanges`, used to highlight trigger words.
+  - `packages/pipeline/src/storyboard.ts`: `buildStoryboard`.
+    - The prototype's prompt, widened to 12 templates; the script goes to the model as JSON data.
+    - The schema, then `specIssues` with the script and a 15 s per-scene check; problems go back to the model, up to 3 attempts.
+    - The stub `submit_storyboard` splits any script into 2-10 valid scenes: a title first, a recap last.
+  - `packages/db/src/storyboard.ts`:
+    - `checkStoryboardRequest`: needs a script, and `overwrite` to replace a storyboard.
+    - `saveStoryboard`: saves only while the job holds the project and the script and draft rev are unchanged. It records `stageHashes.script` and moves `wizardStep` to storyboard.
+  - `saveDraft` takes a full spec:
+    - each scene keeps the server's own timing, cleared when its `narrationHash` no longer matches;
+    - scenes the person changed are marked `userEdited`;
+    - edited narration becomes the script (PRD FR-3.5) unless the script changed after the storyboard;
+    - it returns `specIssues`.
+  - A narrator change by PATCH now also sets the draft's `voiceId`.
+  - `POST /projects/{id}/storyboard` and the `build-storyboard` Inngest function: moderate the script, build, moderate the on-screen text, save.
+  - Step 3 (`components/create/storyboard-step.tsx`, `scene-card.tsx`, `scene-editor.tsx`):
+    - cards with highlighted trigger words, the template picker and element chips;
+    - the "Scene N needs a fix" banner, with the scene marked;
+    - Generate turned off while there are issues;
+    - "Rebuild storyboard" asks first;
+    - the stale-script banner;
+    - autosave with `rev` every 1.5 s at most;
+    - the footer with the scene count, length and usage line;
+    - "Edit scene": a dialog on desktop, a full screen on phones.
+  - Step 2's "Build the storyboard" starts the first storyboard.
+- Tests added:
+  - spec `scenes.test.ts`: highlights, element labels, estimates, paths, all 144 template switches without issues, form fields;
+  - pipeline `storyboard.test.ts`: the stub at every length in both languages, problems fed back, long scenes;
+  - db `storyboard.test.ts`;
+  - new draft tests in `projects.test.ts`: forged timing ignored, `narrationHash`, `userEdited`, script sync and its stale exception, the 1,800-character limit, issues;
+  - `storyboard-jobs.test.ts` (`@inngest/test`);
+  - `e2e/create-storyboard.spec.ts`:
+    - build from step 2;
+    - a template change saved and still there after a reload;
+    - a bad trigger shows the banner and blocks Generate;
+    - fixing it by narration updates the script;
+    - rebuild with confirm, and Generate;
+    - the stale banner;
+    - the API checks;
+    - the phone layout with the full-screen editor;
+    - axe on both sizes.
+  - `projects-api.spec.ts` and `shell.spec.ts` updated: full draft specs, and step 3 is a 404 for a missing video.
+- Manual QA (18 Nov): 2 server gaps and 3 smaller issues, all fixed:
+  - **Draft saves are moderated.** `PUT /draft` checks what the edit adds: changed narration, which becomes the script, and on-screen text not shown before (`addedTexts`). A refusal is 422 CONTENT_BLOCKED and nothing is saved.
+  - **The settings own the spec's language, narrator (with its voice id), format, theme and music.** `saveDraft` takes them from the settings (`specSettings`), whatever the client sends, so a save can't get round the language rule or pick a voice id. The storyboard job uses the same helper.
+  - **The estimated length is checked before recording** (your choice): an estimate over 110 s or under 20 s is a DURATION_OUT_OF_RANGE issue, which shows the banner and blocks Generate. A scene over 15 s shows "Long scene" on its card without blocking.
+  - The job now moderates every on-screen text, including a quiz's question and a timeline's dates (`sceneTexts`).
+  - The rule messages use curly quotes, like the rest of the app.
+  - Retest (18 Nov): all five fixes pass. Two wording nits were fixed after it:
+    - the footer and the length banner now show the same figure (`estimatedVideoMs`; the footer had added up seconds rounded per scene);
+    - with only a whole-video issue, the line under Generate says "Fix the issue above to generate the video." instead of naming marked scenes.
+  - After the fixes: `pnpm typecheck`, `pnpm lint` and `pnpm test` pass (spec 86, db 201, pipeline 38, web 237). `pnpm test:e2e`: 189 passed, 73 skipped. New e2e checks cover a blocked draft save, forged settings fields and the length issue.
+- Screenshots at 1440×900 and 390×844 compared with `Storyboard.png` and `MobileStoryboard.png`:
+  - the layout, cards, highlights, amber banner and border, footer, phone rows and the bottom bar match;
+  - element chips were made one line, as in the design;
+  - the edit panel has no design; it follows the dialog and full-screen patterns.
 
 ### F16 Video spec schema and template contracts · 16 Nov 2026
 
@@ -502,6 +567,8 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 18 Nov 2026 | Storyboard checks (F17 QA): a draft save is moderated like a script edit, checking only what it adds. The settings own the spec's language, narrator, voice id, format, theme and music; a draft save keeps only the client's scenes and title. Before narration is recorded, the length is estimated from the words, and an estimate over 110 s (100 s plus a 10 s margin for the estimate) or under 20 s blocks Generate (your choice). A scene over 15 s is flagged on its card but doesn't block, since splitting scenes comes with F23. |
+| 17 Nov 2026 | Storyboard (F17): a scene is edited in an "Edit scene" panel, a dialog on desktop and a full screen on phones (the designs show none). It edits the narration and each element's text, trigger words, icon and numbers. Adding, removing and reordering scenes wait for F23 (your choice). A new template is filled by hand, with no AI request: what fits is kept and missing elements come from words the narrator says, and a chart made from text gets the numbers its labels mention, or 1 each (your choice). Narration edited in the storyboard becomes the script (PRD FR-3.5), one paragraph a scene, unless the script changed after the storyboard. The draft's issue codes are `specIssues`'s (adds TRIGGER_OUT_OF_ORDER, DUPLICATE_SCENE_ID, NARRATION_MISMATCH and `path`). Text over its limit is a shape error (400), so there is no TEXT_TOO_LONG. Step 2's "Build the storyboard" builds the first storyboard (1 AI request), like step 1's script. The storyboard job moderates the script and the on-screen text. The narrator's ElevenLabs voice id comes from `.env` and goes in the draft's voice. On phones the storyboard is editable (MobileStoryboard), not read-only as SDD §4 says. |
 | 16 Nov 2026 | Trigger order (F16 QA, your choice): each list's items (items, steps, a side's points, events, bars, slices, options) must follow the narration's order; headings, titles and other single fields only need to be said somewhere in the scene, except a quiz's reveal and a recap's call to action, which come after the list they close. DB §6 says "in order across the scene"; the prototype only checked that each trigger was said. |
 | 16 Nov 2026 | VideoSpec (F16): template fields sit under `scene.content`, as in the prototype and SDD §7 (DB §6's type is ambiguous about it). `userEdited` is a boolean (DB §6), not SDD's list of edited paths. The total length is 20-100 s (DB §6), not SDD §10's 30-90 s. A comparison side has 1-4 points, not DB's 2-4, so the prototype's Hindi UPI sample (one point on a side) validates, as the feature plan asks. A heading on a non-title template may have no trigger, and then it's on screen from the start, as in the prototype. Where DB §6 gives no limit, the prototype's or a nearby one is used (`limits` in `templates.ts`). The asset id in `timing` is stored as hex text, so the spec stays plain JSON. |
 | 16 Nov 2026 | Edit lease on PATCH (F15 QA): a `PATCH /projects/{id}` that changes the script needs `X-Editor-Id` and the lease (`423 LEASE_HELD`); any PATCH that sends `X-Editor-Id` is checked the same way. A PATCH without it, such as the library's rename, works as before. API §5 says only one editor tab may change a project. |
@@ -552,10 +619,19 @@ Decisions already made, newest first. Details are in the docs.
 
 ## Known issues and follow-ups
 
+- **Step 3: what waits (F17).**
+  - Video 6afc8410a97835d9464138a9 (QA account) has a blocked sentence in its script, saved before draft saves were moderated. Remove the sentence in step 2, or delete the video.
+  - Adding, removing, duplicating and reordering scenes, and adding or removing elements within a scene, come with F23. A scene over 15 s isn't offered a split yet (PRD edge case).
+  - Generate opens the Generating placeholder; recording narration and the usage reservation come with F20.
+  - The cards' preview is the headline and theme colours, not a rendered frame (F18-F21).
+  - Changing the narration in step 3 rewrites the script as one paragraph a scene, so the script's own paragraph breaks are lost.
+  - Text in an icon picker is the icon's name; there's no search or preview of the icons yet (PRD FR-4.4).
+  - The storyboard prompt hasn't been tried against Gemini or Claude yet (`pnpm check:llm` covers ideas and the script only). The 12-template schema is large; check it with real keys before F20.
+  - A fourth time (17 Nov, the stub storyboard), the running `pnpm dev` served old workspace-package code until it was restarted.
+
 - **Video spec: what waits (F16).**
-  - The API still stores and returns the loose spec shape: the draft PUT, the project DTO and the MongoDB validator. F17 switches the draft to `videoSpec` (and its issue codes), and `migrateSpec` should run where specs are read.
+  - Since F17 the draft PUT and the project DTO use `videoSpec`; the MongoDB validator still checks only the top level (DB §13). A stored draft that doesn't parse (written before F17) shows as no storyboard (`draftSpec`); `migrateSpec` isn't run on read, since no prototype specs are stored.
   - `atMs` fields are allowed but not used: SDD §7 derives element times from `timing.words` when playing (F18-F21).
-  - Timing sent by a browser can't be trusted even when it's consistent: when F17 makes the draft PUT take a full spec, the server must keep its own timing per scene (`carryTiming` in `packages/db/src/projects.ts` does this today) and never take the client's.
   - The icon list is the prototype's (102 names, PascalCase). Remotion maps them to Lucide components in F18.
 
 - **Step 2: what waits (F15).**
@@ -563,7 +639,6 @@ Decisions already made, newest first. Details are in the docs.
   - "Undo last rewrite" lasts until the next edit, and isn't offered after a reload during a running rewrite.
   - "Trim to fit" is a "shorter" rewrite: one try, not a loop to the exact length. "Use 30 s" isn't offered for a short script.
   - Hindi narration with an English script (PRD edge case "language doesn't match") isn't detected yet.
-  - "Build the storyboard" opens step 3, still a placeholder until F17.
   - A third time (16 Nov, the stub LLM), the running `pnpm dev` served old workspace-package code until it was restarted.
   - The stale banner's "Dismiss" isn't remembered: the banner returns on reload while the script is stale. Accepting a stale script for good would need an API field.
   - Step 1's "Edit here instead" doesn't reload the fields the other tab may have changed (step 2's does).

@@ -1,6 +1,11 @@
 // F16: the rules zod can't check (DB §6), the two hashes, and reading the prototype's specs.
 import { describe, expect, it } from "vitest";
-import { reconcileTiming, specIssues, totalDurationMs } from "./checks.ts";
+import {
+  reconcileTiming,
+  type SpecIssue,
+  specIssues as allIssues,
+  totalDurationMs,
+} from "./checks.ts";
 import { exampleScenes } from "./examples.ts";
 import { canonicalJson, narrationHash, specHash } from "./hash.ts";
 import { migrateSpec } from "./migrate.ts";
@@ -16,6 +21,15 @@ const fixtures: Record<string, unknown> = {
   photosynthesis,
   "upi-hindi": upiHindi,
 };
+/**
+ * The rules, without the length estimate for specs not yet recorded: the samples here are
+ * deliberately short (a few scenes), so they'd all be "under 20 s". That rule has its own test.
+ */
+const specIssues = (...args: Parameters<typeof allIssues>): SpecIssue[] =>
+  allIssues(...args).filter(
+    (issue) => issue.code !== "DURATION_OUT_OF_RANGE" || totalDurationMs(args[0]) !== null,
+  );
+
 /** A fresh copy, so no test changes another's sample. */
 const fixture = (name: string) => JSON.parse(JSON.stringify(fixtures[name])) as unknown;
 const codes = (issues: { code: string }[]) => issues.map((issue) => issue.code);
@@ -181,6 +195,32 @@ describe("rules checked on every write", () => {
     expect(codes(specIssues(testSpec(undefined, { timed: true, durationMs: 34_000 })))).toEqual([
       "DURATION_OUT_OF_RANGE",
     ]);
+  });
+
+  it("before recording, estimates the length from the words, with a 10 s margin over 100 s", () => {
+    const words = (n: number) => Array.from({ length: n }, () => "word").join(" ");
+    const scene = (id: string, n: number) => ({
+      ...exampleScenes.title,
+      id,
+      narration: `You tap Pay ${words(n)} follow it.`,
+    });
+    // 10 scenes of 30 words: 12 s each at 2.5 words a second, plus 0.7 s: 127 s.
+    const long = testSpec(Array.from({ length: 10 }, (_, i) => scene(`sc_${i}`, 25)));
+    expect(allIssues(long)).toEqual([
+      {
+        code: "DURATION_OUT_OF_RANGE",
+        sceneId: null,
+        message: "About 127 s of narration: a video can be at most 100 s. Shorten some scenes.",
+      },
+    ]);
+    // 8 of them: 102 s, inside the margin.
+    expect(allIssues(testSpec(long.scenes.slice(0, 8)))).toEqual([]);
+    expect(codes(allIssues(testSpec([exampleScenes.title, exampleScenes.recap])))).toEqual([
+      "DURATION_OUT_OF_RANGE",
+    ]);
+    expect(allIssues(testSpec([exampleScenes.title, exampleScenes.recap]))[0]?.message).toContain(
+      "needs at least 20 s",
+    );
   });
 
   it("on generation, checks the narration reproduces the script (95% of it, 5% extra at most)", () => {
