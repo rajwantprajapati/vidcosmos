@@ -32,6 +32,12 @@ export {
   undoneRewriteSource,
 } from "./script.ts";
 export {
+  checkStoryboardRequest,
+  readStoryboardInputs,
+  saveStoryboard,
+  type StoryboardSave,
+} from "./storyboard.ts";
+export {
   allowedSampleRate,
   moderationReview,
   type NewModerationEvent,
@@ -82,6 +88,7 @@ export {
   projectStale,
   releaseLease,
   restoreProject,
+  type DraftSave,
   saveDraft,
   takeLease,
   type UpdateOptions,

@@ -12,7 +12,6 @@ const routes: [path: string, heading: string][] = [
   ["/settings", "Settings"],
   ["/projects/new", "New video"],
   [`/projects/${projectId}`, "Editor"],
-  [`/projects/${projectId}/storyboard`, "Storyboard"],
   [`/projects/${projectId}/generating`, "Generating"],
   [`/projects/${projectId}/export`, "Export and post"],
 ];
@@ -43,10 +42,10 @@ test.describe("app shell", () => {
     await expect(page).toHaveURL(/\/library$/);
   });
 
-  test("steps 1 and 2 of a video that doesn't exist are a 404", async ({ page }) => {
-    // Step 1 is real since F14, step 2 since F15. (The sidebar can't tell this id is missing,
-    // so it still marks Library, as on every project page.)
-    for (const step of ["idea", "script"]) {
+  test("steps 1 to 3 of a video that doesn't exist are a 404", async ({ page }) => {
+    // Step 1 is real since F14, step 2 since F15, step 3 since F17. (The sidebar can't tell
+    // this id is missing, so it still marks Library, as on every project page.)
+    for (const step of ["idea", "script", "storyboard"]) {
       const response = await page.goto(`/projects/${projectId}/${step}`);
       expect(response?.status(), step).toBe(404);
       await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();

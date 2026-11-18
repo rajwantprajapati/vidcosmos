@@ -12,6 +12,7 @@ import { apiRoute, editorId, readJson, withETag } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { requireAllowed } from "@/lib/moderation";
 import { ownerOf, projectDetail } from "@/lib/projects";
+import { voiceIds } from "@/lib/voices";
 
 type Params = { id: string };
 
@@ -55,6 +56,7 @@ export const PATCH = apiRoute<Params>(async (context) => {
   const project = await updateProject(db, ownerOf(context), projectId, input, new Date(), {
     holder,
     ...(scriptSource ? { scriptSource } : {}),
+    voiceIds: voiceIds(),
   });
   return projectDetail(context, project);
 });

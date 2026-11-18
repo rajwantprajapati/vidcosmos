@@ -3,38 +3,9 @@
 // The two questions step 2 asks in a small modal (native <dialog>, so focus stays inside and
 // Escape closes it): how to rewrite ("Custom…"), and whether to replace a script the person
 // edited with a new one (API §6, `needs: 'overwrite'`).
-import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { Button, TextField } from "@/components/ui";
-
-function Modal({
-  open,
-  onClose,
-  labelledBy,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  labelledBy: string;
-  children: ReactNode;
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const element = dialog.current;
-    if (!element) return;
-    if (open && !element.open) element.showModal();
-    if (!open && element.open) element.close();
-  }, [open]);
-  return (
-    <dialog
-      ref={dialog}
-      onClose={onClose}
-      aria-labelledby={labelledBy}
-      className="m-auto w-[min(480px,calc(100vw-32px))] rounded-xl border border-line bg-surface p-0 text-ink shadow-lg backdrop:bg-ink/40"
-    >
-      {open ? children : null}
-    </dialog>
-  );
-}
+import { Modal } from "./modal";
 
 export function CustomRewriteDialog({
   open,
