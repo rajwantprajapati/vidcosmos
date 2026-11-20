@@ -9,12 +9,30 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "studio": "remotion studio src/remotion/index.ts --public-dir=../../design/design-system/fonts",
+    "stills": "node --disable-warning=ExperimentalWarning scripts/stills.ts"
   },
   "devDependencies": {
-    "@vidcosmos/config": "workspace:*",
+    "@remotion/bundler": "4.0.542",
+    "@remotion/cli": "4.0.542",
+    "@remotion/renderer": "4.0.542",
+    "@types/node": "24.19.2",
+    "@types/pngjs": "6.0.5",
+    "@types/react": "19.3.0",
     "eslint": "9.39.5",
+    "jpeg-js": "0.4.4",
+    "pixelmatch": "7.2.0",
+    "pngjs": "7.0.0",
     "typescript": "6.0.3",
     "vitest": "5.1.0"
+  },
+  "dependencies": {
+    "@vidcosmos/config": "workspace:*",
+    "@vidcosmos/spec": "workspace:*",
+    "lucide-react": "1.72.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.542"
   }
 }
