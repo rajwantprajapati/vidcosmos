@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 17 Nov 2026 · Current focus: **F17 Storyboard** (done)
+Last updated: 18 Nov 2026 · Current focus: **F18 Remotion package and first 4 templates** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -13,12 +13,12 @@ This file is the single place that says where the build stands. Update it at the
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
 | M2 Create flow | 7 | 7 |
-| M3 Video | 0 | 7 |
+| M3 Video | 1 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **17** | **36** |
+| **Total** | **18** | **36** |
 
 ## Features
 
@@ -41,7 +41,7 @@ This file is the single place that says where the build stands. Update it at the
 | F15 | Script | M2 | F14 | Done | 16 Nov 2026 | Step 2 at `/projects/[id]/script`; `POST /projects/{id}/script` and `/script/rewrite`; `writeScript`, `rewriteScript` |
 | F16 | Video spec schema and template contracts | M2 | F05 | Done | 16 Nov 2026 | `@vidcosmos/spec/video`: `videoSpec`, 12 templates, rules, hashes, `migrateSpec`, operations |
 | F17 | Storyboard | M2 | F15, F16 | Done | 17 Nov 2026 | Step 3 at `/projects/[id]/storyboard`; `POST /projects/{id}/storyboard`; `buildStoryboard`; draft PUT takes a full `VideoSpec` |
-| F18 | Remotion package and first 4 templates | M3 | F16 | Not started | | Can start after F16 |
+| F18 | Remotion package and first 4 templates | M3 | F16 | Done | 18 Nov 2026 | `@vidcosmos/video`: `Explainer`, 4 templates, video themes, captions; `pnpm video:studio`, `pnpm video:stills` |
 | F19 | The other 8 templates | M3 | F18 | Not started | | |
 | F20 | Narration and generate video | M3 | F12, F17, F18 | Not started | | |
 | F21 | Editor: live preview | M3 | F20 | Not started | | |
@@ -64,6 +64,63 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F18 Remotion package and first 4 templates · 18 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: spec 92, video 15, db 201, web 237, pipeline 38, integrations 21, config 19. No app UI changed, so no e2e run.
+- `pnpm video:stills` renders 360 stills: title, bullets, flowchart (linear and cycle) and comparison × 3 formats × 4 palettes. In English: the shortest, the longest, the longest in capitals, and one long word per element. In Hindi: the shortest and the longest.
+  - All 360 pass the layout check. 135 are kept as approved images in `packages/video/stills/approved/` (2.4 MB) and compared on every run: every case in midnight, and the other three palettes for the long English text (palettes change colours, not layout).
+  - A second run matched all 135.
+  - A deliberate change to the title template was reported as changed, with exit code 1.
+  - The run takes about 3 minutes on this Mac.
+- Built, in `packages/video` (Remotion 4.0.542, the prototype's version):
+  - `Explainer` (`src/explainer.tsx`):
+    - sized from `spec.format`, 30 fps;
+    - scenes last their recording or the estimate from their words;
+    - each scene's narration plays from `assets` (URLs by `narrationAssetId`; music as `music:<trackId>`), so the spec never holds a URL;
+    - scene fades, a moving background, and music ducked to a quarter under the narrator.
+  - Video themes (`src/theme.ts`): each palette's five colours from the design tokens (`video-<palette>-bg|panel|text|accent|highlight`); softer shades are `color-mix`es of them, so no colour is written in code.
+  - The stage (`src/format.ts`): the canvas, DB §6's safe area, and the box a scene lays out in. That box is the safe area less a band at its bottom for captions, so captions never cover a scene.
+  - The templates, ported from the prototype with a layout per format:
+    - title;
+    - bullets;
+    - flowchart: top to bottom in 9:16 and 1:1, left to right in 16:9; a cycle sits on an ellipse that fills the box, with cards as large as fits;
+    - comparison: stacked in 9:16, side by side in 16:9 and 1:1.
+    - Text is sized to fit its box (`fitBox`).
+    - The other eight templates show their headline and elements as a list until F19.
+  - Captions (`src/captions.tsx`):
+    - pages of at most two lines of 32 characters, with a new page after each sentence;
+    - "highlight" marks the word being said;
+    - "classic" shows plain lines;
+    - "none" shows nothing.
+  - Fonts: the design system's own files (Plus Jakarta Sans, Inter, Noto Sans Devanagari). Rendering waits until they've loaded.
+  - The layout check (`src/layout-check.tsx`):
+    - holds each frame until the fonts are ready, then measures every text box;
+    - a scene's text must stay in its box and captions in their band, and no text may be wider than its own box;
+    - problems go to the browser console, where the stills command collects them.
+  - `@vidcosmos/spec/video` `timing.ts`: element times worked out from the narration's words (the prototype's `applyTiming`), or from words spaced at the speaking rate before any recording. A trigger that isn't found is placed between its neighbours, and a list's items stay in order.
+  - Commands:
+    - `pnpm video:studio`: Remotion Studio with a sample video in each format. Its compositions were listed with `remotion compositions`.
+    - `pnpm video:stills`: options `--approve`, `--only=a,b` and `--full` (full-size PNGs to look at).
+- Tests added:
+  - video `video.test.ts`:
+    - the themes come from the tokens;
+    - DB §6's safe areas, with the content box and captions band filling the safe area;
+    - every one of the 102 icon names is a Lucide icon;
+    - the font files exist;
+    - text fitting, caption pages and the layout rule;
+    - the cycle's cards never touch, for 3 to 6 steps in every format;
+    - the still cases are valid scenes.
+  - spec `timing.test.ts`: word spacing by language and speed, trigger times, a missing trigger, a list kept in order, every template.
+- Manual QA (18 Nov): 6 findings, all fixed or noted:
+  - **Capitals and long words.** Text width is now estimated per character (capitals and M/W wider, narrow letters narrower) and wrapped word by word. Every text is sized so its longest word fits whole (`fitBox`), and bullets drop to a smaller size before taking a third line. This fixes the all-caps bullets overflowing at the top and bottom in 9:16 and 16:9, the square comparison running into the captions, side titles breaking mid-word, and flowchart labels spilling out of their cards.
+  - **Text keeps to its card.** Text in a centred card is limited to the card's width, so a word that still can't fit breaks inside it as a last resort.
+  - **The layout check covers cards.** Cards and tiles are marked `data-box`, and text must stay inside its card as well as its area. Proved by oversizing the cycle labels: "leaves its card" was reported for each.
+  - **New still cases**: capitals at every limit, and one long word per element, in every template, format and palette (English).
+  - **Emoji** on screen use the render host's emoji font: noted for F26 (Known issues).
+  - After the fixes: typecheck, lint and unit tests pass (video 15). 360 stills: 0 layout problems, approved, and a second run matched them all.
+  - **Fewer approved images** (your choice, to keep the repository small): 135 of the 360 are kept and compared, 2.4 MB instead of 5.8 MB; all 360 are still layout-checked. Run after the change: 360 stills, 0 layout problems, 135 compared, 0 changed. The video package's typecheck and lint pass.
+- Checked by eye at full size: every template in the midnight theme, plus paper, ocean and sunset samples. That review found the stacked comparison running into the captions, square bullets overflowing at the top, and overlapping cycle cards; all were fixed. It also found the first layout check measuring nothing, which led to the hold-and-measure check described above.
 
 ### F17 Storyboard · 17 Nov 2026
 
@@ -567,6 +624,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 18 Nov 2026 | Video rendering (F18): the video themes use the design system's five colours per palette (`video-*` tokens), not the prototype's 11 hex values, since the design wins and colour literals aren't allowed. Other shades are mixed from those five, a comparison's right side is outlined rather than given a second accent, and paper (the light theme) puts white on its accent. The spoken word in captions uses the theme's highlight with dark text. Headings use Plus Jakarta Sans (the design rule), not the prototype's Inter 800. A scene's content box sits above a fixed captions band, so captions never cover a scene. A linear flowchart runs top to bottom in 1:1 as in 9:16 (DB §6 names only 9:16 and 16:9); a cycle is an ellipse. Element times are worked out when playing (SDD §7), in `@vidcosmos/spec/video`; stored `atMs` fields are ignored. Approved stills are quarter-size JPEGs committed in `packages/video/stills/approved` (2.4 MB: 135 of the 360 cases, every case in midnight and the other palettes only for the long English text; all 360 are still layout-checked), and CI doesn't render them (your choice); run `pnpm video:stills` before merging template changes. |
 | 18 Nov 2026 | Storyboard checks (F17 QA): a draft save is moderated like a script edit, checking only what it adds. The settings own the spec's language, narrator, voice id, format, theme and music; a draft save keeps only the client's scenes and title. Before narration is recorded, the length is estimated from the words, and an estimate over 110 s (100 s plus a 10 s margin for the estimate) or under 20 s blocks Generate (your choice). A scene over 15 s is flagged on its card but doesn't block, since splitting scenes comes with F23. |
 | 17 Nov 2026 | Storyboard (F17): a scene is edited in an "Edit scene" panel, a dialog on desktop and a full screen on phones (the designs show none). It edits the narration and each element's text, trigger words, icon and numbers. Adding, removing and reordering scenes wait for F23 (your choice). A new template is filled by hand, with no AI request: what fits is kept and missing elements come from words the narrator says, and a chart made from text gets the numbers its labels mention, or 1 each (your choice). Narration edited in the storyboard becomes the script (PRD FR-3.5), one paragraph a scene, unless the script changed after the storyboard. The draft's issue codes are `specIssues`'s (adds TRIGGER_OUT_OF_ORDER, DUPLICATE_SCENE_ID, NARRATION_MISMATCH and `path`). Text over its limit is a shape error (400), so there is no TEXT_TOO_LONG. Step 2's "Build the storyboard" builds the first storyboard (1 AI request), like step 1's script. The storyboard job moderates the script and the on-screen text. The narrator's ElevenLabs voice id comes from `.env` and goes in the draft's voice. On phones the storyboard is editable (MobileStoryboard), not read-only as SDD §4 says. |
 | 16 Nov 2026 | Trigger order (F16 QA, your choice): each list's items (items, steps, a side's points, events, bars, slices, options) must follow the narration's order; headings, titles and other single fields only need to be said somewhere in the scene, except a quiz's reveal and a recap's call to action, which come after the list they close. DB §6 says "in order across the scene"; the prototype only checked that each trigger was said. |
@@ -618,6 +676,15 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **Video: what waits (F18).**
+  - CI doesn't render the stills (your choice): run `pnpm video:stills` before merging a template change, and `--approve` once the new look is right. The first run downloads Remotion's headless Chrome (about 140 MB).
+  - Text is fitted from an estimate of its width (`fitBox`), not measured; the layout check catches what the estimate gets wrong, but only in the still cases. Real content is checked in F21's preview.
+  - The still cases' text is made-up words cut to each limit, not real sentences, so line breaks fall mid-word at the longest lengths.
+  - The other eight templates show a plain list until F19. Hindi scenes in an English video aren't a case (the language is per video).
+  - Not built yet: the app's Player and its font loading (F21), the prebuilt Remotion bundle for exports and its `tooling/remotion-bundle` step (F26), and music files (`music:<trackId>` in `assets`).
+  - Emoji are allowed in on-screen text and render with the machine's emoji font. The export host (F26) may have none, which would show empty boxes: bundle an emoji font there, or remove emoji from on-screen text (a decision for F26).
+  - Caption pages break after sentences and at 32 characters, but not at commas; long Hindi words can make a line wrap inside the caption box. The layout check covers the box's edges, not the line count.
 
 - **Step 3: what waits (F17).**
   - Video 6afc8410a97835d9464138a9 (QA account) has a blocked sentence in its script, saved before draft saves were moderated. Remove the sentence in step 2, or delete the video.
