@@ -1,4 +1,4 @@
-// The still cases (F18): each template (and the flowchart's two layouts) in English and Hindi,
+// The still cases (F18, F19): each template (and the flowchart's two layouts) in English and Hindi,
 // at the shortest and the longest text its limits allow, with the fewest and the most
 // elements. `pnpm video:stills` renders each in every format and palette; Studio lists them.
 // Narration says every trigger, then a closing line, so the still frame has all of them shown.
@@ -23,7 +23,21 @@ export type Length = "short" | "long" | "caps" | "word";
 /** Capitals and long words are English cases; Hindi has neither. */
 export const stillLengths = (language: Language): Length[] =>
   language === "en" ? ["short", "long", "caps", "word"] : ["short", "long"];
-export const stillTemplates = ["title", "bullets", "flowchart", "cycle", "comparison"] as const;
+export const stillTemplates = [
+  "title",
+  "bullets",
+  "flowchart",
+  "cycle",
+  "comparison",
+  "keyTerm",
+  "timeline",
+  "barChart",
+  "pieChart",
+  "iconGrid",
+  "statCallout",
+  "quiz",
+  "recap",
+] as const;
 export type StillTemplate = (typeof stillTemplates)[number];
 
 const bank = {
@@ -167,6 +181,134 @@ export function stillScene(template: StillTemplate, language: Language, length: 
           right: side(points + 1, mark, "Smartphone"),
         }),
         "comparison",
+      );
+    }
+    case "keyTerm":
+      return narrated(
+        language,
+        2,
+        (mark) => ({
+          term: t(limits.keyTerm.term),
+          termTrigger: mark(0),
+          definition: t(limits.keyTerm.definition, 2),
+          ...(long ? { definitionTrigger: mark(1), icon: "Lightbulb" } : {}),
+        }),
+        "keyTerm",
+      );
+    case "timeline": {
+      const n = long ? limits.timeline.max : limits.timeline.min;
+      return narrated(
+        language,
+        n,
+        (mark) => ({
+          heading: t(limits.heading),
+          events: Array.from({ length: n }, (_, i) => ({
+            date: length === "short" ? String(2016 + i) : t(limits.timeline.date, i),
+            label: t(limits.timeline.label, i + 1),
+            trigger: mark(i),
+          })),
+        }),
+        "timeline",
+      );
+    }
+    case "barChart":
+    case "pieChart": {
+      const bar = template === "barChart";
+      const n = long ? limits[template].max : limits[template].min;
+      // Bars: the widest values a long case can show (tens of thousands of crores, with a
+      // unit), down to zero. Slices: shares that each show.
+      const values = bar
+        ? long
+          ? [987_654_321_000, 654_321_000_000, 432_100_000_000, 98_765_000_000, 12_345_000_000, 0]
+          : [3, 7]
+        : long
+          ? [34, 26, 18, 13, 9]
+          : [1, 2];
+      return narrated(
+        language,
+        n,
+        (mark) => ({
+          heading: t(limits.heading),
+          ...(bar && long ? { unit: t(limits.barChart.unit, 4) } : {}),
+          [bar ? "bars" : "slices"]: Array.from({ length: n }, (_, i) => ({
+            label: t(limits[template].label, i),
+            value: values[i]!,
+            trigger: mark(i),
+          })),
+          ...(long ? { source: t(limits.source, 5) } : {}),
+        }),
+        template,
+      );
+    }
+    case "iconGrid": {
+      const n = long ? limits.iconGrid.max : limits.iconGrid.min;
+      const icons = ["Wallet", "Building2", "Smartphone", "Shield", "Clock", "Globe"] as const;
+      return narrated(
+        language,
+        n,
+        (mark) => ({
+          heading: t(limits.heading),
+          items: Array.from({ length: n }, (_, i) => ({
+            icon: icons[i],
+            label: t(limits.iconGrid.label, i),
+            trigger: mark(i),
+          })),
+        }),
+        "iconGrid",
+      );
+    }
+    case "statCallout":
+      return narrated(
+        language,
+        2,
+        (mark) => ({
+          // A number that counts up, at the value's limit; capitals and long words as text.
+          value:
+            length === "short"
+              ? "7%"
+              : length === "long"
+                ? "₹1,20,00,000"
+                : t(limits.statCallout.value),
+          valueTrigger: mark(0),
+          label: t(limits.statCallout.label, 1),
+          ...(long
+            ? { labelTrigger: mark(1), icon: "TrendingUp", source: t(limits.source, 4) }
+            : {}),
+        }),
+        "statCallout",
+      );
+    case "quiz": {
+      const n = long ? limits.quiz.max : limits.quiz.min;
+      return narrated(
+        language,
+        n + 2,
+        (mark) => ({
+          question: t(limits.quiz.question),
+          questionTrigger: mark(0),
+          options: Array.from({ length: n }, (_, i) => ({
+            text: t(limits.quiz.option, i + 1),
+            trigger: mark(i + 1),
+          })),
+          answerIndex: n - 1,
+          reveal: { trigger: mark(n + 1) },
+        }),
+        "quiz",
+      );
+    }
+    case "recap": {
+      const n = long ? limits.recap.max : limits.recap.min;
+      return narrated(
+        language,
+        n + 1,
+        (mark) => ({
+          heading: t(limits.heading),
+          points: Array.from({ length: n }, (_, i) => ({
+            text: t(limits.recap.text, i),
+            trigger: mark(i),
+          })),
+          ...(long ? { cta: t(limits.recap.cta, 3), ctaTrigger: mark(n) } : {}),
+        }),
+        "recap",
       );
     }
   }

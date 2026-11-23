@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 18 Nov 2026 · Current focus: **F18 Remotion package and first 4 templates** (built, waiting for review)
+Last updated: 23 Nov 2026 · Current focus: **F19 The other 8 templates** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -13,12 +13,12 @@ This file is the single place that says where the build stands. Update it at the
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
 | M2 Create flow | 7 | 7 |
-| M3 Video | 1 | 7 |
+| M3 Video | 2 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **18** | **36** |
+| **Total** | **19** | **36** |
 
 ## Features
 
@@ -42,7 +42,7 @@ This file is the single place that says where the build stands. Update it at the
 | F16 | Video spec schema and template contracts | M2 | F05 | Done | 16 Nov 2026 | `@vidcosmos/spec/video`: `videoSpec`, 12 templates, rules, hashes, `migrateSpec`, operations |
 | F17 | Storyboard | M2 | F15, F16 | Done | 17 Nov 2026 | Step 3 at `/projects/[id]/storyboard`; `POST /projects/{id}/storyboard`; `buildStoryboard`; draft PUT takes a full `VideoSpec` |
 | F18 | Remotion package and first 4 templates | M3 | F16 | Done | 18 Nov 2026 | `@vidcosmos/video`: `Explainer`, 4 templates, video themes, captions; `pnpm video:studio`, `pnpm video:stills` |
-| F19 | The other 8 templates | M3 | F18 | Not started | | |
+| F19 | The other 8 templates | M3 | F18 | Done | 23 Nov 2026 | All 12 templates; lakh and crore on charts; 351 approved stills |
 | F20 | Narration and generate video | M3 | F12, F17, F18 | Not started | | |
 | F21 | Editor: live preview | M3 | F20 | Not started | | |
 | F22 | Autosave, edit lease and offline | M3 | F21 | Not started | | |
@@ -64,6 +64,43 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F19 The other 8 templates · 23 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: spec 92, video 22 (7 new), db 201, web 237, pipeline 38, integrations 21, config 19. No app UI changed, so no e2e run.
+- `pnpm video:stills` renders 936 stills: all 12 templates (and the flowchart's cycle) × 3 formats × 4 palettes, with the same cases as F18: in English the shortest, the longest, the longest in capitals and one long word per element; in Hindi the shortest and the longest.
+  - All 936 pass the layout check (the "Done when").
+  - 351 are kept as approved images (6.3 MB): every case in midnight, and the other palettes for the long English text. The 135 F18 images didn't change.
+  - After approving, a second run matched all 351.
+  - The first render found the recap's call to action pushing the heading 10 px out of its box (fixed). The other renders were looked at by eye in every format, and the long English case in paper and sunset as well. That review led to a smaller ring in 9:16 pie charts so the legend has room, more room for "100%", a darker fifth slice, and bar values that wrap rather than shrink.
+- Built, in `packages/video/src/templates/` (one file each, the F18 style: accent fills, cards, the element being talked about lit, everything appearing as it's said):
+  - key term: the term large with an accent underline, the definition in a card below;
+  - timeline: a rail that draws from event to event, top to bottom in 9:16 and 1:1, left to right in 16:9 with dates above and labels below;
+  - bar chart: bars growing from zero on one scale, values at their ends; across in 9:16 and 1:1, upright columns in 16:9; the source below;
+  - pie chart: a ring whose slices sweep in, the current slice's share in the centre, and a legend with each slice's colour, label and whole percentage (adding up to 100), so colour is never the only key;
+  - icon grid: icon cards popping in, two a row in 9:16, four or three in 16:9, two or three in 1:1, a short last row centred;
+  - stat callout: the value in the accent, counting up to itself ("72%", "₹1,20,000"; text that isn't a number just appears), its label and source;
+  - quiz: lettered options; on the reveal the right one fills with the accent and its letter becomes a tick, the others fade;
+  - recap: points ticked off as they're said, and the call to action in an accent pill.
+- Shared pieces:
+  - `src/numbers.ts`: `formatNumber` and `formatValue` (lakh, crore and lakh crore, in English and Hindi, with "%", "₹" or a word as the unit), `percentages`, `countingText`.
+  - `src/parts.tsx`: `Heading`, `headingFit`, `textHeight`, `sourceText` ("Source:" or "स्रोत:").
+  - Templates now get the video's `language`. The F18 stand-in list (`fallback.tsx`) is gone.
+- Tests added (`src/video.test.ts`): numbers in lakh and crore in both languages, where a unit goes, percentages adding up to 100, counting up, five distinct slice colours in every palette, icon grid columns per format, and the still cases covering every template.
+- **QA rounds (21-23 Nov, 9 findings, all fixed):**
+  - The stat value's pulse scaled its full-width block 5% past the safe area (reported "right by 24 px"). The value (and the key term's term) now sits in a box as wide as its text and is fitted with room for the pulse.
+  - Stats that aren't amounts no longer count up: years ("1947", "1947 AD", "2024 elections"), names with numbers ("5G", "COVID-19", "24x7"), ranks ("#1") and ratios ("1 in 3") stay as written (`countsUp`). A sign counts ("+35%").
+  - A unit that says its scale ("₹ crore", "lakh users") keeps the number in full instead of reading "crore crore".
+  - The scale is picked after rounding: 99,999.6 reads "1 lakh", 99,99,999 "1 crore", 9,99,999 crore "1 lakh crore".
+  - "Rs", "Rs.", "INR" and "US$" go before the number ("Rs 1,234").
+  - A pie settles on its largest slice a second after the last is said, instead of showing the last (possibly 0%) slice.
+  - A zero bar draws no bar, only its value, so it no longer looks like a small value.
+  - Tests added: each of the above (video tests 22 → 27).
+  - The stills command now allows 2 minutes per frame (was 30 s), so a busy machine slows a run down rather than failing it.
+  - The fonts are loaded up to three times, and a render whose fonts still fail now stops with an error instead of drawing in a fallback font (one confirming run had a still drawn in a fallback font after a font file failed to load once).
+  - After the fixes: `pnpm typecheck` and `pnpm test` pass (spec 92, video 27, db 201, web 237, pipeline 38, integrations 21, config 19). `pnpm lint` passes.
+  - The QA session's retest passed: all 9 findings fixed, 84 adversarial renders with 0 layout problems (the stat value and key term checked every 3rd frame through the pulse), and its own `pnpm video:stills` run matched all 351. A plain "1500 users" now reads as a year and doesn't count up, an accepted trade-off.
+  - `pnpm video:stills`: 936 stills, 0 layout problems. 76 approved images changed as expected (key term, stat callout, pie chart and bar chart), were checked by eye and approved; a second run matched all 351.
 
 ### F18 Remotion package and first 4 templates · 18 Nov 2026
 
@@ -624,6 +661,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 20 Nov 2026 | Templates (F19): icons stay the closed list of Lucide icons bundled with `lucide-react` (DB §6), so nothing is fetched or cached at render time; the feature plan's "Iconify or Lucide, resolved and cached" isn't needed for V1. Chart values are written the Indian way: in full up to 99,999, then lakh, crore and lakh crore ("लाख", "करोड़" in Hindi, Latin digits). A unit of "%" follows the number, "₹" (or another currency sign) goes in front, and any other unit follows after a space. A pie shows whole percentages that add up to 100. Bars run across in 9:16 and 1:1 (labels need the width) and stand up in 16:9. A chart's or stat's source reads "Source: …" ("स्रोत: …" in Hindi). The quiz marks the answer with a tick as well as the accent; video themes have no success colour. No design screen shows these templates, so they follow the F18 templates' look. |
 | 18 Nov 2026 | Video rendering (F18): the video themes use the design system's five colours per palette (`video-*` tokens), not the prototype's 11 hex values, since the design wins and colour literals aren't allowed. Other shades are mixed from those five, a comparison's right side is outlined rather than given a second accent, and paper (the light theme) puts white on its accent. The spoken word in captions uses the theme's highlight with dark text. Headings use Plus Jakarta Sans (the design rule), not the prototype's Inter 800. A scene's content box sits above a fixed captions band, so captions never cover a scene. A linear flowchart runs top to bottom in 1:1 as in 9:16 (DB §6 names only 9:16 and 16:9); a cycle is an ellipse. Element times are worked out when playing (SDD §7), in `@vidcosmos/spec/video`; stored `atMs` fields are ignored. Approved stills are quarter-size JPEGs committed in `packages/video/stills/approved` (2.4 MB: 135 of the 360 cases, every case in midnight and the other palettes only for the long English text; all 360 are still layout-checked), and CI doesn't render them (your choice); run `pnpm video:stills` before merging template changes. |
 | 18 Nov 2026 | Storyboard checks (F17 QA): a draft save is moderated like a script edit, checking only what it adds. The settings own the spec's language, narrator, voice id, format, theme and music; a draft save keeps only the client's scenes and title. Before narration is recorded, the length is estimated from the words, and an estimate over 110 s (100 s plus a 10 s margin for the estimate) or under 20 s blocks Generate (your choice). A scene over 15 s is flagged on its card but doesn't block, since splitting scenes comes with F23. |
 | 17 Nov 2026 | Storyboard (F17): a scene is edited in an "Edit scene" panel, a dialog on desktop and a full screen on phones (the designs show none). It edits the narration and each element's text, trigger words, icon and numbers. Adding, removing and reordering scenes wait for F23 (your choice). A new template is filled by hand, with no AI request: what fits is kept and missing elements come from words the narrator says, and a chart made from text gets the numbers its labels mention, or 1 each (your choice). Narration edited in the storyboard becomes the script (PRD FR-3.5), one paragraph a scene, unless the script changed after the storyboard. The draft's issue codes are `specIssues`'s (adds TRIGGER_OUT_OF_ORDER, DUPLICATE_SCENE_ID, NARRATION_MISMATCH and `path`). Text over its limit is a shape error (400), so there is no TEXT_TOO_LONG. Step 2's "Build the storyboard" builds the first storyboard (1 AI request), like step 1's script. The storyboard job moderates the script and the on-screen text. The narrator's ElevenLabs voice id comes from `.env` and goes in the draft's voice. On phones the storyboard is editable (MobileStoryboard), not read-only as SDD §4 says. |
@@ -681,7 +719,7 @@ Decisions already made, newest first. Details are in the docs.
   - CI doesn't render the stills (your choice): run `pnpm video:stills` before merging a template change, and `--approve` once the new look is right. The first run downloads Remotion's headless Chrome (about 140 MB).
   - Text is fitted from an estimate of its width (`fitBox`), not measured; the layout check catches what the estimate gets wrong, but only in the still cases. Real content is checked in F21's preview.
   - The still cases' text is made-up words cut to each limit, not real sentences, so line breaks fall mid-word at the longest lengths.
-  - The other eight templates show a plain list until F19. Hindi scenes in an English video aren't a case (the language is per video).
+  - Hindi scenes in an English video aren't a case (the language is per video).
   - Not built yet: the app's Player and its font loading (F21), the prebuilt Remotion bundle for exports and its `tooling/remotion-bundle` step (F26), and music files (`music:<trackId>` in `assets`).
   - Emoji are allowed in on-screen text and render with the machine's emoji font. The export host (F26) may have none, which would show empty boxes: bundle an emoji font there, or remove emoji from on-screen text (a decision for F26).
   - Caption pages break after sentences and at 32 characters, but not at commas; long Hindi words can make a line wrap inside the caption box. The layout check covers the box's edges, not the line count.

@@ -4,7 +4,8 @@
 import * as Lucide from "lucide-react";
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 import type { IconName } from "@vidcosmos/spec/video";
-import { fontFamilies, lineHeightFor } from "./fonts";
+import { useAppear } from "./anim";
+import { fitBox, fontFamilies, lineHeightFor, linesFor } from "./fonts";
 import type { VideoTheme } from "./theme";
 
 type LucideIcon = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
@@ -127,3 +128,41 @@ export function Place({
     </div>
   );
 }
+
+/** How tall `text` is at `size` px, wrapped to `width`: its lines times the line height. */
+export const textHeight = (text: string, size: number, width: number, lineHeight: number) =>
+  linesFor(text, size, width) * size * lineHeightFor(text, lineHeight);
+
+/** A scene heading's size, up to `max` px and `maxHeight` tall, and the height it takes. */
+export function headingFit(text: string, width: number, max: number, maxHeight = 180) {
+  const size = fitBox(text, max, 36, width, maxHeight, 1.1);
+  return { size, height: textHeight(text, size, width, 1.1) };
+}
+
+/** A scene's heading, rising in as it's said (or there from the start, without a trigger). */
+export function Heading({
+  text,
+  size,
+  atMs,
+  theme,
+  style,
+}: {
+  text: string;
+  size: number;
+  atMs: number | undefined;
+  theme: VideoTheme;
+  style?: CSSProperties;
+}) {
+  const shown = useAppear(atMs);
+  return (
+    <div style={{ opacity: shown, transform: `translateY(${(1 - shown) * 30}px)`, ...style }}>
+      <Text size={size} weight={800} color={theme.text} display lineHeight={1.1}>
+        {text}
+      </Text>
+    </div>
+  );
+}
+
+/** "Source: …" under a chart or stat, in the video's language. */
+export const sourceText = (source: string, language: "en" | "hi") =>
+  `${language === "hi" ? "स्रोत" : "Source"}: ${source}`;

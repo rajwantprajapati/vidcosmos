@@ -2,20 +2,45 @@
 // for `pnpm video:stills`. Fonts load from the design system's files (Studio and the bundler
 // serve design/design-system/fonts as the public folder) before any frame is drawn.
 import { useEffect, useState, type ReactNode } from "react";
-import { Composition, continueRender, delayRender, Folder, staticFile } from "remotion";
+import {
+  cancelRender,
+  Composition,
+  continueRender,
+  delayRender,
+  Folder,
+  staticFile,
+} from "remotion";
 import { videoFormats } from "../format";
 import { loadFonts } from "../fonts";
 import { compositionSize, Explainer, type ExplainerProps, totalFrames } from "../explainer";
 import { palettes } from "../theme";
 import { stillSpec, stillTemplates } from "./cases";
 
-/** Holds rendering until the fonts are ready, so no frame uses a fallback font. */
+/** Attempts at loading the fonts before the render gives up (a busy machine can drop one). */
+const fontAttempts = 3;
+
+async function loadFontsWithRetry() {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await loadFonts(staticFile);
+    } catch (error) {
+      if (attempt >= fontAttempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+  }
+}
+
+/**
+ * Holds rendering until the fonts are ready, so no frame uses a fallback font. If they still
+ * can't be loaded, the render fails rather than drawing the frame in another font.
+ */
 function FontGate({ children }: { children: ReactNode }) {
   const [handle] = useState(() => delayRender("Loading fonts"));
   useEffect(() => {
-    loadFonts(staticFile)
-      .catch((error: unknown) => console.error("Couldn't load the fonts", error))
-      .finally(() => continueRender(handle));
+    loadFontsWithRetry().then(
+      () => continueRender(handle),
+      (error: unknown) => cancelRender(error),
+    );
   }, [handle]);
   return <>{children}</>;
 }
