@@ -229,7 +229,11 @@ export const updateNarrationInput = z.object({
 export type UpdateNarrationInput = z.infer<typeof updateNarrationInput>;
 
 export const takeLeaseInput = z.object({ takeover: z.boolean().optional() }).default({});
-export const releaseLeaseInput = z.object({ editorId: z.string().min(1).max(100) });
+/** The lease release (a beacon): the tab's editor id, and its last unsaved change if any (F22). */
+export const releaseLeaseInput = z.object({
+  editorId: z.string().min(1).max(100),
+  draft: saveDraftInput.optional(),
+});
 
 /** A single value, or the same parameter repeated (`?stage=ready&stage=draft`). */
 const repeatable = <T extends z.ZodType>(item: T) =>

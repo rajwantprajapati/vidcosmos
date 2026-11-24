@@ -10,8 +10,9 @@
 //
 // Step 2's "Build the storyboard" starts the first one and opens this step, which picks the
 // running job up. Opened without a storyboard and without a job, it offers to build one.
-// Generate starts the generation (API §7) and opens the Generating screen.
-import type { DraftSavedDto, JobDto, ProjectDetailDto } from "@vidcosmos/spec/api";
+// Generate starts the generation (API §7) and opens the Generating screen. Autosave (F22) keeps
+// unsaved edits in the browser while offline and offers them back after a conflict.
+import type { JobDto, ProjectDetailDto } from "@vidcosmos/spec/api";
 import {
   convertScene,
   estimatedVideoMs,
@@ -34,10 +35,8 @@ import { Notice } from "./notice";
 import { SceneCard, SceneRow } from "./scene-card";
 import { SceneEditor } from "./scene-editor";
 import { StepBars, Stepper } from "./stepper";
+import { autosaveLabel, useDraftAutosave } from "./use-draft-autosave";
 import { useEditLease } from "./use-edit-lease";
-
-/** At most one draft save every 1.5 s while editing (API §5). */
-const autosaveMs = 1_500;
 
 export type StoryboardUsage = {
   max: number;
@@ -54,8 +53,6 @@ export type StoryboardStepProps = {
   job: JobDto | null;
   usage: StoryboardUsage;
 };
-
-type SaveState = "idle" | "saving" | "saved" | "failed";
 
 const leaseLostMessage = "Another tab took over editing, so your last change wasn’t saved here.";
 
@@ -81,9 +78,6 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
 
   const [title, setTitle] = useState(project.title);
   const [spec, setSpec] = useState<VideoSpec | null>(project.draft.spec);
-  const [savedSpec, setSavedSpec] = useState<VideoSpec | null>(project.draft.spec);
-  const [rev, setRev] = useState(project.draft.rev);
-  const [saveState, setSaveState] = useState<SaveState>("idle");
   const [stale, setStale] = useState(project.stale.storyboard);
   const [used, setUsed] = useState(project.counters.generationsUsed);
   const [job, setJob] = useState<JobDto | null>(initialJob);
@@ -92,14 +86,16 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
   const [editing, setEditing] = useState<string | null>(null);
   const [confirmRebuild, setConfirmRebuild] = useState(false);
   const [reloading, setReloading] = useState(false);
-  /** The save in flight, so Generate can wait for it. */
-  const saving = useRef<Promise<boolean> | null>(null);
+  /** This tab's draft that a change elsewhere got in ahead of: offered back, never lost. */
+  const [recovered, setRecovered] = useState<{
+    spec: VideoSpec;
+    why: "conflict" | "kept";
+  } | null>(null);
 
   const readOnly = lease.state.status === "elsewhere" || reloading;
   const working = isActive(job);
   const outOfRequests = used >= project.counters.generationsMax;
   const canAsk = !readOnly && !working && !outOfRequests && busy === null;
-  const dirty = spec !== savedSpec;
 
   const issues = useMemo(() => (spec ? specIssues(spec) : []), [spec]);
   const issuesBy = useMemo(() => {
@@ -111,67 +107,55 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
     return map;
   }, [issues]);
 
-  // ---- Autosave ----
+  // ---- Autosave (F22: kept locally offline, conflicts offered back) ----
 
-  /** Shows the project as the server has it: after a job, a conflict, or a takeover. */
-  const showProject = useCallback((fresh: ProjectDetailDto) => {
+  /** Puts the server's project on the page (the saved state is the caller's to reset). */
+  const applyProject = useCallback((fresh: ProjectDetailDto) => {
     setSpec(fresh.draft.spec);
-    setSavedSpec(fresh.draft.spec);
-    setRev(fresh.draft.rev);
     setTitle(fresh.title);
     setStale(fresh.stale.storyboard);
     setUsed(fresh.counters.generationsUsed);
   }, []);
 
-  const save = useCallback(async (): Promise<boolean> => {
-    if (!spec || spec === savedSpec) return true;
-    const snapshot = spec;
-    setSaveState("saving");
-    const request = (async () => {
-      try {
-        const saved = await apiFetch<DraftSavedDto>(`/projects/${projectId}/draft`, {
-          method: "PUT",
-          body: { baseRev: rev, spec: snapshot },
-          editorId: tabId,
-        });
-        setRev(saved.rev);
-        setSavedSpec(snapshot);
-        setSaveState("saved");
-        setError(null);
-        return true;
-      } catch (failure) {
-        setSaveState("failed");
-        if (failure instanceof ApiRequestError && failure.code === "LEASE_HELD") {
-          leaseLost(failure.details);
-          setError(leaseLostMessage);
-        } else if (failure instanceof ApiRequestError && failure.code === "REV_CONFLICT") {
-          setError("This video changed in another place. Showing the latest version.");
-          showProject(await apiFetch<ProjectDetailDto>(`/projects/${projectId}`));
-        } else {
-          setError(
-            failure instanceof ApiRequestError
-              ? failure.message
-              : "Couldn't save. Check your connection.",
-          );
-        }
-        return false;
-      } finally {
-        saving.current = null;
-      }
-    })();
-    saving.current = request;
-    return request;
-  }, [spec, savedSpec, rev, projectId, tabId, leaseLost, showProject]);
-
-  useEffect(() => {
+  const autosave = useDraftAutosave({
+    projectId,
+    editorId: tabId,
+    spec,
+    initial: { spec: project.draft.spec, rev: project.draft.rev },
     // Not while a job runs: its storyboard is saved only over the draft it started from.
-    if (!dirty || readOnly || working || saveState === "failed") return;
-    const timer = setTimeout(() => void save(), autosaveMs);
-    return () => clearTimeout(timer);
-  }, [dirty, readOnly, working, saveState, save]);
+    paused: readOnly || working,
+    onConflict: (fresh, mine) => {
+      // The hook has taken the server's draft and rev as saved; show them, offer ours back.
+      applyProject(fresh);
+      setRecovered({ spec: mine, why: "conflict" });
+    },
+    onLeaseLost: (details) => {
+      leaseLost(details);
+      setError(leaseLostMessage);
+    },
+    onRestore: (kept) => setSpec(kept),
+    onKept: (kept) => setRecovered({ spec: kept, why: "kept" }),
+    setFinalDraft: lease.setFinalDraft,
+    onServerNewer: (fresh) => {
+      applyProject(fresh);
+      setRecovered(null);
+    },
+    onSaved: () => setError(null),
+  });
+  const dirty = autosave.dirty;
+  const { reset: resetSaved } = autosave;
+
+  /** Shows the project as the server has it: after a job, a conflict, or a takeover. */
+  const showProject = useCallback(
+    (fresh: ProjectDetailDto) => {
+      applyProject(fresh);
+      resetSaved(fresh.draft.spec, fresh.draft.rev);
+    },
+    [applyProject, resetSaved],
+  );
 
   function changeScene(next: Scene) {
-    setSaveState("idle");
+    if (autosave.status === "failed") autosave.setStatus("idle");
     setSpec((current) =>
       current
         ? { ...current, scenes: current.scenes.map((s) => (s.id === next.id ? next : s)) }
@@ -188,7 +172,6 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
     try {
       await lease.takeover();
       setError(null);
-      setSaveState("idle");
       showProject(await apiFetch<ProjectDetailDto>(`/projects/${projectId}`));
     } finally {
       setReloading(false);
@@ -202,7 +185,7 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
     setBusy("build");
     setError(null);
     // Edits waiting to be saved go first, so the job starts from the draft as it is.
-    if (!(await (saving.current ?? save()))) {
+    if (!(await autosave.flush())) {
       setBusy(null);
       return;
     }
@@ -240,7 +223,6 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
     async (done: JobDto) => {
       if (done.status === "succeeded") {
         showProject(await apiFetch<ProjectDetailDto>(`/projects/${projectId}`));
-        setSaveState("idle");
       } else {
         setUsed((n) => Math.max(0, n - 1));
       }
@@ -252,7 +234,7 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
   async function generate() {
     setError(null);
     setBusy("generate");
-    const ok = await (saving.current ?? save());
+    const ok = await autosave.flush();
     if (!ok) {
       setBusy(null);
       return;
@@ -364,16 +346,10 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
         </div>
         <Stepper step={3} className="py-4" />
         <span
-          className="w-[112px] shrink-0 text-right text-[13px] text-ink-muted"
+          className="max-w-[200px] min-w-[112px] shrink-0 text-right text-[13px] text-ink-muted"
           aria-live="polite"
         >
-          {!spec
-            ? ""
-            : unsavedHere
-              ? "Not saved"
-              : dirty && saveState !== "failed"
-                ? "Saving…"
-                : saveLabel(saveState)}
+          {!spec ? "" : unsavedHere ? "Not saved" : autosaveLabel(autosave.status, dirty)}
         </span>
       </header>
 
@@ -410,7 +386,45 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
               You can look, but changes are off here.
             </span>
             <Button variant="secondary" size="sm" onClick={() => void takeOver()}>
-              Edit here instead
+              Take over editing
+            </Button>
+          </Notice>
+        ) : null}
+
+        {/* Phones have no save status in the header: say when edits wait for a connection. */}
+        {autosave.status === "offline" ? (
+          <Notice className="md:hidden">
+            Offline – changes kept locally. They’re saved when you’re back online.
+          </Notice>
+        ) : null}
+
+        {recovered ? (
+          <Notice>
+            <span className="flex-1">
+              {recovered.why === "conflict"
+                ? "This video changed in another place. Your unsaved changes are kept here: use them over the latest version, or discard them."
+                : "There are unsaved changes to this video from earlier or another tab. Use them over this version, or discard them."}
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={readOnly}
+              onClick={() => {
+                setSpec(recovered.spec);
+                setRecovered(null);
+              }}
+            >
+              {recovered.why === "conflict" ? "Use my changes" : "Use them"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                autosave.discardKept();
+                setRecovered(null);
+              }}
+            >
+              Discard them
             </Button>
           </Notice>
         ) : null}
@@ -473,10 +487,10 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
           />
         ) : null}
 
-        {error || unsavedHere ? (
+        {error || autosave.error || unsavedHere ? (
           <p role="alert" className="m-0 flex items-start gap-2 text-[14px] text-danger">
             <Icon name="alert" size={18} className="mt-px shrink-0" />
-            {error ?? leaseLostMessage}
+            {error ?? autosave.error ?? leaseLostMessage}
           </p>
         ) : null}
 
@@ -611,19 +625,6 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
       />
     </div>
   );
-}
-
-function saveLabel(state: SaveState): string {
-  switch (state) {
-    case "saving":
-      return "Saving…";
-    case "saved":
-      return "Saved just now";
-    case "failed":
-      return "Not saved";
-    default:
-      return "Saved";
-  }
 }
 
 /** Progress while the storyboard is built; its error when it failed. */

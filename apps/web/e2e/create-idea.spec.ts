@@ -91,7 +91,7 @@ test.describe("step 1 on desktop", () => {
     await other.goto(page.url());
     await expect(other.getByText("You have this video open in another tab.")).toBeVisible();
     await expect(other.getByRole("button", { name: "Suggest angles" })).toBeDisabled();
-    await other.getByRole("button", { name: "Edit here instead" }).click();
+    await other.getByRole("button", { name: "Take over editing" }).click();
     await expect(other.getByText("You have this video open in another tab.")).toBeHidden();
     await expect(other.getByRole("button", { name: "Suggest angles" })).toBeEnabled();
     await other.close();

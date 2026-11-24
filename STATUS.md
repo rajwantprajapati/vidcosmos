@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 24 Nov 2026 · Current focus: **F21 Editor: live preview** (built, waiting for review)
+Last updated: 24 Nov 2026 · Current focus: **F22 Autosave, edit lease and offline** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -13,12 +13,12 @@ This file is the single place that says where the build stands. Update it at the
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
 | M2 Create flow | 7 | 7 |
-| M3 Video | 4 | 7 |
+| M3 Video | 5 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **21** | **36** |
+| **Total** | **22** | **36** |
 
 ## Features
 
@@ -45,7 +45,7 @@ This file is the single place that says where the build stands. Update it at the
 | F19 | The other 8 templates | M3 | F18 | Done | 23 Nov 2026 | All 12 templates; lakh and crore on charts; 351 approved stills |
 | F20 | Narration and generate video | M3 | F12, F17, F18 | Done | 24 Nov 2026 | Generate, retry scenes, Generating screen; live run on ElevenLabs' free plan |
 | F21 | Editor: live preview | M3 | F20 | Done | 24 Nov 2026 | Remotion Player with signed audio; scenes, strip, quick settings, format switch; phone editor |
-| F22 | Autosave, edit lease and offline | M3 | F21 | Not started | | |
+| F22 | Autosave, edit lease and offline | M3 | F21 | Done | 24 Nov 2026 | Offline queue (IndexedDB), conflict recovery, "Take over editing", editor settings queued |
 | F23 | Manual scene editing | M3 | F21 | Not started | | |
 | F24 | Versions and undo | M3 | F21 | Not started | | |
 | F25 | Chat revisions | M4 | F23, F24 | Not started | | |
@@ -64,6 +64,19 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F22 Autosave, edit lease and offline · 24 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: spec 92, video 27, db 214, web 257 (4 new: the offline store, settings merging, what counts as offline, the status labels), pipeline 43, integrations 28, config 19.
+- E2E (`e2e/autosave.spec.ts`, desktop, Playwright's `setOffline`), the three "Done when" checks and one more:
+  - two template changes made offline show "Offline – changes kept locally" and are saved after reconnecting;
+  - a second tab of the storyboard is read-only ("You have this video open in another tab", the controls disabled) with "Take over editing"; after it takes over, the first tab's next change is refused and it turns read-only, and nothing is overwritten;
+  - a draft saved elsewhere first: this tab's change over the old rev shows "This video changed in another place…", isn't saved, and "Use my changes" saves it over the newer version;
+  - an editor setting (Paper) changed offline stays on screen, shows "Offline – changes kept locally" and is saved on reconnecting.
+  - Existing tests updated for "Take over editing". The full suite with 2 workers: 185 passed; the 13 that failed (navigation timeouts while the machine was loaded, 13 minutes for the run) all passed run again one at a time.
+- **QA round (24 Nov, 3 findings, fixed):** (1) leaving within 1.5 s lost the edit: every change is now kept in the browser at once; closing the tab sends the last change inside the lease release, which saves it before letting go (the reloaded page then looks for it and shows it); an in-app link sends it with a keep-alive request. (2) a slow save let the next one go out over the same rev and conflict with itself: saves now run one at a time from refs holding the latest rev. (3) another tab's refused change was put back silently: kept drafts and settings carry the tab's editor id; only the same tab over the same rev restores silently, anything else is offered ("There are unsaved changes to this video…", Use them / Discard them). E2E added for all three (`autosave.spec`: 7 passed).
+  - Retest: all three pass. One more, fixed: after leaving by a link (the keep-alive save can't drop the browser copy), coming back offered changes the server already had. A kept draft whose title and scenes match the server's draft (`sameDraft`, ignoring timing and `userEdited`) is now dropped silently; the e2e checks no offer appears. The offer for a kept draft says "Use them" (a conflict keeps "Use my changes"). After all the QA fixes: typecheck, lint and unit tests pass (web 258), and the full e2e suite with 2 workers passes (201 passed, 0 failed).
+- No design shows these states; screenshots at 1440×900 and 390×844 checked by eye: the desktop status line in the storyboard header (now wide enough for "Offline – changes kept locally"), the conflict banner with "Use my changes" and "Discard them", and on phones (no status line there) an offline notice under the header.
 
 ### F21 Editor: live preview · 24 Nov 2026
 
@@ -698,6 +711,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 24 Nov 2026 | Autosave (F22): offline, the editor's quick settings are kept and sent on reconnecting like draft edits (your choice). Unsaved drafts and settings are kept in IndexedDB per video (memory when it's blocked) and resent with their old `rev`, on reconnecting, every 10 s while offline, and on the next visit (a kept draft over an older rev is offered back as a conflict). A `409` never discards anything: the page shows the server's version and a banner offers this tab's draft ("Use my changes", which saves it over, or "Discard them"); before, the storyboard dropped it. Closing a tab sends a keep-alive `PUT` rather than SDD §4's `sendBeacon`, which can't send `PUT` or `X-Editor-Id`. The read-only notice's button says "Take over editing" (feature plan, SDD §4) everywhere, not API §5's "Edit here instead". |
 | 24 Nov 2026 | Editor (F21, your choices): the Revise panel and Versions button stay out until F25 and F24; phones show Scenes and Style only; a narrator change offers "Record narration" at once (`POST /narration`, no revision counted yet). Also: the editor is full screen (no app sidebar, top bar or tab bar), as the design shows; one layout is picked in the browser at 768 px so there's one Player; the quick settings add Format (9:16, 16:9, 1:1), which the designs don't show, for the `setFormat` scope; scenes without narration show "No narration" (the scene row's own badge) and play silently for their estimated length; the project detail's `audio` carries signed links (1 hour) for the draft's recordings, and `GET /projects/{id}/audio` answers only for recordings the draft or a version uses. |
 | 24 Nov 2026 | Narrators on the free plan (your choice): ElevenLabs' free API can't use Voice Library voices, which include the Indian narrators Ani and Rishika, so the default narrators are ElevenLabs default voices: Matilda (female, "Knowledgeable, Professional", American) and Daniel (male, "Steady Broadcaster", British). Both use the multilingual model, so Hindi works, with a non-Indian accent. The Indian narrators return with a paid plan (Starter, $6 a month); their ids are kept in `.env.example`. The free plan is for development: it's non-commercial and needs attribution. |
 | 24 Nov 2026 | Generate (F20): local MongoDB runs in Docker as replica set `rs0` (`docker compose up -d`), because saving a version is a transaction (your choice); the Homebrew `mongod` is stopped. The thumbnail from the title scene waits for F26's render setup (your choice). Each batch of up to 4 scenes is one Inngest step (scenes in it run at once; a retried batch finds its finished scenes in the cache), and a scene is tried 3 times inside it, not again for errors that won't change (a refused key or text). A partial generation saves a version and counts the video (API §7); retrying failed scenes (`POST /narration`) uses no video and no revision. The stub voice's recordings have their own cache key, so turning the live voice on never replays silent audio. The stub refuses narration containing "Narration fails here", to try a failing scene. Speech text isn't rewritten for pronunciation yet (SDD §8 step 3), so on-screen words and spoken words stay the same for triggers. Errors: `WORKSPACE_BLOCKED` (403) for a blocked workspace; a narration request with nothing to record is `400 VALIDATION_FAILED`. |
@@ -754,6 +768,10 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **Autosave: what waits (F22).**
+  - The script step (F15) still saves on its own (no offline queue); F23's scene editing in the editor will use `useDraftAutosave`.
+  - A keep-alive request on closing the tab carries at most 64 KB; a bigger draft relies on the copy kept in the browser for the next visit.
 
 - **Editor: what waits (F21).**
   - The Revise chat (F25), Versions (F24), scene editing and "Add a scene" (F23), and autosave states beyond "Saving…/Saved" (F22) join the editor later.

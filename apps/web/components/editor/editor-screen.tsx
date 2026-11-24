@@ -23,9 +23,17 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "@/components/create/modal";
 import { Notice } from "@/components/create/notice";
+import { offlineRetryMs } from "@/components/create/use-draft-autosave";
 import { useEditLease } from "@/components/create/use-edit-lease";
 import { Button, buttonClassName, cn, Icon, Logo, SceneRow } from "@/components/ui";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
+import {
+  dropSettings,
+  isOffline,
+  keepSettings,
+  type PendingSettings,
+  readPending,
+} from "@/lib/offline-drafts";
 import { QuickSettings, type QuickSettingsValue } from "./quick-settings";
 import { clock, framesToMs, sceneIndexAt, seconds, timelineOf } from "./timeline";
 
@@ -106,7 +114,7 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
   const player = useRef<PlayerRef>(null);
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [saving, setSaving] = useState<"idle" | "saving" | "failed">("idle");
+  const [saving, setSaving] = useState<"idle" | "saving" | "failed" | "offline">("idle");
   const [error, setError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [sheet, setSheet] = useState<"scenes" | "style" | null>(null);
@@ -165,9 +173,8 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
 
   // ---- Settings ----
 
-  async function change(next: Partial<QuickSettingsValue>) {
-    setError(null);
-    // The look changes at once; the server's answer replaces it.
+  /** The look of these settings, at once; the server's answer replaces it. */
+  const applyLocal = useCallback((next: PendingSettings) => {
     setProject((p) => {
       const draft = p.draft.spec as VideoSpec;
       return {
@@ -186,31 +193,90 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
         },
       };
     });
-    setSaving("saving");
-    try {
-      const saved = await apiFetch<ProjectDetailDto>(`/projects/${projectId}`, {
-        method: "PATCH",
-        body: { settings: next },
-        editorId,
-      });
-      lastSaved.current = saved;
-      setProject(saved);
-      setSaving("idle");
-    } catch (failure) {
-      // Back to the last saved look, not the page's first one.
-      setProject(lastSaved.current);
-      if (failure instanceof ApiRequestError && failure.code === "LEASE_HELD") {
-        // The read-only notice says why; no second message.
-        leaseLost(failure.details);
+  }, []);
+
+  /**
+   * Saves settings. Offline (F22), the change stays on screen and is kept in the browser, to be
+   * sent when the connection is back, or on the next visit.
+   */
+  const sendSettings = useCallback(
+    async (next: PendingSettings) => {
+      setSaving("saving");
+      try {
+        const saved = await apiFetch<ProjectDetailDto>(`/projects/${projectId}`, {
+          method: "PATCH",
+          body: { settings: next },
+          editorId,
+        });
+        await dropSettings(projectId);
+        lastSaved.current = saved;
+        setProject(saved);
         setSaving("idle");
-        return;
+      } catch (failure) {
+        if (!(failure instanceof ApiRequestError) || isOffline(failure)) {
+          await keepSettings(projectId, next, editorId);
+          setSaving("offline");
+          return;
+        }
+        await dropSettings(projectId);
+        // Back to the last saved look, not the page's first one.
+        setProject(lastSaved.current);
+        if (failure.code === "LEASE_HELD") {
+          // The read-only notice says why; no second message.
+          leaseLost(failure.details);
+          setSaving("idle");
+          return;
+        }
+        setSaving("failed");
+        setError(failure.message);
       }
-      setSaving("failed");
-      setError(
-        failure instanceof ApiRequestError ? failure.message : "Couldn't save that. Try again.",
-      );
+    },
+    [projectId, editorId, leaseLost],
+  );
+
+  async function change(next: Partial<QuickSettingsValue>) {
+    setError(null);
+    applyLocal(next);
+    // Offline already: add this to what's kept, so the latest of each setting is sent.
+    if (saving === "offline") {
+      await keepSettings(projectId, next, editorId);
+      return;
     }
+    await sendSettings(next);
   }
+
+  // Settings kept from an earlier visit while offline: show them and send them.
+  useEffect(() => {
+    let stopped = false;
+    void readPending(projectId).then((pending) => {
+      // Only this tab's own kept settings: another tab sends its own when it reconnects.
+      if (stopped || !pending?.settings || pending.settings.editorId !== editorId) return;
+      applyLocal(pending.settings.patch);
+      void sendSettings(pending.settings.patch);
+    });
+    return () => {
+      stopped = true;
+    };
+    // Once, on open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // Offline: send what's kept when the connection is back, and every so often anyway.
+  useEffect(() => {
+    if (saving !== "offline" || elsewhere) return;
+    const retry = async () => {
+      const pending = await readPending(projectId);
+      if (pending?.settings?.editorId === editorId) await sendSettings(pending.settings.patch);
+      else setSaving("idle");
+    };
+    const onOnline = () => void retry();
+    window.addEventListener("online", onOnline);
+    const timer = setInterval(onOnline, offlineRetryMs);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      clearInterval(timer);
+    };
+  }, [saving, elsewhere, projectId, editorId, sendSettings]);
 
   async function recordNarration() {
     setRecording(true);
@@ -232,13 +298,15 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
   // ---- Pieces ----
 
   const status =
-    saving === "saving"
-      ? "Saving…"
-      : saving === "failed"
-        ? "Not saved"
-        : elsewhere
-          ? "Read only"
-          : "Saved";
+    saving === "offline"
+      ? "Offline – changes kept locally"
+      : saving === "saving"
+        ? "Saving…"
+        : saving === "failed"
+          ? "Not saved"
+          : elsewhere
+            ? "Read only"
+            : "Saved";
   const facts = [
     status,
     project.currentVersion ? `version ${project.currentVersion}` : null,
@@ -276,7 +344,7 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
               setSaving("idle");
             }}
           >
-            Edit here instead
+            Take over editing
           </Button>
         </Notice>
       ) : null}

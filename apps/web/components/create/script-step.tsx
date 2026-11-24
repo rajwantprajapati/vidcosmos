@@ -439,7 +439,7 @@ export function ScriptStep({ project, job: initialJob, undo: initialUndo }: Scri
                 You can look, but changes are off here.
               </span>
               <Button variant="secondary" size="sm" onClick={() => void takeOver()}>
-                Edit here instead
+                Take over editing
               </Button>
             </Notice>
           ) : null}
