@@ -63,6 +63,20 @@ export async function stepJob(
   return latest?.status === "failed" ? toJobDto(latest) : null;
 }
 
+/** The job running on the project if it's one of `types`, or else the latest of them. */
+export async function latestJob(
+  workspaceId: ObjectId,
+  project: Project,
+  types: Job["type"][],
+): Promise<JobDto | null> {
+  if (project.activeJobId) {
+    const active = await getJob(getDb(), workspaceId, project.activeJobId).catch(() => null);
+    if (active && types.includes(active.type)) return toJobDto(active);
+  }
+  const latest = (await recentJobs(workspaceId, project)).find((job) => types.includes(job.type));
+  return latest ? toJobDto(latest) : null;
+}
+
 const recentJobs = async (workspaceId: ObjectId, project: Project) =>
   (
     await listJobs(

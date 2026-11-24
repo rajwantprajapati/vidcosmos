@@ -7,27 +7,11 @@ import { jobEventId } from "@vidcosmos/spec/events";
 import type { Job, Workspace } from "@vidcosmos/spec/collections";
 import { type Db, type Filter, ObjectId } from "mongodb";
 import type { Owner } from "./projects.ts";
-import { workspaceCollection } from "./scoped.ts";
+import { JobError } from "./job-error.ts";
+import { systemCollection, workspaceCollection } from "./scoped.ts";
+import { releaseVideo } from "./usage.ts";
 
-export type JobErrorCode =
-  | "NOT_FOUND"
-  | "INVALID_CURSOR"
-  | "JOB_IN_PROGRESS"
-  | "LIMIT_REACHED"
-  | "NOT_CANCELLABLE"
-  | "NOT_RETRYABLE";
-
-/** A refusal the API turns into its error envelope (API §2). */
-export class JobError extends Error {
-  readonly code: JobErrorCode;
-  readonly details?: Record<string, unknown>;
-  constructor(code: JobErrorCode, message: string, details?: Record<string, unknown>) {
-    super(message);
-    this.name = "JobError";
-    this.code = code;
-    this.details = details;
-  }
-}
+export { JobError, type JobErrorCode } from "./job-error.ts";
 
 /** Finished jobs are kept 180 days, then a TTL index removes them (DB §7). */
 export const jobRetentionDays = 180;
@@ -107,6 +91,11 @@ export type NewJob = {
   idempotencyKey?: string;
   /** The job uses one of the project's AI requests, given back if it fails (`ideas.ts`). */
   reservesGeneration?: boolean;
+  /**
+   * A video of the month is reserved for it (a first generation, `generate.ts`): committed
+   * when its version is saved, given back if it fails or is cancelled.
+   */
+  reservesVideo?: boolean;
 };
 
 /**
@@ -135,7 +124,11 @@ export async function createJob(
     input: input.input,
     ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
     inngest: { eventId: jobEventId(jobId.toHexString()) },
-    usage: { reserved: Boolean(input.reservesGeneration), committed: false, released: false },
+    usage: {
+      reserved: Boolean(input.reservesGeneration || input.reservesVideo),
+      committed: false,
+      released: false,
+    },
     attempts: 0,
     createdAt: now,
     updatedAt: now,
@@ -371,6 +364,81 @@ export async function advanceJob(
   return advanced.matchedCount === 1;
 }
 
+type JobScene = NonNullable<Job["scenes"]>[number];
+
+/**
+ * The scenes a narration job works on, each with its status (API §11), for the generating
+ * screen. Written while the job runs; a later call replaces the list (a retried run).
+ */
+export async function setJobScenes(
+  db: Db,
+  ref: JobRef,
+  scenes: Pick<JobScene, "sceneId" | "status">[],
+  now = new Date(),
+): Promise<boolean> {
+  const set = await jobs(db).updateOne(
+    { workspaceId: ref.workspaceId, _id: ref.jobId, status: "running" },
+    {
+      $set: {
+        scenes: scenes.map((scene) => ({ ...scene, attempts: 0 })),
+        heartbeatAt: now,
+        updatedAt: now,
+      },
+    },
+  );
+  return set.matchedCount === 1;
+}
+
+/** One scene's status, attempts and error while the job runs. */
+export async function markJobScene(
+  db: Db,
+  ref: JobRef,
+  sceneId: string,
+  update: Pick<JobScene, "status"> & Partial<Pick<JobScene, "attempts" | "error">>,
+  now = new Date(),
+): Promise<boolean> {
+  const marked = await jobs(db).updateOne(
+    { workspaceId: ref.workspaceId, _id: ref.jobId, status: "running", "scenes.sceneId": sceneId },
+    {
+      $set: {
+        "scenes.$.status": update.status,
+        ...(update.attempts !== undefined ? { "scenes.$.attempts": update.attempts } : {}),
+        ...(update.error ? { "scenes.$.error": update.error } : {}),
+        heartbeatAt: now,
+        updatedAt: now,
+      },
+    },
+  );
+  return marked.matchedCount === 1;
+}
+
+/**
+ * Jobs that stopped responding (SDD §8 "Timeouts"): running with no progress for 15 minutes,
+ * or queued that long with no run. The stuck-job cron fails them, which releases their usage.
+ */
+export async function findStuckJobs(
+  db: Db,
+  now = new Date(),
+  quietMs = stuckAfterMs,
+): Promise<JobRef[]> {
+  const before = new Date(now.getTime() - quietMs);
+  const stuck = await systemCollection(db, "jobs")
+    .find(
+      {
+        $or: [
+          { status: "running", heartbeatAt: { $lt: before } },
+          { status: "queued", updatedAt: { $lt: before } },
+        ],
+      },
+      { projection: { workspaceId: 1 }, limit: 200 },
+    )
+    .toArray();
+  return stuck.map((job) => ({ workspaceId: job.workspaceId, jobId: job._id }));
+}
+
+/** No progress for this long and a job counts as stuck. */
+export const stuckAfterMs = 15 * 60_000;
+
 /** Whether someone asked the job to stop. */
 export async function cancelRequested(db: Db, ref: JobRef): Promise<boolean> {
   const job = await jobs(db).findOne(
@@ -489,8 +557,47 @@ export async function releaseJobGeneration(db: Db, ref: JobRef): Promise<boolean
   return true;
 }
 
+/**
+ * Removes a job that was created but must not run (a later check refused the request), and
+ * frees its project first, so no claim points at a missing job.
+ */
+export async function discardJob(db: Db, job: Pick<Job, "_id" | "workspaceId" | "projectId">) {
+  await releaseProject(db, job);
+  await jobs(db).deleteOne({ workspaceId: job.workspaceId, _id: job._id });
+}
+
+/** The project's stage before a generation started, kept in the job's input. */
+const stageBefore = (job: Job) => (job.input.stageBefore === "ready" ? "ready" : "draft");
+
+/**
+ * Settles a generation that ended without saving: the video reserved for it is given back
+ * once (the save already committed it if it saved), and the project returns to the stage it
+ * had: `draft` for a first generation, `ready` on its previous version.
+ */
+async function settleVideo(db: Db, job: Job) {
+  if (job.status === "succeeded" || job.status === "partial") return;
+  if (job.projectId) {
+    await projects(db).updateOne(
+      { workspaceId: job.workspaceId, _id: job.projectId, stage: "generating" },
+      { $set: { stage: stageBefore(job) } },
+    );
+  }
+  if (!job.usage.reserved) return;
+  const released = await jobs(db).updateOne(
+    {
+      workspaceId: job.workspaceId,
+      _id: job._id,
+      "usage.committed": false,
+      "usage.released": false,
+    },
+    { $set: { "usage.released": true } },
+  );
+  if (released.modifiedCount === 1) await releaseVideo(db, job.workspaceId);
+}
+
 /** Settles a finished job's AI request: kept when it succeeded, given back otherwise. */
 async function settleGeneration(db: Db, job: Job) {
+  if (job.type === "generate") return settleVideo(db, job);
   if (!job.usage.reserved) return;
   const ref = { workspaceId: job.workspaceId, jobId: job._id };
   if (job.status === "succeeded" || job.status === "partial") {

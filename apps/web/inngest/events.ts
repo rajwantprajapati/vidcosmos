@@ -26,3 +26,11 @@ export const scriptRewriteRequested = eventType("video/script.rewrite.requested"
 export const storyboardRequested = eventType("video/storyboard.requested", {
   schema: eventSchemas["video/storyboard.requested"],
 });
+
+export const generateRequested = eventType("video/generate.requested", {
+  schema: eventSchemas["video/generate.requested"],
+});
+
+export const sceneRetryRequested = eventType("video/scene.retry.requested", {
+  schema: eventSchemas["video/scene.retry.requested"],
+});

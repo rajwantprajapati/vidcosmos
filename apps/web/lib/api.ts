@@ -17,6 +17,7 @@ const errors = {
   CSRF_ORIGIN: { status: 403, message: "This request came from another site, so it was refused." },
   FORBIDDEN: { status: 403, message: "You can't do that." },
   LIMIT_REACHED: { status: 403, message: "You've reached a usage limit." },
+  WORKSPACE_BLOCKED: { status: 403, message: "This account can't make videos right now." },
   NOT_FOUND: { status: 404, message: "That doesn't exist." },
   REV_CONFLICT: { status: 409, message: "This video changed in another place." },
   JOB_IN_PROGRESS: { status: 409, message: "Something is already running on this video." },

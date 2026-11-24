@@ -47,7 +47,7 @@ export function isCurrent(item: NavItem, pathname: string): boolean {
  * bar and the tab bar step aside (CLAUDE.md "Design rules").
  */
 export const isCreateStep = (pathname: string) =>
-  /^\/projects\/(new|[0-9a-f]{24}\/(idea|script|storyboard))\/?$/.test(pathname);
+  /^\/projects\/(new|[0-9a-f]{24}\/(idea|script|storyboard|generating))\/?$/.test(pathname);
 
 export function initialsOf(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);

@@ -10,9 +10,11 @@ import { demoJobMode, requestIdeasInput } from "@vidcosmos/spec/api";
 import { jobEventId } from "@vidcosmos/spec/events";
 import {
   demoJobRequested,
+  generateRequested,
   ideasRequested,
   jobCancelRequested,
   scriptRequested,
+  sceneRetryRequested,
   scriptRewriteRequested,
   storyboardRequested,
 } from "@/inngest/events";
@@ -21,13 +23,30 @@ import { getDb } from "./db";
 
 type Sendable = Parameters<typeof inngest.send>[0];
 
+/**
+ * How long a send may take before it counts as failed. Inngest that accepts the connection but
+ * doesn't answer would otherwise hold the request open for minutes (found in QA of F20).
+ */
+export const sendTimeoutMs = 4_000;
+
 async function send(event: Sendable, what: string): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await inngest.send(event);
+    await Promise.race([
+      inngest.send(event),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`no answer in ${sendTimeoutMs / 1000} s`)),
+          sendTimeoutMs,
+        );
+      }),
+    ]);
     return true;
   } catch (error) {
     console.error(`[jobs] Couldn't send ${what} to Inngest`, error);
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -60,6 +79,10 @@ function startEvent(job: Job) {
       return scriptRewriteRequested.create({ ...data, projectId: data.projectId! }, options);
     case "storyboard":
       return storyboardRequested.create({ ...data, projectId: data.projectId! }, options);
+    case "generate":
+      return generateRequested.create({ ...data, projectId: data.projectId! }, options);
+    case "scene_retry":
+      return sceneRetryRequested.create({ ...data, projectId: data.projectId! }, options);
     default:
       throw new Error(`No function runs ${job.type} jobs yet.`);
   }

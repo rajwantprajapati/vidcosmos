@@ -1,16 +1,21 @@
 // Every Inngest function the app serves at /api/inngest, wired to the real job store.
 import "server-only";
-import { ObjectId } from "@vidcosmos/db";
+import { findStuckJobs, ObjectId } from "@vidcosmos/db";
 import { getDb } from "@/lib/db";
 import { getLlm, recordLlmUsage } from "@/lib/llm";
+import { getStorage } from "@/lib/storage";
+import { getTts } from "@/lib/tts";
 import { inngest } from "./client";
 import { createDemoJob } from "./functions/demo-job";
 import { createJobCancelled } from "./functions/job-cancelled";
+import { createNarrationJobs } from "./functions/narration-jobs";
 import { createRewriteScript, createWriteScript } from "./functions/script-jobs";
 import { createBuildStoryboard } from "./functions/storyboard-jobs";
+import { createFailStuckJobs } from "./functions/stuck-jobs";
 import { createSuggestIdeas } from "./functions/suggest-ideas";
 import { mongoIdeasStore } from "./ideas-store";
 import { mongoJobStore } from "./job-store";
+import { mongoNarrationStore } from "./narration-store";
 import { mongoScriptStore } from "./script-store";
 import { mongoStoryboardStore } from "./storyboard-store";
 import { voiceIds } from "@/lib/voices";
@@ -59,6 +64,20 @@ export const functions = [
     llm: () => getLlm("main"),
     small: () => getLlm("small"),
     usage: usageFor,
+  }),
+  ...createNarrationJobs(inngest, {
+    jobs: store,
+    narration: mongoNarrationStore(getDb, { tts: getTts, storage: getStorage }),
+    small: () => getLlm("small"),
+    usage: usageFor,
+  }),
+  createFailStuckJobs(inngest, {
+    jobs: store,
+    findStuck: async () =>
+      (await findStuckJobs(getDb())).map((ref) => ({
+        workspaceId: ref.workspaceId.toHexString(),
+        jobId: ref.jobId.toHexString(),
+      })),
   }),
 ];
 

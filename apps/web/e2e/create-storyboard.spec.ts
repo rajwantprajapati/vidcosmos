@@ -119,9 +119,9 @@ test.describe("step 3 on desktop", () => {
       page.getByRole("listitem", { name: "Scene 2" }).getByLabel("Template"),
     ).not.toHaveValue("timeline");
 
-    // Generate opens step 4 (the video itself arrives with F20).
+    // Generate records the video (F20) and opens the editor once it's ready.
     await generate.click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${id}/generating$`));
+    await expect(page).toHaveURL(new RegExp(`/projects/${id}(/generating)?$`));
   });
 
   test("a script changed after the storyboard shows it as stale", async ({ page }) => {

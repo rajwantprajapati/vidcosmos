@@ -9,7 +9,8 @@
     "./collections": "./src/collections/index.ts",
     "./time": "./src/time.ts",
     "./events": "./src/events.ts",
-    "./video": "./src/video/index.ts"
+    "./video": "./src/video/index.ts",
+    "./video/testing": "./src/video/testing.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

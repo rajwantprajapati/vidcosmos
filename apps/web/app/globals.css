@@ -57,6 +57,21 @@
   animation: vc-spin 900ms linear infinite;
 }
 
+/* A scene still waiting for its narration on the Generating screen (design: "waiting"). Still
+   under reduced motion (the reset below runs it once). */
+@keyframes vc-shimmer {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+.vc-waiting {
+  animation: vc-shimmer 1.6s ease-in-out infinite;
+}
+
 /* The slow orbit around the phone on the sign-in page; still under reduced motion (the reset
    below runs it once, instantly, which leaves it where it started). */
 .vc-orbit {

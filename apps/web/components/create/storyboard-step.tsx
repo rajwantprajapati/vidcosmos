@@ -10,7 +10,7 @@
 //
 // Step 2's "Build the storyboard" starts the first one and opens this step, which picks the
 // running job up. Opened without a storyboard and without a job, it offers to build one.
-// Generating the video itself arrives with F20; until then Generate opens its placeholder.
+// Generate starts the generation (API §7) and opens the Generating screen.
 import type { DraftSavedDto, JobDto, ProjectDetailDto } from "@vidcosmos/spec/api";
 import {
   convertScene,
@@ -257,8 +257,27 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
       setBusy(null);
       return;
     }
-    // Recording the narration and making the video arrive with F20.
-    router.push(`/projects/${projectId}/generating`);
+    try {
+      // Over the rev just saved: read back, since the save's state update is still pending.
+      const fresh = await apiFetch<ProjectDetailDto>(`/projects/${projectId}`);
+      await apiFetch<JobDto>(`/projects/${projectId}/generate`, {
+        method: "POST",
+        idempotent: true,
+        body: { baseRev: fresh.draft.rev },
+        editorId: tabId,
+      });
+      router.push(`/projects/${projectId}/generating`);
+    } catch (failure) {
+      if (failure instanceof ApiRequestError && failure.code === "LEASE_HELD") {
+        leaseLost(failure.details);
+        setError(leaseLostMessage);
+      } else {
+        setError(
+          failure instanceof ApiRequestError ? failure.message : "Couldn't start. Try again.",
+        );
+      }
+      setBusy(null);
+    }
   }
 
   // ---- What the page shows ----

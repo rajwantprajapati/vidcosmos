@@ -70,8 +70,11 @@ const schema = z.object({
   // Voice (ElevenLabs)
   ELEVENLABS_API_KEY: z.string().optional(),
   ELEVENLABS_MODEL: z.string().default("eleven_multilingual_v2"),
-  ELEVENLABS_VOICE_ID_MALE: z.string().default("pOk40AXK0gYhreBApvj7"),
-  ELEVENLABS_VOICE_ID_FEMALE: z.string().default("tLGhEubY0Pyc5mxjkJSJ"),
+  // ElevenLabs default voices, which a free account can use through the API: "Daniel" and
+  // "Matilda". The Indian narrators (Ani, Rishika) are Voice Library voices, which need a paid
+  // plan; they return with one (decision log, 24 Nov).
+  ELEVENLABS_VOICE_ID_MALE: z.string().default("onwK4e9ZLuTAKqWW03F9"),
+  ELEVENLABS_VOICE_ID_FEMALE: z.string().default("XrExE9yKIg1WjnnlVkGX"),
 
   // Render (Vercel Sandbox). Provided by Vercel, or by `vercel env pull` locally.
   VERCEL_OIDC_TOKEN: z.string().optional(),
