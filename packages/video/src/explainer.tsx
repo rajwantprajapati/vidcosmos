@@ -27,10 +27,17 @@ import { Captions } from "./captions";
 import { fontFamilies } from "./fonts";
 import { type Stage, stageOf } from "./format";
 import { LayoutCheck } from "./layout-check";
+import { BarChartScene } from "./templates/bar-chart";
 import { BulletsScene } from "./templates/bullets";
 import { ComparisonScene } from "./templates/comparison";
-import { FallbackScene } from "./templates/fallback";
 import { FlowchartScene } from "./templates/flowchart";
+import { IconGridScene } from "./templates/icon-grid";
+import { KeyTermScene } from "./templates/key-term";
+import { PieChartScene } from "./templates/pie-chart";
+import { QuizScene } from "./templates/quiz";
+import { RecapScene } from "./templates/recap";
+import { StatCalloutScene } from "./templates/stat-callout";
+import { TimelineScene } from "./templates/timeline";
 import { TitleScene } from "./templates/title";
 import { type VideoTheme, videoTheme } from "./theme";
 
@@ -114,7 +121,7 @@ function SceneBody({
     [scene, spec.language, spec.voice.speed],
   );
   const at = (path: string) => times[path];
-  const props = { theme, stage, at };
+  const props = { language: spec.language, theme, stage, at };
   switch (scene.template) {
     case "title":
       return <TitleScene content={scene.content} {...props} />;
@@ -124,9 +131,22 @@ function SceneBody({
       return <FlowchartScene content={scene.content} {...props} />;
     case "comparison":
       return <ComparisonScene content={scene.content} {...props} />;
-    default:
-      // The other eight templates arrive in F19.
-      return <FallbackScene scene={scene} {...props} />;
+    case "keyTerm":
+      return <KeyTermScene content={scene.content} {...props} />;
+    case "timeline":
+      return <TimelineScene content={scene.content} {...props} />;
+    case "barChart":
+      return <BarChartScene content={scene.content} {...props} />;
+    case "pieChart":
+      return <PieChartScene content={scene.content} {...props} />;
+    case "iconGrid":
+      return <IconGridScene content={scene.content} {...props} />;
+    case "statCallout":
+      return <StatCalloutScene content={scene.content} {...props} />;
+    case "quiz":
+      return <QuizScene content={scene.content} {...props} />;
+    case "recap":
+      return <RecapScene content={scene.content} {...props} />;
   }
 }
 

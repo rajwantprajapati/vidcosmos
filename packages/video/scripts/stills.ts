@@ -52,6 +52,8 @@ const jpegQuality = 80;
 const colourThreshold = 0.1;
 /** An image may differ in this share of its pixels (anti-aliasing) and still match. */
 const allowedChange = 0.001;
+/** Generous, so a busy machine slows the run down rather than failing it. */
+const timeoutInMilliseconds = 120_000;
 
 const args = process.argv.slice(2);
 const approve = args.includes("--approve");
@@ -144,6 +146,7 @@ async function main() {
         id: "Still",
         inputProps: still.inputProps,
         puppeteerInstance: browser,
+        timeoutInMilliseconds,
       });
       await renderStill({
         serveUrl,
@@ -154,6 +157,7 @@ async function main() {
         ...(full ? { imageFormat: "png" as const } : { imageFormat: "jpeg" as const, jpegQuality }),
         scale: full ? 1 : quarter,
         puppeteerInstance: browser,
+        timeoutInMilliseconds,
         onBrowserLog: ({ text }) => {
           if (text.startsWith(layoutTag))
             problems.push(`${still.name}: ${text.slice(layoutTag.length + 1)}`);

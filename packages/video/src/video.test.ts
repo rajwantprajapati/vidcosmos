@@ -1,18 +1,29 @@
-// F18: the parts of the video that don't need a browser: themes from the design tokens, the
+// F18, F19: the parts of the video that don't need a browser: themes from the design tokens, the
 // safe areas, icons, caption lines, text fitting, the layout check's rule, the cycle's layout,
-// and the still cases themselves. The rendered stills are checked by `pnpm video:stills`.
+// chart numbers and colours, the icon grid, and the still cases themselves. The rendered stills
+// are checked by `pnpm video:stills`.
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { iconNames, specIssues, type SpokenWord } from "@vidcosmos/spec/video";
+import {
+  iconNames,
+  limits,
+  specIssues,
+  type SpokenWord,
+  type TemplateName,
+  templateNames,
+} from "@vidcosmos/spec/video";
 import { describe, expect, it } from "vitest";
 import { captionLimits, captionPages } from "./captions";
 import { fitBox, fitFontSize, fontFiles, linesFor, longestWordEm, textEm } from "./fonts";
 import { stageOf, videoFormats } from "./format";
 import { layoutProblem } from "./layout-check";
+import { countingText, countsUp, formatNumber, formatValue, percentages } from "./numbers";
 import { lucideIcon } from "./parts";
 import { stillLengths, stillScene, stillSpec, stillTemplates } from "./remotion/cases";
 import { cycleGeometry } from "./templates/flowchart";
+import { gridColumns } from "./templates/icon-grid";
+import { largestSlice, sliceColours } from "./templates/pie-chart";
 import { palettes, videoTheme } from "./theme";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -181,7 +192,136 @@ describe("the cycle layout", () => {
   });
 });
 
+describe("numbers on screen", () => {
+  it("writes chart values in lakh and crore, in English and Hindi", () => {
+    expect(formatNumber(7, "en")).toBe("7");
+    expect(formatNumber(3.75, "en")).toBe("3.75");
+    expect(formatNumber(98_765, "en")).toBe("98,765");
+    expect(formatNumber(120_000, "en")).toBe("1.2 lakh");
+    expect(formatNumber(45_600_000, "en")).toBe("4.6 crore");
+    expect(formatNumber(987_654_321_000, "en")).toBe("98,765 crore");
+    expect(formatNumber(1e12, "en")).toBe("1 lakh crore");
+    expect(formatNumber(4_500_000, "hi")).toBe("45 लाख");
+    expect(formatNumber(1_200_000_000, "hi")).toBe("120 करोड़");
+  });
+
+  it("puts a unit where it's read", () => {
+    expect(formatValue(72, "en", "%")).toBe("72%");
+    expect(formatValue(120_000, "en", "₹")).toBe("₹1.2 lakh");
+    expect(formatValue(30, "en", "users")).toBe("30 users");
+    expect(formatValue(30, "en")).toBe("30");
+  });
+
+  it("rounds a pie's shares to whole percentages that add up to 100", () => {
+    expect(percentages([1, 1, 1])).toEqual([34, 33, 33]);
+    expect(percentages([1, 2])).toEqual([33, 67]);
+    expect(percentages([5, 0])).toEqual([100, 0]);
+    for (const values of [
+      [34, 26, 18, 13, 9],
+      [1, 1, 1, 1, 1, 1, 1],
+      [0.1, 0.2, 99.7],
+    ]) {
+      expect(percentages(values).reduce((a, b) => a + b, 0)).toBe(100);
+    }
+  });
+
+  it("counts a stat up to its own text, keeping symbols, decimals and grouping", () => {
+    expect(countingText("72%", 0)).toBe("0%");
+    expect(countingText("72%", 0.5)).toBe("36%");
+    expect(countingText("72%", 1)).toBe("72%");
+    expect(countingText("₹1,20,000", 0.5)).toBe("₹60,000");
+    expect(countingText("1,200,000 users", 0.5)).toBe("600,000 users");
+    expect(countingText("4.5", 0.5)).toBe("2.3");
+    expect(countingText("₹1.2 लाख", 0.5)).toBe("₹0.6 लाख");
+    expect(countingText("10 crore users", 0.5)).toBe("5 crore users");
+    expect(countingText("Rs 500", 0.5)).toBe("Rs 250");
+    expect(countingText("+35%", 0.5)).toBe("+18%");
+    expect(countingText("No.", 0.5)).toBe("No.");
+  });
+
+  it("leaves a stat that isn't an amount as it is (QA)", () => {
+    for (const value of [
+      "1947",
+      "2024",
+      "1947 AD",
+      "2024 elections",
+      "5G",
+      "COVID-19",
+      "24x7",
+      "#1",
+      "1 in 3",
+      "4.5x",
+    ]) {
+      expect(countsUp(value), value).toBe(false);
+      expect(countingText(value, 0.5), value).toBe(value);
+    }
+    for (const value of [
+      "72%",
+      "+35%",
+      "−2%",
+      "₹1,20,000",
+      "3,000",
+      "250",
+      "2500",
+      "10K+",
+      "1.2 lakh",
+      "1200 crore",
+    ]) {
+      expect(countsUp(value), value).toBe(true);
+    }
+  });
+
+  it("picks the scale from the rounded value (QA)", () => {
+    expect(formatNumber(99_999.6, "en")).toBe("1 lakh");
+    expect(formatNumber(9_996_000, "en")).toBe("1 crore");
+    expect(formatNumber(9_999_999, "en")).toBe("1 crore");
+    expect(formatNumber(999_999_000_000, "en")).toBe("1 lakh crore");
+    expect(formatNumber(99_999, "en")).toBe("99,999");
+  });
+
+  it("doesn't scale a number whose unit already says its scale (QA)", () => {
+    expect(formatValue(5e11, "en", "₹ crore")).toBe("₹5,00,00,00,00,000 crore");
+    expect(formatValue(4500, "en", "₹ crore")).toBe("₹4,500 crore");
+    expect(formatValue(12, "en", "lakh users")).toBe("12 lakh users");
+    expect(formatValue(3, "hi", "करोड़")).toBe("3 करोड़");
+  });
+
+  it("writes Rs, INR and US$ before the number (QA)", () => {
+    expect(formatValue(1234, "en", "Rs")).toBe("Rs 1,234");
+    expect(formatValue(1234, "en", "Rs.")).toBe("Rs. 1,234");
+    expect(formatValue(1234, "en", "INR")).toBe("INR 1,234");
+    expect(formatValue(5, "en", "US$")).toBe("US$5");
+  });
+});
+
+describe("chart and grid layouts", () => {
+  it("settles a pie on its largest slice", () => {
+    expect(largestSlice([97, 1, 1, 0.6, 0.4])).toBe(0);
+    expect(largestSlice([9, 34, 34])).toBe(1);
+  });
+
+  it("gives every pie slice its own colour in every palette", () => {
+    for (const palette of palettes) {
+      const colours = sliceColours(videoTheme(palette));
+      expect(new Set(colours).size, palette).toBe(limits.pieChart.max);
+    }
+  });
+
+  it("lays icon grids out two a row in 9:16 and wider in 16:9 and 1:1", () => {
+    expect([4, 5, 6].map((n) => gridColumns(n, "9:16"))).toEqual([2, 2, 2]);
+    expect([4, 5, 6].map((n) => gridColumns(n, "16:9"))).toEqual([4, 3, 3]);
+    expect([4, 5, 6].map((n) => gridColumns(n, "1:1"))).toEqual([2, 3, 3]);
+  });
+});
+
 describe("the still cases", () => {
+  it("cover every template", () => {
+    const covered = new Set(
+      stillTemplates.map((t) => stillScene(t, "en", "short").template as TemplateName),
+    );
+    expect([...covered].sort()).toEqual([...templateNames].sort());
+  });
+
   it("are valid scenes whose narration says every trigger, in order", () => {
     for (const template of stillTemplates) {
       for (const language of ["en", "hi"] as const) {
