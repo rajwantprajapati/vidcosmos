@@ -3,7 +3,7 @@
 // before calling the voice service, the pipeline looks the hash up and, on a hit, pays nothing.
 import { createHash } from "node:crypto";
 import type { Asset } from "@vidcosmos/spec/collections";
-import type { Db, ObjectId } from "mongodb";
+import { type Db, ObjectId } from "mongodb";
 import { workspaceCollection } from "./scoped.ts";
 
 const assets = (db: Db) => workspaceCollection(db, "assets");
@@ -78,4 +78,49 @@ export async function touchAssets(
     { $max: { lastUsedAt: now } },
   );
   return result.matchedCount;
+}
+
+/** The narration asset ids a stored spec plays (`timing.narrationAssetId`). */
+export function specAudioIds(spec: unknown): string[] {
+  const scenes = (spec as { scenes?: unknown } | null)?.scenes;
+  if (!Array.isArray(scenes)) return [];
+  const ids = scenes.flatMap((scene) => {
+    const id = (scene as { timing?: { narrationAssetId?: unknown } | null })?.timing
+      ?.narrationAssetId;
+    return typeof id === "string" ? [id] : [];
+  });
+  return [...new Set(ids)];
+}
+
+/**
+ * The narration assets a project may play, by id: those its draft or any of its versions use
+ * (API §7 "Audio URLs"). Ids it doesn't use, or that aren't hex, are left out.
+ */
+export async function projectNarration(
+  db: Db,
+  project: { _id: ObjectId; workspaceId: ObjectId; draft: { spec: unknown } },
+  ids?: string[],
+): Promise<{ id: string; key: string }[]> {
+  const used = new Set(specAudioIds(project.draft.spec));
+  if (ids?.some((id) => !used.has(id))) {
+    const versions = await workspaceCollection(db, "project_versions")
+      .find(
+        { workspaceId: project.workspaceId, projectId: project._id },
+        { projection: { "spec.scenes.timing.narrationAssetId": 1 } },
+      )
+      .toArray();
+    for (const version of versions) {
+      for (const id of specAudioIds(version.spec as Parameters<typeof specAudioIds>[0]))
+        used.add(id);
+    }
+  }
+  const wanted = (ids ?? [...used]).filter((id) => used.has(id) && /^[0-9a-f]{24}$/.test(id));
+  if (wanted.length === 0) return [];
+  const found = await assets(db)
+    .find(
+      { workspaceId: project.workspaceId, _id: { $in: wanted.map((id) => new ObjectId(id)) } },
+      { projection: { r2Key: 1 } },
+    )
+    .toArray();
+  return found.map((asset) => ({ id: asset._id.toHexString(), key: asset.r2Key }));
 }

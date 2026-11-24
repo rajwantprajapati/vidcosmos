@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { initialsOf, isCreateStep, isCurrent, library, newVideo, posts, settings } from "./nav";
+import {
+  initialsOf,
+  isCreateStep,
+  isCurrent,
+  isEditor,
+  library,
+  newVideo,
+  posts,
+  settings,
+} from "./nav";
 
 describe("isCurrent", () => {
   it("marks a section on its page and the pages under it", () => {
@@ -31,6 +40,16 @@ describe("isCreateStep", () => {
     expect(isCreateStep("/projects/new")).toBe(true);
     expect(isCreateStep(`/projects/${id}`)).toBe(false);
     expect(isCreateStep(`/projects/${id}/export`)).toBe(false);
+  });
+});
+
+describe("isEditor", () => {
+  it("is the project page itself, full screen, and none of its steps", () => {
+    const id = "6730a1b2c3d4e5f6a7b8c9d0";
+    expect(isEditor(`/projects/${id}`)).toBe(true);
+    expect(isEditor(`/projects/${id}/`)).toBe(true);
+    expect(isEditor(`/projects/${id}/storyboard`)).toBe(false);
+    expect(isEditor("/projects/new")).toBe(false);
   });
 });
 

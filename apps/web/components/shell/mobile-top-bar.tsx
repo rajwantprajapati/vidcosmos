@@ -6,10 +6,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui";
 import { Avatar } from "./avatar";
-import { isCreateStep } from "./nav";
+import { isCreateStep, isEditor } from "./nav";
 
 export function MobileTopBar({ initials }: { initials: string }) {
-  if (isCreateStep(usePathname())) return null;
+  const pathname = usePathname();
+  if (isCreateStep(pathname) || isEditor(pathname)) return null;
   return (
     <header className="flex h-14 items-center justify-between pr-2 pl-4 md:hidden">
       <Link href="/" aria-label="Vidcosmos home" className="inline-flex rounded-md">

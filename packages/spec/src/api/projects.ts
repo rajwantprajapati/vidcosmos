@@ -357,6 +357,8 @@ export type DetailExtras = SummaryExtras & {
   leaseHolderName?: string;
   /** Which later steps are out of date (computed from the stage hashes on the server). */
   stale: { script: boolean; storyboard: boolean };
+  /** Signed playback URLs for the narration the draft plays, by asset id (API §7). */
+  audio?: Record<string, { url: string; expiresAt: Date }>;
   now?: Date;
 };
 
@@ -381,8 +383,12 @@ export function toProjectDetailDto(project: Project, extras: DetailExtras): Proj
       rev: project.draft.rev,
       updatedAt: project.draft.updatedAt.toISOString(),
     },
-    // Narration audio URLs arrive with storage and narration (F12, F20).
-    audio: {},
+    audio: Object.fromEntries(
+      Object.entries(extras.audio ?? {}).map(([id, link]) => [
+        id,
+        { url: link.url, expiresAt: link.expiresAt.toISOString() },
+      ]),
+    ),
     stale: extras.stale,
     lease: lease
       ? {

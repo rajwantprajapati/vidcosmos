@@ -11,7 +11,6 @@ const routes: [path: string, heading: string][] = [
   ["/posts", "Posts"],
   ["/settings", "Settings"],
   ["/projects/new", "New video"],
-  [`/projects/${projectId}`, "Editor"],
   [`/projects/${projectId}/export`, "Export and post"],
 ];
 
@@ -41,12 +40,12 @@ test.describe("app shell", () => {
     await expect(page).toHaveURL(/\/library$/);
   });
 
-  test("steps 1 to 4 of a video that doesn't exist are a 404", async ({ page }) => {
-    // Step 1 is real since F14, step 2 since F15, step 3 since F17, step 4 since F20. (The
-    // sidebar can't tell this id is missing, so it still marks Library, as on every project
-    // page.)
-    for (const step of ["idea", "script", "storyboard", "generating"]) {
-      const response = await page.goto(`/projects/${projectId}/${step}`);
+  test("steps 1 to 4 and the editor of a video that doesn't exist are a 404", async ({ page }) => {
+    // Step 1 is real since F14, step 2 since F15, step 3 since F17, step 4 since F20, the
+    // editor since F21. (The sidebar can't tell this id is missing, so it still marks Library,
+    // as on every project page.)
+    for (const step of ["idea", "script", "storyboard", "generating", ""]) {
+      const response = await page.goto(`/projects/${projectId}${step ? `/${step}` : ""}`);
       expect(response?.status(), step).toBe(404);
       await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
       await expect(page).toHaveTitle("Page not found · Vidcosmos");
@@ -136,9 +135,10 @@ test.describe("app shell", () => {
     await expect(page).toHaveURL(/\/projects\/new$/);
   });
 
-  // Create steps (idea, script, storyboard) hide the phone's tab bar; the editor keeps it.
+  // Create steps (idea, script, storyboard, generating) hide the phone's tab bar, and the
+  // editor is full screen (F21); other project pages, such as export, keep the shell.
   test("project pages count as the library", async ({ page }) => {
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/projects/${projectId}/export`);
     const current = page.locator('a[aria-current="page"]:visible');
     await expect(current).toHaveCount(1);
     await expect(current).toContainText("Library");

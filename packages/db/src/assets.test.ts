@@ -1,16 +1,21 @@
 // F12: asset helpers against MongoDB: the narration hash, the cache lookup per workspace, two
 // steps recording the same file at once, and lastUsedAt moving only forward.
 import type { Asset } from "@vidcosmos/spec/collections";
+import { exampleScenes } from "@vidcosmos/spec/video";
+import { testSpec } from "@vidcosmos/spec/video/testing";
 import { ObjectId } from "mongodb";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   findAsset,
   type NarrationInput,
   narrationHash,
+  projectNarration,
   recordAsset,
   sha256Hex,
+  specAudioIds,
   touchAssets,
 } from "./assets.ts";
+import { workspaceCollection } from "./scoped.ts";
 import { migrate } from "./migrate.ts";
 import { useTestDatabase } from "./testing/database.ts";
 
@@ -113,5 +118,60 @@ describe("assets", () => {
     );
     expect(await touchAssets(db(), ws, "narration", [])).toBe(0);
     expect(await touchAssets(db(), new ObjectId(), "narration", [hash])).toBe(0);
+  });
+});
+
+/** A valid timed spec whose first scene plays `assetId`. */
+function versionSpec(assetId: string) {
+  const spec = testSpec([exampleScenes.title, exampleScenes.recap], { timed: true });
+  spec.scenes[0]!.timing!.narrationAssetId = assetId;
+  return spec;
+}
+
+describe("the audio a project plays (F21)", () => {
+  const specWith = (ids: (string | null)[]) => ({
+    scenes: ids.map((id) => ({ timing: id ? { narrationAssetId: id } : null })),
+  });
+
+  it("lists each recording a spec plays, once", () => {
+    expect(specAudioIds(specWith(["a1", null, "a1", "b2"]))).toEqual(["a1", "b2"]);
+    expect(specAudioIds(null)).toEqual([]);
+    expect(specAudioIds({ scenes: "not a list" })).toEqual([]);
+  });
+
+  it("gives the draft's recordings, and a version's when asked, never another project's", async () => {
+    const workspaceId = new ObjectId();
+    const projectId = new ObjectId();
+    const [inDraft, inVersion, elsewhere] = await Promise.all(
+      ["d", "v", "e"].map(async (c) => {
+        const made = asset(workspaceId, c.repeat(64));
+        await recordAsset(db(), made);
+        return made._id.toHexString();
+      }),
+    );
+    await workspaceCollection(db(), "project_versions").insertOne({
+      _id: new ObjectId(),
+      schemaVersion: 1,
+      workspaceId,
+      projectId,
+      number: 1,
+      spec: versionSpec(inVersion!),
+      specHash: "0".repeat(64),
+      reason: "generate",
+      summary: "First version",
+      durationMs: 1000,
+      sceneCount: 1,
+      createdBy: new ObjectId(),
+      createdAt: new Date(),
+    });
+    const project = { _id: projectId, workspaceId, draft: { spec: specWith([inDraft!]) } };
+
+    const draftOnly = await projectNarration(db(), project);
+    expect(draftOnly.map((a) => a.id)).toEqual([inDraft]);
+    expect(draftOnly[0]!.key).toMatch(/\/narration\/d{64}\.mp3$/);
+    const asked = await projectNarration(db(), project, [inVersion!, elsewhere!, "not-an-id"]);
+    expect(asked.map((a) => a.id)).toEqual([inVersion]);
+    // The version's other scene plays a recording this workspace doesn't have: left out.
+    expect(specAudioIds(versionSpec(inVersion!))).toHaveLength(2);
   });
 });

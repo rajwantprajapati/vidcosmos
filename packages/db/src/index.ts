@@ -3,8 +3,10 @@ export {
   findAsset,
   type NarrationInput,
   narrationHash,
+  projectNarration,
   recordAsset,
   sha256Hex,
+  specAudioIds,
   touchAssets,
 } from "./assets.ts";
 export {
