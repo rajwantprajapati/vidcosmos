@@ -138,7 +138,7 @@ test.describe("step 3 on desktop", () => {
       headers: tab,
     });
     await page.goto(`/projects/${id}/storyboard`);
-    await page.getByRole("button", { name: "Edit here instead" }).click();
+    await page.getByRole("button", { name: "Take over editing" }).click();
     await expect(page.getByText("The script changed after these scenes were made.")).toBeVisible();
   });
 });

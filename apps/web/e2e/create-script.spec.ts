@@ -166,7 +166,7 @@ test.describe("step 2 on desktop", () => {
     const id = await videoWithScript(page, "script-lease", "How a pressure cooker works");
     const other = await context.newPage();
     await other.goto(page.url());
-    await other.getByRole("button", { name: "Edit here instead" }).click();
+    await other.getByRole("button", { name: "Take over editing" }).click();
     await expect(other.getByText("You have this video open in another tab.")).toBeHidden();
     await scriptText(other).fill("Tab B wrote this. It stays.");
     await expect(other.getByText("Saved just now")).toBeVisible();
@@ -179,7 +179,7 @@ test.describe("step 2 on desktop", () => {
     expect((await project(page, id)).script.text).toBe("Tab B wrote this. It stays.");
 
     // Taking editing back shows the script as saved.
-    await page.getByRole("button", { name: "Edit here instead" }).click();
+    await page.getByRole("button", { name: "Take over editing" }).click();
     await expect(scriptText(page)).toHaveValue("Tab B wrote this. It stays.");
     await other.close();
   });
@@ -193,7 +193,7 @@ test.describe("step 2 on desktop", () => {
     await videoWithScript(page, "script-renewal", "How a ceiling fan cools a room");
     const other = await context.newPage();
     await other.goto(page.url());
-    await other.getByRole("button", { name: "Edit here instead" }).click();
+    await other.getByRole("button", { name: "Take over editing" }).click();
     await expect(other.getByText("You have this video open in another tab.")).toBeHidden();
 
     // Hold this tab's saves, so the renewal (every 30 s) is what finds the takeover.

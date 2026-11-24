@@ -4,8 +4,9 @@
 // The tab's editor id lives in sessionStorage, so a reload keeps the lease. Taken on open,
 // renewed every 30 s (it lasts 60), given up with a beacon when the tab closes. Held elsewhere
 // (found on renewal, or when a save is refused with 423): the page goes read-only and offers
-// "Edit here instead".
-import { useCallback, useEffect, useState } from "react";
+// "Take over editing".
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FinalDraft } from "./use-draft-autosave";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 
 const storageKey = "vidcosmos.editorId";
@@ -36,6 +37,7 @@ export type LeaseState =
 export function useEditLease(projectId: string | null) {
   const [state, setState] = useState<LeaseState>({ status: projectId ? "taking" : "held" });
   const [editorId] = useState(() => (typeof window === "undefined" ? "" : getEditorId()));
+  const finalDraft = useRef<(() => FinalDraft) | null>(null);
 
   const take = useCallback(
     async (takeover = false) => {
@@ -70,7 +72,9 @@ export function useEditLease(projectId: string | null) {
       if (!document.hidden) void take();
     }, leaseRenewMs);
     const release = () => {
-      const body = new Blob([JSON.stringify({ editorId: getEditorId() })], {
+      // The last unsaved change goes with the release, which saves it first (F22).
+      const draft = finalDraft.current?.() ?? undefined;
+      const body = new Blob([JSON.stringify({ editorId: getEditorId(), draft })], {
         type: "application/json",
       });
       navigator.sendBeacon?.(`/api/v1/projects/${projectId}/lease/release`, body);
@@ -88,5 +92,10 @@ export function useEditLease(projectId: string | null) {
     setState({ status: "elsewhere", byYou: details?.heldBy !== "other" });
   }, []);
 
-  return { state, editorId, takeover: () => take(true), lost };
+  /** What to save when the tab closes (the draft autosave registers it). */
+  const setFinalDraft = useCallback((get: () => FinalDraft) => {
+    finalDraft.current = get;
+  }, []);
+
+  return { state, editorId, takeover: () => take(true), lost, setFinalDraft };
 }

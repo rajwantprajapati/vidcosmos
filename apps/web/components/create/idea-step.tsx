@@ -411,7 +411,7 @@ export function IdeaStep({ project, defaults, ideasJob, generations, limit }: Id
               You can look, but changes are off here.
             </span>
             <Button variant="secondary" size="sm" onClick={() => void lease.takeover()}>
-              Edit here instead
+              Take over editing
             </Button>
           </Notice>
         ) : null}

@@ -123,7 +123,7 @@ test.describe("the editor on desktop", () => {
     await expect(page.getByTestId("preview")).toHaveAttribute("data-format", "16:9");
 
     // Another tab takes over: a save is refused and the look stays as last saved, with one
-    // notice; "Edit here instead" takes it back (F21 QA).
+    // notice; "Take over editing" takes it back (F21 QA).
     await page.request.post(`/api/v1/projects/${id}/lease`, {
       headers: { "X-Editor-Id": "another-tab", Origin: new URL(page.url()).origin },
       data: { takeover: true },
@@ -139,7 +139,7 @@ test.describe("the editor on desktop", () => {
       "aria-checked",
       "true",
     );
-    await page.getByRole("button", { name: "Edit here instead" }).click();
+    await page.getByRole("button", { name: "Take over editing" }).click();
     await expect(page.getByText(/open for editing in another tab/)).toBeHidden();
     await expect(page.getByText(/^Saved · version 1/)).toBeVisible();
 
