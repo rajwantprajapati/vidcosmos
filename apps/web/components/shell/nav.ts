@@ -49,6 +49,9 @@ export function isCurrent(item: NavItem, pathname: string): boolean {
 export const isCreateStep = (pathname: string) =>
   /^\/projects\/(new|[0-9a-f]{24}\/(idea|script|storyboard|generating))\/?$/.test(pathname);
 
+/** The editor (F21): full screen, with its own header; no sidebar, top bar or tab bar. */
+export const isEditor = (pathname: string) => /^\/projects\/[0-9a-f]{24}\/?$/.test(pathname);
+
 export function initialsOf(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const letters = words.length > 1 ? [words[0], words[words.length - 1]] : words.slice(0, 1);

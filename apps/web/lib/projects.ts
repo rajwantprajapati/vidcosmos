@@ -9,6 +9,7 @@ import {
 } from "@vidcosmos/spec/api";
 import type { Project } from "@vidcosmos/spec/collections";
 import type { ApiContext } from "./api";
+import { projectAudio } from "./audio";
 import { getDb } from "./db";
 
 export const ownerOf = (context: ApiContext): Owner => ({
@@ -27,8 +28,12 @@ export async function projectDetail(
   project: Project,
 ): Promise<ProjectDetailDto> {
   const db = getDb();
-  const jobs = await activeJobs(db, ownerOf(context), [project]);
+  const [jobs, audio] = await Promise.all([
+    activeJobs(db, ownerOf(context), [project]),
+    projectAudio(project),
+  ]);
   return toProjectDetailDto(project, {
+    audio,
     workspace: context.workspace,
     stale: projectStale(project),
     holder: holderOf(context),

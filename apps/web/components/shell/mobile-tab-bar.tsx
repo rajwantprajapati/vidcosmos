@@ -4,11 +4,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/components/ui";
-import { isCreateStep, isCurrent, tabItems } from "./nav";
+import { isCreateStep, isCurrent, isEditor, tabItems } from "./nav";
 
 export function MobileTabBar() {
   const pathname = usePathname();
-  if (isCreateStep(pathname)) return null;
+  if (isCreateStep(pathname) || isEditor(pathname)) return null;
   return (
     <nav
       aria-label="App"

@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 24 Nov 2026 · Current focus: **F20 Narration and generate video** (built, waiting for review)
+Last updated: 24 Nov 2026 · Current focus: **F21 Editor: live preview** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -13,12 +13,12 @@ This file is the single place that says where the build stands. Update it at the
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
 | M2 Create flow | 7 | 7 |
-| M3 Video | 3 | 7 |
+| M3 Video | 4 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **20** | **36** |
+| **Total** | **21** | **36** |
 
 ## Features
 
@@ -44,7 +44,7 @@ This file is the single place that says where the build stands. Update it at the
 | F18 | Remotion package and first 4 templates | M3 | F16 | Done | 18 Nov 2026 | `@vidcosmos/video`: `Explainer`, 4 templates, video themes, captions; `pnpm video:studio`, `pnpm video:stills` |
 | F19 | The other 8 templates | M3 | F18 | Done | 23 Nov 2026 | All 12 templates; lakh and crore on charts; 351 approved stills |
 | F20 | Narration and generate video | M3 | F12, F17, F18 | Done | 24 Nov 2026 | Generate, retry scenes, Generating screen; live run on ElevenLabs' free plan |
-| F21 | Editor: live preview | M3 | F20 | Not started | | |
+| F21 | Editor: live preview | M3 | F20 | Done | 24 Nov 2026 | Remotion Player with signed audio; scenes, strip, quick settings, format switch; phone editor |
 | F22 | Autosave, edit lease and offline | M3 | F21 | Not started | | |
 | F23 | Manual scene editing | M3 | F21 | Not started | | |
 | F24 | Versions and undo | M3 | F21 | Not started | | |
@@ -64,6 +64,21 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F21 Editor: live preview · 24 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: spec 92, video 27, db 214 (2 new), web 253 (4 new), pipeline 43, integrations 28, config 19.
+- E2E (`e2e/editor.spec.ts`, stub voice and AI, Inngest Dev Server):
+  - desktop: a generated stub video opens in the editor with a signed link for every scene's narration; seeking to two words in scene 2 marks exactly that word in the captions (the "Done when"), and "Scene 2 of N" follows; picking scene 3 in the list jumps to it; Play and Pause work. 16:9, Paper and captions Off save with no new job and the same narration, the player re-lays out at 16:9 (and stays so after a reload), the version stays 1. A new narrator shows "N scenes have no narration" with "Record narration", which records every scene as version 2. Axe clean.
+  - phone: the full-screen editor (no app sidebar, top bar or tab bar), no sideways scroll, axe clean; the scene strip jumps between scenes; the Style sheet switches the format to 1:1; the Scenes sheet lists every scene and picking one closes it.
+  - The full suite with 2 workers: 191 passed; the 3 that failed passed after one fix (`shell.spec` checks the export page for the shell, since the editor is full screen) and a rerun (a 5 s navigation in `create-idea` under load).
+- Screenshots at 1440×900 and 390×844, paused in scene 3, compared with `Editor.png` and `MobileEditor.png`: the header ("Saved · version 1 · Explainer · 1:06 · English", Export and post), the scene list with frame thumbnails and lengths, the dark stage with the 304 px player, the seek bar with scene marks, "0:24 / 1:06", "Scene 3 of 8", the quick settings; on phones the dark full-screen editor, player, play and progress, the thumbnail strip and the bottom bar. Differences are by choice: no Revise panel or Versions button (F24, F25), two phone tabs (Scenes, Style), and a Format control the designs don't show.
+- `pnpm video:stills` not rerun: the captions only gained a `data-spoken` attribute, which changes no pixel.
+- **QA round (24 Nov, 3 findings, all fixed):**
+  - A refused save reset the preview to the page-load look: it now goes back to the last saved state (and keeps refreshed audio links). A save refused because another tab took over shows only the read-only notice, and "Edit here instead" clears the "Not saved" status.
+  - "No narration" squeezed scene titles to a few letters when every scene had it: `SceneRow` takes `badgePlacement="below"`, which the editor uses; the design-system default stays at the end of the row (the gallery still matches its preview).
+  - A video that was never generated opened in the editor with a "Record narration" that can't work: `/projects/[id]` now sends it to its storyboard (or the step it's at), as the library does.
+  - E2E added: before generating, the editor link opens the storyboard; a takeover by another tab keeps Paper at 16:9 with one notice, and "Edit here instead" returns to "Saved". `editor.spec` and `dev-components` pass (41); lint and the web unit tests pass.
 
 ### F20 Narration and generate video · 24 Nov 2026
 
@@ -683,6 +698,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 24 Nov 2026 | Editor (F21, your choices): the Revise panel and Versions button stay out until F25 and F24; phones show Scenes and Style only; a narrator change offers "Record narration" at once (`POST /narration`, no revision counted yet). Also: the editor is full screen (no app sidebar, top bar or tab bar), as the design shows; one layout is picked in the browser at 768 px so there's one Player; the quick settings add Format (9:16, 16:9, 1:1), which the designs don't show, for the `setFormat` scope; scenes without narration show "No narration" (the scene row's own badge) and play silently for their estimated length; the project detail's `audio` carries signed links (1 hour) for the draft's recordings, and `GET /projects/{id}/audio` answers only for recordings the draft or a version uses. |
 | 24 Nov 2026 | Narrators on the free plan (your choice): ElevenLabs' free API can't use Voice Library voices, which include the Indian narrators Ani and Rishika, so the default narrators are ElevenLabs default voices: Matilda (female, "Knowledgeable, Professional", American) and Daniel (male, "Steady Broadcaster", British). Both use the multilingual model, so Hindi works, with a non-Indian accent. The Indian narrators return with a paid plan (Starter, $6 a month); their ids are kept in `.env.example`. The free plan is for development: it's non-commercial and needs attribution. |
 | 24 Nov 2026 | Generate (F20): local MongoDB runs in Docker as replica set `rs0` (`docker compose up -d`), because saving a version is a transaction (your choice); the Homebrew `mongod` is stopped. The thumbnail from the title scene waits for F26's render setup (your choice). Each batch of up to 4 scenes is one Inngest step (scenes in it run at once; a retried batch finds its finished scenes in the cache), and a scene is tried 3 times inside it, not again for errors that won't change (a refused key or text). A partial generation saves a version and counts the video (API §7); retrying failed scenes (`POST /narration`) uses no video and no revision. The stub voice's recordings have their own cache key, so turning the live voice on never replays silent audio. The stub refuses narration containing "Narration fails here", to try a failing scene. Speech text isn't rewritten for pronunciation yet (SDD §8 step 3), so on-screen words and spoken words stay the same for triggers. Errors: `WORKSPACE_BLOCKED` (403) for a blocked workspace; a narration request with nothing to record is `400 VALIDATION_FAILED`. |
 | 20 Nov 2026 | Templates (F19): icons stay the closed list of Lucide icons bundled with `lucide-react` (DB §6), so nothing is fetched or cached at render time; the feature plan's "Iconify or Lucide, resolved and cached" isn't needed for V1. Chart values are written the Indian way: in full up to 99,999, then lakh, crore and lakh crore ("लाख", "करोड़" in Hindi, Latin digits). A unit of "%" follows the number, "₹" (or another currency sign) goes in front, and any other unit follows after a space. A pie shows whole percentages that add up to 100. Bars run across in 9:16 and 1:1 (labels need the width) and stand up in 16:9. A chart's or stat's source reads "Source: …" ("स्रोत: …" in Hindi). The quiz marks the answer with a tick as well as the accent; video themes have no success colour. No design screen shows these templates, so they follow the F18 templates' look. |
@@ -738,6 +754,11 @@ Decisions already made, newest first. Details are in the docs.
 | Prototype batch with real keys (15 topics) | Confirms cost and render time per video | Waiting for keys |
 
 ## Known issues and follow-ups
+
+- **Editor: what waits (F21).**
+  - The Revise chat (F25), Versions (F24), scene editing and "Add a scene" (F23), and autosave states beyond "Saving…/Saved" (F22) join the editor later.
+  - Thumbnails are drawn by the composition (one Remotion thumbnail per scene, in the list and the phone strip); fine for 10 scenes, but worth checking on slow phones.
+  - Fonts in the Player come from the page; a font still loading on first paint can show a fallback for a moment.
 
 - **Generate: what waits (F20).**
   - The narrators are ElevenLabs default voices (Matilda, Daniel) until a paid plan brings back the Indian ones (Ani, Rishika); none has been heard in Hindi yet. The free plan isn't for launch: non-commercial, attribution, 10,000 characters a month.

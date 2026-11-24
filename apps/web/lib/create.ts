@@ -40,8 +40,17 @@ export async function findProject(workspace: Workspace, id: string): Promise<Pro
   }
 }
 
-export function projectDto(project: Project, workspace: Workspace): ProjectDetailDto {
-  return toProjectDetailDto(project, { workspace, stale: projectStale(project) });
+export function projectDto(
+  project: Project,
+  workspace: Workspace,
+  /** Signed narration links, for pages that play the video (the editor). */
+  audio?: Record<string, { url: string; expiresAt: Date }>,
+): ProjectDetailDto {
+  return toProjectDetailDto(project, {
+    workspace,
+    stale: projectStale(project),
+    ...(audio ? { audio } : {}),
+  });
 }
 
 /**

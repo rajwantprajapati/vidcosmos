@@ -5,13 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { buttonClassName, cn, Icon, Logo, UsageMeter } from "@/components/ui";
 import { Avatar } from "./avatar";
-import { isCurrent, newVideo, sidebarItems } from "./nav";
+import { isCurrent, isEditor, newVideo, sidebarItems } from "./nav";
 
 export type ShellUser = { firstName: string; initials: string; plan: string };
 export type ShellUsage = { used: number; max: number; resetsOn: string };
 
 export function AppSidebar({ user, usage }: { user: ShellUser; usage: ShellUsage }) {
   const pathname = usePathname();
+  // The editor is full screen with its own header (Editor design).
+  if (isEditor(pathname)) return null;
   return (
     // The column runs the full page height (its background and border); the sidebar inside it
     // stays in view while the page scrolls.

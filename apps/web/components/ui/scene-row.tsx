@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Badge } from "./badge";
 import { cn } from "./cn";
 
@@ -15,6 +15,13 @@ export type SceneRowProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   edited?: boolean;
   /** Narration failed and needs a retry. */
   failed?: boolean;
+  /** A still of the scene, in place of the plain 34×60 tile. */
+  thumbnail?: ReactNode;
+  /**
+   * Where the badge sits: at the end of the row (the design), or under the title, which keeps
+   * the title readable in a narrow list where many rows have one (the editor).
+   */
+  badgePlacement?: "end" | "below";
 };
 
 export function SceneRow({
@@ -25,9 +32,21 @@ export function SceneRow({
   selected = false,
   edited = false,
   failed = false,
+  thumbnail,
+  badgePlacement = "end",
   className,
   ...rest
 }: SceneRowProps) {
+  const badge = (className?: string) =>
+    failed ? (
+      <Badge tone="danger" icon="alert" className={className}>
+        No narration
+      </Badge>
+    ) : edited ? (
+      <Badge tone="warning" icon="pencil" className={className}>
+        Edited
+      </Badge>
+    ) : null;
   return (
     <button
       type="button"
@@ -49,22 +68,17 @@ export function SceneRow({
       >
         {String(index).padStart(2, "0")}
       </span>
-      <span aria-hidden className="h-[60px] w-[34px] shrink-0 rounded-xs bg-stage" />
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-[14px] font-semibold leading-5">{title}</span>
+      <span aria-hidden className="h-[60px] w-[34px] shrink-0 overflow-hidden rounded-xs bg-stage">
+        {thumbnail}
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col items-start">
+        <span className="max-w-full truncate text-[14px] font-semibold leading-5">{title}</span>
         <span className="text-[12px] leading-[18px] text-ink-muted">
           {[template, duration].filter(Boolean).join(" · ")}
         </span>
+        {badgePlacement === "below" ? badge("mt-1") : null}
       </span>
-      {failed ? (
-        <Badge tone="danger" icon="alert">
-          No narration
-        </Badge>
-      ) : edited ? (
-        <Badge tone="warning" icon="pencil">
-          Edited
-        </Badge>
-      ) : null}
+      {badgePlacement === "end" ? badge() : null}
     </button>
   );
 }

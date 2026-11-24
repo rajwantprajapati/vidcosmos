@@ -113,6 +113,8 @@ export function Captions({
                 <Fragment key={j}>
                   {j > 0 ? " " : null}
                   <span
+                    // Marks the word being said, for the editor's tests (F21).
+                    data-spoken={speaking || undefined}
                     style={{
                       // Padding the highlight without moving the words.
                       padding: "0 6px",
