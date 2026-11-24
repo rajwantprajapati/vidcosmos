@@ -35,6 +35,16 @@ export const eventSchemas = {
    * the script and the draft's rev it was asked over from the job's input.
    */
   "video/storyboard.requested": jobEventData.extend({ projectId: id }),
+  /**
+   * Record every scene's narration, time the visuals and save a version (API §7,
+   * `generateVideo`). Ids only: the function snapshots the draft.
+   */
+  "video/generate.requested": jobEventData.extend({ projectId: id }),
+  /**
+   * Record narration again for some scenes (API §7, `retryScene`). Ids only: the scenes are
+   * in the job's input.
+   */
+  "video/scene.retry.requested": jobEventData.extend({ projectId: id }),
   /** Stops the job's run at the next step boundary (API §11 "Cancel"). */
   "job/cancel.requested": z.object({ workspaceId: id, jobId: id }),
 } as const;

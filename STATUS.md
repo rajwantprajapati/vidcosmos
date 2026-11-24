@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 23 Nov 2026 · Current focus: **F19 The other 8 templates** (built, waiting for review)
+Last updated: 24 Nov 2026 · Current focus: **F20 Narration and generate video** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -13,12 +13,12 @@ This file is the single place that says where the build stands. Update it at the
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
 | M2 Create flow | 7 | 7 |
-| M3 Video | 2 | 7 |
+| M3 Video | 3 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **19** | **36** |
+| **Total** | **20** | **36** |
 
 ## Features
 
@@ -43,7 +43,7 @@ This file is the single place that says where the build stands. Update it at the
 | F17 | Storyboard | M2 | F15, F16 | Done | 17 Nov 2026 | Step 3 at `/projects/[id]/storyboard`; `POST /projects/{id}/storyboard`; `buildStoryboard`; draft PUT takes a full `VideoSpec` |
 | F18 | Remotion package and first 4 templates | M3 | F16 | Done | 18 Nov 2026 | `@vidcosmos/video`: `Explainer`, 4 templates, video themes, captions; `pnpm video:studio`, `pnpm video:stills` |
 | F19 | The other 8 templates | M3 | F18 | Done | 23 Nov 2026 | All 12 templates; lakh and crore on charts; 351 approved stills |
-| F20 | Narration and generate video | M3 | F12, F17, F18 | Not started | | |
+| F20 | Narration and generate video | M3 | F12, F17, F18 | Done | 24 Nov 2026 | Generate, retry scenes, Generating screen; live run on ElevenLabs' free plan |
 | F21 | Editor: live preview | M3 | F20 | Not started | | |
 | F22 | Autosave, edit lease and offline | M3 | F21 | Not started | | |
 | F23 | Manual scene editing | M3 | F21 | Not started | | |
@@ -64,6 +64,28 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F20 Narration and generate video · 24 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: spec 92, video 27, db 211 (10 new), web 248 (11 new), pipeline 43 (5 new), integrations 28 (7 new), config 19.
+- `@inngest/test` (`inngest/functions/narration-jobs.test.ts`): the happy path (every scene recorded, timed and saved; stages in order; progress only goes up), one scene failing three times while the others finish (`partial`, the version saved without it), an error that won't change tried once, cached scenes `skipped` at no cost, nothing recorded (`failed`, nothing saved), a cancel, a blocked narration, a retry of chosen scenes and of scenes without narration, and the stuck-job cron failing quiet jobs.
+- Database (`packages/db/src/generate.test.ts`, MongoDB replica set in memory): 12 reservations at once against 3 left give exactly 3; the IST month rollover; a blocked workspace; the request checks in API order; a refused reservation leaves no job or claim; the save writes version 1, the draft with timing, `countedAt` and the video's commit together, and a repeated save finds the same version; an edit made meanwhile is kept with the recordings that still match; a failed generation gives its video back once and returns the project to `draft`.
+- E2E (`e2e/create-generate.spec.ts`, stub voice and AI, Inngest Dev Server, Docker MongoDB replica set): Generate reaches the editor on desktop and phone with version 1, every scene timed and one video counted; a scene the stub voice refuses leaves the video partial ("Scene 2 · Failed", axe clean), and "Retry this scene" after fixing its narration saves version 2 without counting another video. `create-storyboard` and `shell` updated for the real step 4. The full suite: 170 passed, and the 22 that timed out on navigation while the machine was loaded (load average 14-19, disk 95% full) all passed when run again with 2 workers.
+- Screenshots of the Generating screen mid-recording (a job set to "4 of 8 scenes" in the database) at 1440×900 and 390×844, compared with `Generating.png`: the header and stepper, the phone-shaped scene preview, the progress bar, the stage list with each scene's status, and the buttons match. On phones (no design) the scene statuses and the voice line now use the full width.
+- Live run (24 Nov, `PROVIDERS_TTS=live`, ElevenLabs free plan, the rest stub): a 30-second English video "How UPI moves your money" with the narrator Matilda (`eleven_multilingual_v2`) through the app: sign up, write the script, build the storyboard, Generate.
+  - The job succeeded in 3.2 s: 4 scenes recorded at once, all `done`, version 1 saved, the project `ready` and counted.
+  - Every scene's timing is `provider`, with as many timed words as the narration has (22, 30, 5, 19), so every trigger finds its words; the video is 25.7 s.
+  - 4 MP3 assets; each one's size matches its length at 128 kbit/s (107,458 bytes = 6,716 ms).
+  - 4 usage events, 363 characters in all, which is exactly what the account shows as used (363 of 10,000). Priced at the table's $0.10 per 1,000 characters: $0.036; the free plan charges nothing.
+  - Not checked by ear: the Player arrives with F21.
+- **QA round (24 Nov, stub voice; 3 findings, all fixed):**
+  - A stalled Inngest (accepting connections, not answering) held `POST /generate` open for minutes: every job route's start event now gives up after 4 s (`sendTimeoutMs`) and the job waits queued for `resendIfWaiting`, as when Inngest is down. Test added (`lib/jobs.test.ts`).
+  - Generate on an unchanged video saved an identical version: a generation whose spec equals the current version's now keeps that version (`created: false`) and saves nothing. Summaries say what happened: "First version", "Generated again", "Scenes recorded again". Test added.
+  - The Generating screen said "Indian female voice" for the default narrators: it now says "Female voice · English" until the Indian voices return.
+  - Retest: all three pass. Two more on the Generating screen, fixed: a finished run's last stage named the next version ("Saving version 3" after saving 2); it now reads "Saved version N" from the job's result (the e2e checks "Saved version 1"). On phones a partial run now offers "Open the editor" under "Retry this scene", as desktop does.
+  - Also: `.env.example` had the real ElevenLabs key and `PROVIDERS_TTS=live` pasted in (never committed); both are placeholders again and the key is in no tracked file.
+  - QA passed the request checks in API order, the happy path, regenerating a counted video, partial and retry, an edit during a run, a voice change re-recording every scene, the monthly limit under parallel requests, and a cancel while queued. The Generating screen's rebuild loop QA saw in the browser didn't reproduce here (no file under `apps/web` changed in 20 s); its cause is unknown.
+  - After the fixes: `pnpm typecheck` and `pnpm lint` pass; db 212 and web 249 unit tests pass; `create-generate` e2e passes (3, with 2 workers; the step after Generate now allows 30 s, as the machine's load reached 27).
 
 ### F19 The other 8 templates · 23 Nov 2026
 
@@ -661,6 +683,8 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 24 Nov 2026 | Narrators on the free plan (your choice): ElevenLabs' free API can't use Voice Library voices, which include the Indian narrators Ani and Rishika, so the default narrators are ElevenLabs default voices: Matilda (female, "Knowledgeable, Professional", American) and Daniel (male, "Steady Broadcaster", British). Both use the multilingual model, so Hindi works, with a non-Indian accent. The Indian narrators return with a paid plan (Starter, $6 a month); their ids are kept in `.env.example`. The free plan is for development: it's non-commercial and needs attribution. |
+| 24 Nov 2026 | Generate (F20): local MongoDB runs in Docker as replica set `rs0` (`docker compose up -d`), because saving a version is a transaction (your choice); the Homebrew `mongod` is stopped. The thumbnail from the title scene waits for F26's render setup (your choice). Each batch of up to 4 scenes is one Inngest step (scenes in it run at once; a retried batch finds its finished scenes in the cache), and a scene is tried 3 times inside it, not again for errors that won't change (a refused key or text). A partial generation saves a version and counts the video (API §7); retrying failed scenes (`POST /narration`) uses no video and no revision. The stub voice's recordings have their own cache key, so turning the live voice on never replays silent audio. The stub refuses narration containing "Narration fails here", to try a failing scene. Speech text isn't rewritten for pronunciation yet (SDD §8 step 3), so on-screen words and spoken words stay the same for triggers. Errors: `WORKSPACE_BLOCKED` (403) for a blocked workspace; a narration request with nothing to record is `400 VALIDATION_FAILED`. |
 | 20 Nov 2026 | Templates (F19): icons stay the closed list of Lucide icons bundled with `lucide-react` (DB §6), so nothing is fetched or cached at render time; the feature plan's "Iconify or Lucide, resolved and cached" isn't needed for V1. Chart values are written the Indian way: in full up to 99,999, then lakh, crore and lakh crore ("लाख", "करोड़" in Hindi, Latin digits). A unit of "%" follows the number, "₹" (or another currency sign) goes in front, and any other unit follows after a space. A pie shows whole percentages that add up to 100. Bars run across in 9:16 and 1:1 (labels need the width) and stand up in 16:9. A chart's or stat's source reads "Source: …" ("स्रोत: …" in Hindi). The quiz marks the answer with a tick as well as the accent; video themes have no success colour. No design screen shows these templates, so they follow the F18 templates' look. |
 | 18 Nov 2026 | Video rendering (F18): the video themes use the design system's five colours per palette (`video-*` tokens), not the prototype's 11 hex values, since the design wins and colour literals aren't allowed. Other shades are mixed from those five, a comparison's right side is outlined rather than given a second accent, and paper (the light theme) puts white on its accent. The spoken word in captions uses the theme's highlight with dark text. Headings use Plus Jakarta Sans (the design rule), not the prototype's Inter 800. A scene's content box sits above a fixed captions band, so captions never cover a scene. A linear flowchart runs top to bottom in 1:1 as in 9:16 (DB §6 names only 9:16 and 16:9); a cycle is an ellipse. Element times are worked out when playing (SDD §7), in `@vidcosmos/spec/video`; stored `atMs` fields are ignored. Approved stills are quarter-size JPEGs committed in `packages/video/stills/approved` (2.4 MB: 135 of the 360 cases, every case in midnight and the other palettes only for the long English text; all 360 are still layout-checked), and CI doesn't render them (your choice); run `pnpm video:stills` before merging template changes. |
 | 18 Nov 2026 | Storyboard checks (F17 QA): a draft save is moderated like a script edit, checking only what it adds. The settings own the spec's language, narrator, voice id, format, theme and music; a draft save keeps only the client's scenes and title. Before narration is recorded, the length is estimated from the words, and an estimate over 110 s (100 s plus a 10 s margin for the estimate) or under 20 s blocks Generate (your choice). A scene over 15 s is flagged on its card but doesn't block, since splitting scenes comes with F23. |
@@ -715,6 +739,18 @@ Decisions already made, newest first. Details are in the docs.
 
 ## Known issues and follow-ups
 
+- **Generate: what waits (F20).**
+  - The narrators are ElevenLabs default voices (Matilda, Daniel) until a paid plan brings back the Indian ones (Ani, Rishika); none has been heard in Hindi yet. The free plan isn't for launch: non-commercial, attribution, 10,000 characters a month.
+  - ElevenLabs lists Multilingual v2 at $0.08 per 1,000 characters on every plan; the price table (`narrationCost`) uses the SDD's estimate of $0.10, so usage events overstate narration by 25% until it's updated.
+  - The live R2 test (`packages/integrations/src/storage/r2.test.ts`, run only with R2 keys in `.env`) failed twice during `pnpm test` while every package tested at once, and passed both times on its own: a timeout against Cloudflare under load, not an F20 change.
+  - With `PROVIDERS_TTS=live` the e2e tests use real characters, and the failing-scene test fails (only the stub refuses its phrase): run them with the stub voice.
+  - Speech text isn't rewritten for pronunciation (SDD §8 step 3: "2x" → "two times", ₹ amounts); ElevenLabs reads the narration as written.
+  - ElevenLabs calls have no account-wide concurrency limit yet (SDD §8 "Rate limits"); each run records 4 scenes at a time.
+  - The editor's Player and `GET /projects/{id}/audio` (playback URLs) come with F21; until then the editor is a placeholder that Generate opens.
+  - Re-recording after narration or voice edits uses a revision (API §7); counting it arrives with the editor's edits (F22). Retrying failed scenes uses none.
+  - "We'll let you know when it's ready" needs notifications (F31); the thumbnail waits for F26.
+  - The full e2e suite with the default workers timed out on navigation in 22 tests while this machine was loaded (load 14-19, disk 95% full); they pass with `--workers=2`.
+
 - **Video: what waits (F18).**
   - CI doesn't render the stills (your choice): run `pnpm video:stills` before merging a template change, and `--approve` once the new look is right. The first run downloads Remotion's headless Chrome (about 140 MB).
   - Text is fitted from an estimate of its width (`fitBox`), not measured; the layout check catches what the estimate gets wrong, but only in the still cases. Real content is checked in F21's preview.
@@ -727,7 +763,7 @@ Decisions already made, newest first. Details are in the docs.
 - **Step 3: what waits (F17).**
   - Video 6afc8410a97835d9464138a9 (QA account) has a blocked sentence in its script, saved before draft saves were moderated. Remove the sentence in step 2, or delete the video.
   - Adding, removing, duplicating and reordering scenes, and adding or removing elements within a scene, come with F23. A scene over 15 s isn't offered a split yet (PRD edge case).
-  - Generate opens the Generating placeholder; recording narration and the usage reservation come with F20.
+  - Generate starts the generation (since F20).
   - The cards' preview is the headline and theme colours, not a rendered frame (F18-F21).
   - Changing the narration in step 3 rewrites the script as one paragraph a scene, so the script's own paragraph breaks are lost.
   - Text in an icon picker is the icon's name; there's no search or preview of the icons yet (PRD FR-4.4).
@@ -764,7 +800,7 @@ Decisions already made, newest first. Details are in the docs.
   - In the Cloudflare dashboard, set the bucket's CORS: GET and HEAD with Range from the app's origins.
   - Add the 120-day lifecycle rule on `exports/` (SDD §12).
   - Project thumbnails get signed URLs once something writes `thumbnailKey` (F26).
-  - The narration step uses `findAsset`, `recordAsset` and `touchAssets` (F20).
+  - The narration step uses `findAsset`, `recordAsset` and `touchAssets` (since F20).
   - The cleanup crons are F35.
   - The stub keeps files in `apps/web/.storage/` (git-ignored); delete the folder to clear them.
   - Stub responses have no `Content-Length`. Next.js streams every route-handler response and drops it, in dev and with `next start` (checked with plain string and byte bodies). `Content-Range` still carries the full size, so audio seeks. R2, which serves production files directly, sends `Content-Length`.
@@ -777,14 +813,13 @@ Decisions already made, newest first. Details are in the docs.
   - The stuck-job sweeper is F35. Until then, a job whose start event never reached Inngest runs as soon as someone reads the job (polling, the active list, a replay) once Inngest is back. If nobody does, it waits.
   - Cancelling `publish` once uploading is refused only from F28.
   - `DELETE /projects/{id}/permanent` and cancel-on-delete still need doing.
-  - `/dev/jobs` lists only running jobs, so after a reload a failed job and its Try again are gone. F20's generating screen must show the project's latest job when it failed or was cancelled, with Try again (found in QA of F11).
+  - `/dev/jobs` lists only running jobs, so after a reload a failed job and its Try again are gone. The Generating screen (F20) shows the project's latest generation when it failed or was cancelled, with Try again (found in QA of F11).
 - **Run the Inngest Dev Server for jobs:** `pnpm inngest` (dashboard on http://127.0.0.1:8288, this machine only) next to `pnpm dev`. Without it, jobs stay queued. `pnpm test:e2e` starts it.
 
 - **TypeScript 6.0, not 7.** `typescript-eslint` 8.72 supports TypeScript `<6.1`, so the repo pins `typescript@6.0.3`. Move to 7 when typescript-eslint supports it.
 - **ESLint 9.** ESLint 9.39 is marked deprecated in favour of 10; kept on 9 because `eslint-config-next` 16 pulls in React plugins that are tested on 9. Revisit with the next Next.js upgrade.
 - **First CI run not confirmed.** `main` is pushed to `github.com/rajwantprajapati/vidcosmos`, but no Actions run had appeared when last checked, and the GitHub CLI is not signed in on this machine. Check the Actions tab, and run `gh auth login` so pull requests can be opened from here.
 - **Prototype folder is empty.** `/Users/rajwant/Developer/namaste-ai/season-2/vidcosmos-prototype` has no files, but F13, F16, F18 and F20 are meant to port from it. Restore it before F13.
-- **Local MongoDB is standalone.** `.env` points at the Homebrew `mongod` 8.2.2 on port 27017, which is not a replica set, so the transactions in DB §11 (first needed in F20/F24) will fail there. Before then, stop it and use `docker compose up -d` (replica set `rs0`), or turn the Homebrew one into a single-node replica set. Unit tests are not affected: they use `mongodb-memory-server`.
 - **Root `.env` changes need a restart.** Next.js reloads only `apps/web/.env*` while `pnpm dev` runs; after editing the root `.env`, restart the dev server.
 - **Claude.ai originals of the docs.** SDD §18's variable table was edited here (provider overrides, token keys). The editable original on claude.ai needs the same change.
 - **Fonts are not preloaded.** They load through `@font-face` in `tokens.css`, so the first paint may use the fallback for a moment. Consider `next/font/local` or preload links in F36 (performance).
@@ -818,6 +853,6 @@ Decisions already made, newest first. Details are in the docs.
 - **No designs for the card menu, rename dialog, Trash view or toasts.** Built from the design-system components; check them with the designer.
 - **If MongoDB stops, restart `pnpm dev` too.** When the local MongoDB stopped (the disk filled up on 12 Nov), the dev server's cached client closed (`MongoTopologyClosedError`) and kept failing after MongoDB came back, until `pnpm dev` was restarted. Local MongoDB isn't a Homebrew service; `--fork` doesn't work on macOS, so start it with `nohup mongod --config /opt/homebrew/etc/mongod.conf > /dev/null 2>&1 &`. Production (Atlas) reconnects on its own; a reconnecting client for development can wait.
 - **Turborepo cache: fixed on 12 Nov.** Each `pnpm build` used to save about 1.2 GB to `.turbo/cache`, because the build outputs in `turbo.json` included `.next/dev`, the running dev server's folder (Next.js 16). That filled the disk. `.next/dev` is now excluded, so a build saves about 7 MB and a cache restore no longer writes old files into the running dev server's folder. The cache can still be deleted at any time.
-- **Usage: write side comes with generation.** Reserving, committing and releasing videos, the conditional month rollover in the database, the daily export counter and the stuck-job release arrive with F20 (and F26 for exports). Until then the counters only change by hand (as the usage e2e tests do).
+- **Usage: what waits.** Videos are reserved, committed and released with generation (F20), and the stuck-job cron gives back what dead jobs held. The daily export counter arrives with F26.
 - **Settings shows only Usage and Account.** The rest of the Settings design (account form, video defaults, Instagram, notifications, delete) is F30.
 - **`PATCH /me` is F30.** API §4 lists it (name, time zone, UI language); it returns 405 until the Settings account form arrives.

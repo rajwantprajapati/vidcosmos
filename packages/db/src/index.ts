@@ -21,6 +21,17 @@ export {
   type IdempotencyErrorCode,
   withIdempotency,
 } from "./idempotency.ts";
+export {
+  checkGenerateRequest,
+  type GenerateJobInput,
+  type GenerateSnapshot,
+  type GeneratedSave,
+  readGenerateSnapshot,
+  saveGeneratedVersion,
+  startGenerate,
+  startNarration,
+  touchSpecAudio,
+} from "./generate.ts";
 export { readIdeaInputs, saveAngles } from "./ideas.ts";
 export {
   checkRewriteRequest,
@@ -50,6 +61,8 @@ export {
   cancelRequested,
   claimStartResend,
   createJob,
+  discardJob,
+  findStuckJobs,
   finishJob,
   getJob,
   JobError,
@@ -59,15 +72,18 @@ export {
   type JobRef,
   jobRetentionDays,
   listJobs,
+  markJobScene,
   type NewJob,
   parseJobId,
   releaseJobGeneration,
   requestCancel,
   reserveGeneration,
   retryJob,
+  setJobScenes,
   returnGeneration,
   startJob,
   startResendMs,
+  stuckAfterMs,
 } from "./jobs.ts";
 export {
   activeJobs,
@@ -111,7 +127,7 @@ export {
   WorkspaceScopeError,
 } from "./scoped.ts";
 export { toMongoJsonSchema, validatorFor } from "./validators.ts";
-export { activeJobCount, readUsage } from "./usage.ts";
+export { activeJobCount, readUsage, releaseVideo, reserveVideo } from "./usage.ts";
 export {
   type AppUserFields,
   needsOnboarding,

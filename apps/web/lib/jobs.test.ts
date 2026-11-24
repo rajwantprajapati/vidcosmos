@@ -1,5 +1,6 @@
 // F11 QA fix: a job whose start event didn't reach Inngest gets it again when it's read or
-// its request replayed, so it runs once Inngest is back, instead of holding its video.
+// its request replayed, so it runs once Inngest is back, instead of holding its video. F20 QA:
+// a send that gets no answer gives up after a few seconds.
 import type * as DbModule from "@vidcosmos/db";
 import type { Job } from "@vidcosmos/spec/collections";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +16,7 @@ vi.mock("@vidcosmos/db", () => ({
   getJob: (...args: unknown[]) => getJob(...args),
 }));
 
-const { resendIfWaiting, sendStart, startedResponse } = await import("./jobs");
+const { resendIfWaiting, sendStart, sendTimeoutMs, startedResponse } = await import("./jobs");
 const { ObjectId } = await vi.importActual<typeof DbModule>("@vidcosmos/db");
 
 const queued = (extra: Partial<Job> = {}): Job => ({
@@ -45,6 +46,18 @@ describe("start events", () => {
   it("keeps the job queued when Inngest is unreachable", async () => {
     send.mockRejectedValueOnce(new Error("connect ECONNREFUSED 127.0.0.1:8288"));
     expect(await sendStart(queued())).toBe(false);
+  });
+
+  it("gives up on an Inngest that doesn't answer, so the request returns (F20 QA)", async () => {
+    vi.useFakeTimers();
+    try {
+      send.mockReturnValueOnce(new Promise(() => {}));
+      const started = sendStart(queued());
+      await vi.advanceTimersByTimeAsync(sendTimeoutMs);
+      expect(await started).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("re-sends with the same event id for a waiting job, then the run can start", async () => {

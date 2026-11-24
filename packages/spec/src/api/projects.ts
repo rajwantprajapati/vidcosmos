@@ -214,6 +214,20 @@ export type SaveDraftInput = z.infer<typeof saveDraftInput>;
 export const requestStoryboardInput = z.object({ overwrite: z.boolean().optional() }).default({});
 export type RequestStoryboardInput = z.infer<typeof requestStoryboardInput>;
 
+/** `POST /projects/{id}/generate` (API §7): over the draft rev the person sees. */
+export const generateInput = z.object({ baseRev: z.int().min(0) });
+export type GenerateInput = z.infer<typeof generateInput>;
+
+/**
+ * `POST /projects/{id}/narration` (API §7): record some scenes again; by default every scene
+ * without a current recording.
+ */
+export const updateNarrationInput = z.object({
+  baseRev: z.int().min(0),
+  sceneIds: z.array(z.string().min(1).max(40)).min(1).max(10).optional(),
+});
+export type UpdateNarrationInput = z.infer<typeof updateNarrationInput>;
+
 export const takeLeaseInput = z.object({ takeover: z.boolean().optional() }).default({});
 export const releaseLeaseInput = z.object({ editorId: z.string().min(1).max(100) });
 

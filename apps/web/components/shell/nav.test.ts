@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialsOf, isCurrent, library, newVideo, posts, settings } from "./nav";
+import { initialsOf, isCreateStep, isCurrent, library, newVideo, posts, settings } from "./nav";
 
 describe("isCurrent", () => {
   it("marks a section on its page and the pages under it", () => {
@@ -19,6 +19,18 @@ describe("isCurrent", () => {
     expect(isCurrent(library, "/projects/not-an-id")).toBe(false);
     expect(isCurrent(newVideo, "/projects/new/idea")).toBe(false);
     expect(isCurrent(library, "/projects/new/idea")).toBe(false);
+  });
+});
+
+describe("isCreateStep", () => {
+  it("covers the four create steps, Generating included, and not the editor", () => {
+    const id = "6730a1b2c3d4e5f6a7b8c9d0";
+    for (const step of ["idea", "script", "storyboard", "generating"]) {
+      expect(isCreateStep(`/projects/${id}/${step}`), step).toBe(true);
+    }
+    expect(isCreateStep("/projects/new")).toBe(true);
+    expect(isCreateStep(`/projects/${id}`)).toBe(false);
+    expect(isCreateStep(`/projects/${id}/export`)).toBe(false);
   });
 });
 
