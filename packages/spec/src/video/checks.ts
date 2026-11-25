@@ -8,10 +8,11 @@
 // - on generation, the scenes' narration reproduces the approved script (at least 95% of
 //   its words, at most 5% extra).
 // A scene whose timing no longer matches its narration and voice loses it
-// (`reconcileTiming`), so it is recorded again.
+// (`reconcileTiming`), so it is recorded again; a scene without one takes a recording already
+// made of the same words in the same voice (`reuseRecordings`), as a duplicated scene does.
 import { narrationHash } from "./hash.ts";
 import { estimatedVideoMs } from "./scenes.ts";
-import type { VideoSpec } from "./schema.ts";
+import type { SceneTiming, VideoSpec } from "./schema.ts";
 import { videoTiming } from "./schema.ts";
 import { triggersOf } from "./templates.ts";
 import { findSequence, orderedCoverage, tokenize } from "./text.ts";
@@ -189,4 +190,29 @@ export function reconcileTiming(spec: VideoSpec): { spec: VideoSpec; cleared: st
     return { ...scene, timing: null };
   });
   return { spec: { ...spec, scenes }, cleared };
+}
+
+/**
+ * Gives each scene without timing a recording already made of its words in the spec's voice
+ * and language, from another scene of `spec` or of `from` (the stored draft, on the server),
+ * so a duplicated scene, or narration put back as it was, needs no new recording. The same
+ * spec back when nothing changes.
+ */
+export function reuseRecordings(spec: VideoSpec, from: VideoSpec[] = []): VideoSpec {
+  const made = new Map<string, SceneTiming>();
+  for (const source of [spec, ...from]) {
+    for (const scene of source.scenes) {
+      if (scene.timing) made.set(scene.timing.narrationHash, scene.timing);
+    }
+  }
+  if (made.size === 0) return spec;
+  let reused = false;
+  const scenes = spec.scenes.map((scene) => {
+    if (scene.timing) return scene;
+    const timing = made.get(narrationHash(scene.narration, spec.language, spec.voice));
+    if (!timing) return scene;
+    reused = true;
+    return { ...scene, timing };
+  });
+  return reused ? { ...spec, scenes } : spec;
 }

@@ -24,6 +24,7 @@ export {
   withIdempotency,
 } from "./idempotency.ts";
 export {
+  changedSinceVersion,
   checkGenerateRequest,
   type GenerateJobInput,
   type GenerateSnapshot,

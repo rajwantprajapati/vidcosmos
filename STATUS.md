@@ -1,6 +1,6 @@
 # Vidcosmos — Development Status
 
-Last updated: 24 Nov 2026 · Current focus: **F22 Autosave, edit lease and offline** (built, waiting for review)
+Last updated: 24 Nov 2026 · Current focus: **F23 Manual scene editing** (built, waiting for review)
 
 This file is the single place that says where the build stands. Update it at the end of every feature, in the same commit. The plan for each feature, with its checks, is in [`docs/05-feature-plan.md`](docs/05-feature-plan.md).
 
@@ -13,12 +13,12 @@ This file is the single place that says where the build stands. Update it at the
 | M0 Foundations | 7 | 7 |
 | M1 Projects and library | 3 | 3 |
 | M2 Create flow | 7 | 7 |
-| M3 Video | 5 | 7 |
+| M3 Video | 6 | 7 |
 | M4 Revisions | 0 | 1 |
 | M5 Export and publish | 0 | 4 |
 | M6 Account, home and admin | 0 | 4 |
 | M7 Launch readiness | 0 | 3 |
-| **Total** | **22** | **36** |
+| **Total** | **23** | **36** |
 
 ## Features
 
@@ -46,7 +46,7 @@ This file is the single place that says where the build stands. Update it at the
 | F20 | Narration and generate video | M3 | F12, F17, F18 | Done | 24 Nov 2026 | Generate, retry scenes, Generating screen; live run on ElevenLabs' free plan |
 | F21 | Editor: live preview | M3 | F20 | Done | 24 Nov 2026 | Remotion Player with signed audio; scenes, strip, quick settings, format switch; phone editor |
 | F22 | Autosave, edit lease and offline | M3 | F21 | Done | 24 Nov 2026 | Offline queue (IndexedDB), conflict recovery, "Take over editing", editor settings queued |
-| F23 | Manual scene editing | M3 | F21 | Not started | | |
+| F23 | Manual scene editing | M3 | F21 | Done | 24 Nov 2026 | Edit, add, duplicate, move and remove scenes; "Update narration" re-records only changed scenes |
 | F24 | Versions and undo | M3 | F21 | Not started | | |
 | F25 | Chat revisions | M4 | F23, F24 | Not started | | |
 | F26 | Export and downloads | M5 | F21 | Not started | | |
@@ -64,6 +64,21 @@ This file is the single place that says where the build stands. Update it at the
 ## Verified
 
 For each finished feature, list how it was checked: commands run, tests added, screenshots compared, live runs. Newest first.
+
+### F23 Manual scene editing · 24 Nov 2026
+
+- `pnpm typecheck`, `pnpm lint` and `pnpm test` pass. Unit tests: spec 93, video 27, db 219 (5 new: an edited scene uses a revision and gets it back when the job fails, retrying a failed scene uses none, the limit, what counts as changed, a duplicate takes the stored recording), web 258, pipeline 43, integrations 28, config 19.
+- E2E (`e2e/scene-editing.spec.ts`, desktop, stub voice and AI):
+  - editing scene 2's narration in the edit panel marks it ("One scene needs narration recorded"); "Update narration" records version 2 in which only scene 2 has a new recording, every other scene keeping its asset (the "Done when"), and uses one revision;
+  - moving scene 3 up plays it second at once ("Scene 2 of N"), and scene 1 changed to a key term shows "Key term" in the list and the preview at once; both saved;
+  - "Add a scene" opens the new scene in the edit panel; Duplicate puts a copy (new id) after the scene; Remove asks first and removes it.
+  - `create-storyboard` checks the rebuild dialog now names the scenes changed by hand; `editor.spec` uses the new wording. The full suite with 2 workers: 203 passed; the one failure (the editor test, see below) passes after its fix, with `editor.spec`, `scene-editing` and `autosave.spec` (12 passed).
+- Screenshots at 1440×900 and 390×844 compared with `Editor.png`: the scene list keeps the design's rows and "Add a scene", with a "More" button on each row (its menu: Edit scene, Duplicate, Move up, Move down, Remove); the edit panel is F17's dialog; on phones the Scenes sheet has the same rows and button.
+- Manual QA (24 Nov) found two problems, both fixed:
+  - nothing showed why "Update narration" was refused (409 "Fix the marked scenes first."): a scene whose narration no longer said its triggers was marked only inside the edit panel, a too-short video nowhere, and the error stayed after the fix. Scene rows now show "Needs a fix", a banner names the first issue (scene or whole video) with "Edit scene N", "Update narration" waits until it's fixed, and the refusal clears once nothing needs a fix;
+  - a duplicated scene had no recording, so "Update narration" used a revision for words already recorded. A scene without a recording now takes one of the same words in the same voice (`reuseRecordings` in `@vidcosmos/spec/video`, in the editor and in the server's draft save, from the stored draft only), and a revision counts only for words none of the version's scenes recorded.
+  - E2E: the duplicate test checks the copy has the original's recording; a new test marks a scene whose words were replaced, holds "Update narration", and clears once fixed. Full suite with 2 workers: 205 passed.
+- Found while testing: a settings change made the theme look like an unsaved draft edit, so autosave also sent a draft save (refused once the lease was lost, leaving "Not saved" after taking over). Settings changes are now taken as saved for autosave (`adopt`), scene edits are saved first, and "Take over editing" resets the save status.
 
 ### F22 Autosave, edit lease and offline · 24 Nov 2026
 
@@ -711,6 +726,7 @@ Decisions already made, newest first. Details are in the docs.
 
 | Date | Decision |
 | --- | --- |
+| 24 Nov 2026 | Scene editing (F23): scenes are edited in the editor with F17's "Edit scene" panel (the designs show no editing controls), opened from a "More" menu on each scene row that also duplicates, moves (Alt+Up/Down on the button too) and removes (asked first); "Add a scene" adds a title scene ("Here is a new scene.") after the one playing and opens it. An edit's new narration loses its recording at once (as the server does), so the scene plays silently, marked "No narration", until "Update narration" records it. Recording again counts a revision when any requested scene's words, in the current voice, are none of the current version's recordings; a failed scene retried, or a duplicate of a recorded scene, counts none (API §7), and a scene without a recording takes an existing recording of the same words and voice; the revision is given back if the job fails. The rebuild dialog names the scenes changed by hand. |
 | 24 Nov 2026 | Autosave (F22): offline, the editor's quick settings are kept and sent on reconnecting like draft edits (your choice). Unsaved drafts and settings are kept in IndexedDB per video (memory when it's blocked) and resent with their old `rev`, on reconnecting, every 10 s while offline, and on the next visit (a kept draft over an older rev is offered back as a conflict). A `409` never discards anything: the page shows the server's version and a banner offers this tab's draft ("Use my changes", which saves it over, or "Discard them"); before, the storyboard dropped it. Closing a tab sends a keep-alive `PUT` rather than SDD §4's `sendBeacon`, which can't send `PUT` or `X-Editor-Id`. The read-only notice's button says "Take over editing" (feature plan, SDD §4) everywhere, not API §5's "Edit here instead". |
 | 24 Nov 2026 | Editor (F21, your choices): the Revise panel and Versions button stay out until F25 and F24; phones show Scenes and Style only; a narrator change offers "Record narration" at once (`POST /narration`, no revision counted yet). Also: the editor is full screen (no app sidebar, top bar or tab bar), as the design shows; one layout is picked in the browser at 768 px so there's one Player; the quick settings add Format (9:16, 16:9, 1:1), which the designs don't show, for the `setFormat` scope; scenes without narration show "No narration" (the scene row's own badge) and play silently for their estimated length; the project detail's `audio` carries signed links (1 hour) for the draft's recordings, and `GET /projects/{id}/audio` answers only for recordings the draft or a version uses. |
 | 24 Nov 2026 | Narrators on the free plan (your choice): ElevenLabs' free API can't use Voice Library voices, which include the Indian narrators Ani and Rishika, so the default narrators are ElevenLabs default voices: Matilda (female, "Knowledgeable, Professional", American) and Daniel (male, "Steady Broadcaster", British). Both use the multilingual model, so Hindi works, with a non-Indian accent. The Indian narrators return with a paid plan (Starter, $6 a month); their ids are kept in `.env.example`. The free plan is for development: it's non-commercial and needs attribution. |
@@ -770,7 +786,7 @@ Decisions already made, newest first. Details are in the docs.
 ## Known issues and follow-ups
 
 - **Autosave: what waits (F22).**
-  - The script step (F15) still saves on its own (no offline queue); F23's scene editing in the editor will use `useDraftAutosave`.
+  - The script step (F15) still saves on its own (no offline queue); the storyboard and the editor use `useDraftAutosave`.
   - A keep-alive request on closing the tab carries at most 64 KB; a bigger draft relies on the copy kept in the browser for the next visit.
 
 - **Editor: what waits (F21).**

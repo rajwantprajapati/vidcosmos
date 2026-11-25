@@ -15,15 +15,33 @@
 // The Revise chat (F25), Versions (F24) and scene editing (F23) join this screen later.
 import type { PlayerRef } from "@remotion/player";
 import type { JobDto, ProjectDetailDto } from "@vidcosmos/spec/api";
-import { sceneHeadline, templateLabels, type VideoSpec } from "@vidcosmos/spec/video";
+import {
+  applyOperations,
+  newSceneId,
+  reconcileTiming,
+  reuseRecordings,
+  type Scene,
+  sceneHeadline,
+  specIssues,
+  SpecOperationError,
+  type SpecOperation,
+  templateLabels,
+  type VideoSpec,
+} from "@vidcosmos/spec/video";
 import { ChevronLeft, Palette, Rows3 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { issuesByScene, issueText } from "@/components/create/issue-text";
 import { Modal } from "@/components/create/modal";
 import { Notice } from "@/components/create/notice";
-import { offlineRetryMs } from "@/components/create/use-draft-autosave";
+import { SceneEditor } from "@/components/create/scene-editor";
+import {
+  autosaveLabel,
+  offlineRetryMs,
+  useDraftAutosave,
+} from "@/components/create/use-draft-autosave";
 import { useEditLease } from "@/components/create/use-edit-lease";
 import { Button, buttonClassName, cn, Icon, Logo, SceneRow } from "@/components/ui";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
@@ -35,7 +53,19 @@ import {
   readPending,
 } from "@/lib/offline-drafts";
 import { QuickSettings, type QuickSettingsValue } from "./quick-settings";
+import { type SceneAction, SceneActions } from "./scene-actions";
 import { clock, framesToMs, sceneIndexAt, seconds, timelineOf } from "./timeline";
+
+/** A video has 2 to 10 scenes (DB §6). */
+const minScenes = 2;
+const maxScenes = 10;
+
+/** What "Add a scene" starts from: a title scene whose heading appears on its own words. */
+const blankScene = {
+  template: "title" as const,
+  narration: "Here is a new scene.",
+  content: { heading: "A new scene", headingTrigger: "new scene" },
+};
 
 const VideoPlayer = dynamic(() => import("./video-player").then((m) => m.VideoPlayer), {
   ssr: false,
@@ -106,10 +136,41 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
   const [project, setProject] = useState(initial);
   /** The project as last saved: what a failed save goes back to (F21 QA). */
   const lastSaved = useRef(initial);
-  const spec = project.draft.spec as VideoSpec;
+  /** The draft as edited here (F23); saved by autosave (F22). */
+  const [spec, setSpec] = useState<VideoSpec>(initial.draft.spec as VideoSpec);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+  /** Unsaved changes offered back: after a conflict, or kept from another tab. */
+  const [recovered, setRecovered] = useState<{
+    spec: VideoSpec;
+    why: "conflict" | "kept";
+  } | null>(null);
   const projectId = project.id;
   const lease = useEditLease(projectId);
   const { editorId, lost: leaseLost } = lease;
+  const elsewhere = lease.state.status === "elsewhere";
+  /** Shows the project as the server has it, draft included. */
+  const showProject = (fresh: ProjectDetailDto) => {
+    lastSaved.current = fresh;
+    setProject(fresh);
+    setSpec(fresh.draft.spec as VideoSpec);
+  };
+  const autosave = useDraftAutosave({
+    projectId,
+    editorId,
+    spec,
+    initial: { spec: initial.draft.spec, rev: initial.draft.rev },
+    paused: elsewhere,
+    onConflict: (fresh, mine) => {
+      showProject(fresh);
+      setRecovered({ spec: mine, why: "conflict" });
+    },
+    onLeaseLost: (details) => leaseLost(details),
+    onRestore: (kept) => setSpec(kept),
+    onKept: (kept) => setRecovered({ spec: kept, why: "kept" }),
+    setFinalDraft: lease.setFinalDraft,
+    onServerNewer: (fresh) => showProject(fresh),
+  });
   const desktop = useDesktop();
   const player = useRef<PlayerRef>(null);
   const [frame, setFrame] = useState(0);
@@ -127,7 +188,6 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
   );
   const unrecorded = spec.scenes.filter((scene) => scene.timing === null).length;
   const totalMs = framesToMs(timeline.total);
-  const elsewhere = lease.state.status === "elsewhere";
 
   useFreshAudio(
     project,
@@ -174,26 +234,20 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
   // ---- Settings ----
 
   /** The look of these settings, at once; the server's answer replaces it. */
-  const applyLocal = useCallback((next: PendingSettings) => {
-    setProject((p) => {
-      const draft = p.draft.spec as VideoSpec;
-      return {
-        ...p,
-        settings: { ...p.settings, ...next },
-        draft: {
-          ...p.draft,
-          spec: {
-            ...draft,
-            format: next.format ?? draft.format,
-            theme: {
-              palette: next.palette ?? draft.theme.palette,
-              captionStyle: next.captionStyle ?? draft.theme.captionStyle,
-            },
-          },
-        },
-      };
-    });
-  }, []);
+  const applyLocal = (next: PendingSettings) => {
+    setProject((p) => ({ ...p, settings: { ...p.settings, ...next } }));
+    const changed: VideoSpec = {
+      ...spec,
+      format: next.format ?? spec.format,
+      theme: {
+        palette: next.palette ?? spec.theme.palette,
+        captionStyle: next.captionStyle ?? spec.theme.captionStyle,
+      },
+    };
+    setSpec(changed);
+    // Settings are saved by PATCH, not the draft save: nothing for autosave to send.
+    autosave.adopt(changed);
+  };
 
   /**
    * Saves settings. Offline (F22), the change stays on screen and is kept in the browser, to be
@@ -209,8 +263,8 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
           editorId,
         });
         await dropSettings(projectId);
-        lastSaved.current = saved;
-        setProject(saved);
+        showProject(saved);
+        autosave.reset(saved.draft.spec, saved.draft.rev);
         setSaving("idle");
       } catch (failure) {
         if (!(failure instanceof ApiRequestError) || isOffline(failure)) {
@@ -220,7 +274,19 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
         }
         await dropSettings(projectId);
         // Back to the last saved look, not the page's first one.
-        setProject(lastSaved.current);
+        const last = lastSaved.current;
+        const lastSpec = last.draft.spec as VideoSpec;
+        setProject(last);
+        setSpec((draft) => {
+          const rolled = {
+            ...draft,
+            format: lastSpec.format,
+            theme: lastSpec.theme,
+            voice: lastSpec.voice,
+          };
+          autosave.adopt(rolled);
+          return rolled;
+        });
         if (failure.code === "LEASE_HELD") {
           // The read-only notice says why; no second message.
           leaseLost(failure.details);
@@ -231,11 +297,15 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
         setError(failure.message);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- autosave's flush and reset are stable
     [projectId, editorId, leaseLost],
   );
 
   async function change(next: Partial<QuickSettingsValue>) {
     setError(null);
+    // A settings change moves the draft's rev on: scene edits are saved first, so they don't
+    // conflict with it.
+    if (saving !== "offline" && autosave.dirty) await autosave.flush();
     applyLocal(next);
     // Offline already: add this to what's kept, so the latest of each setting is sent.
     if (saving === "offline") {
@@ -282,23 +352,123 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
     setRecording(true);
     setError(null);
     try {
+      // Edits first, then over the rev they saved at.
+      if (!(await autosave.flush())) {
+        setRecording(false);
+        return;
+      }
+      const fresh = await apiFetch<ProjectDetailDto>(`/projects/${projectId}`);
       await apiFetch<JobDto>(`/projects/${projectId}/narration`, {
         method: "POST",
         idempotent: true,
         editorId,
-        body: { baseRev: project.draft.rev },
+        body: { baseRev: fresh.draft.rev },
       });
       router.push(`/projects/${projectId}/generating`);
     } catch (failure) {
+      issuesError.current = failure instanceof ApiRequestError && failure.code === "STAGE_INVALID";
       setError(failure instanceof ApiRequestError ? failure.message : "Couldn't start. Try again.");
       setRecording(false);
     }
   }
 
+  // ---- Scenes (F23) ----
+
+  const issues = useMemo(() => specIssues(spec), [spec]);
+  const issuesBy = useMemo(() => issuesByScene(issues), [issues]);
+  const firstIssue = issues[0];
+  const firstIssueScene = spec.scenes.findIndex((scene) => scene.id === firstIssue?.sceneId);
+  /** Scenes needing a fix besides the one the banner names. */
+  const otherIssueScenes = issuesBy.size - (firstIssue?.sceneId ? 1 : 0);
+  // "Fix the marked scenes first" goes once nothing needs a fix.
+  const issuesError = useRef(false);
+  useEffect(() => {
+    if (issues.length > 0 || !issuesError.current) return;
+    issuesError.current = false;
+    setError(null);
+  }, [issues]);
+  const count = spec.scenes.length;
+  const editingScene = spec.scenes.find((scene) => scene.id === editing) ?? null;
+  const removingIndex = spec.scenes.findIndex((scene) => scene.id === removing);
+
+  /**
+   * A scene changed in the edit panel. New narration loses its recording at once; words that
+   * another scene has recorded take that recording.
+   */
+  function changeScene(next: Scene) {
+    setSpec((draft) =>
+      reuseRecordings(
+        reconcileTiming({
+          ...draft,
+          scenes: draft.scenes.map((s) => (s.id === next.id ? { ...next, userEdited: true } : s)),
+        }).spec,
+        [draft],
+      ),
+    );
+  }
+
+  /** Adds, removes or moves scenes; false (with the reason shown) when it can't. */
+  function apply(operations: SpecOperation[]): boolean {
+    try {
+      // A duplicate keeps the recording of its words (the server does the same).
+      setSpec(reuseRecordings(applyOperations(spec, operations).spec));
+      setError(null);
+      return true;
+    } catch (failure) {
+      if (failure instanceof SpecOperationError) {
+        setError(failure.message);
+        return false;
+      }
+      throw failure;
+    }
+  }
+
+  function act(sceneId: string, action: SceneAction) {
+    const index = spec.scenes.findIndex((scene) => scene.id === sceneId);
+    const scene = spec.scenes[index];
+    if (!scene) return;
+    if (action === "edit") setEditing(sceneId);
+    if (action === "remove") setRemoving(sceneId);
+    if (action === "duplicate") {
+      apply([
+        {
+          op: "addScene",
+          afterSceneId: sceneId,
+          scene: {
+            template: scene.template,
+            narration: scene.narration,
+            content: scene.content as Record<string, unknown>,
+          },
+        },
+      ]);
+    }
+    if (action === "up" && index > 0) {
+      apply([
+        { op: "moveScene", sceneId, afterSceneId: index >= 2 ? spec.scenes[index - 2]!.id : null },
+      ]);
+    }
+    if (action === "down" && index < count - 1) {
+      apply([{ op: "moveScene", sceneId, afterSceneId: spec.scenes[index + 1]!.id }]);
+    }
+  }
+
+  /** A new title scene after the one playing, opened for editing. */
+  function addScene() {
+    const id = newSceneId();
+    const added = apply([
+      {
+        op: "addScene",
+        afterSceneId: spec.scenes[current]?.id ?? null,
+        scene: { id, ...blankScene },
+      },
+    ]);
+    if (added) setEditing(id);
+  }
+
   // ---- Pieces ----
 
   const status =
-    saving === "offline"
+    saving === "offline" || autosave.status === "offline"
       ? "Offline – changes kept locally"
       : saving === "saving"
         ? "Saving…"
@@ -306,7 +476,7 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
           ? "Not saved"
           : elsewhere
             ? "Read only"
-            : "Saved";
+            : autosaveLabel(autosave.status, autosave.dirty).replace(" just now", "");
   const facts = [
     status,
     project.currentVersion ? `version ${project.currentVersion}` : null,
@@ -342,25 +512,82 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
               await lease.takeover();
               setError(null);
               setSaving("idle");
+              autosave.setStatus("idle");
             }}
           >
             Take over editing
           </Button>
         </Notice>
       ) : null}
+      {firstIssue ? (
+        <Notice>
+          <span id="editor-issue" className="flex-1">
+            <strong>
+              {firstIssue.sceneId
+                ? `Scene ${firstIssueScene + 1} needs a fix.`
+                : "The video needs a fix."}
+            </strong>{" "}
+            {issueText(firstIssue, spec.scenes[firstIssueScene])}
+            {otherIssueScenes > 0
+              ? ` ${otherIssueScenes} ${firstIssue.sceneId ? "more " : ""}${otherIssueScenes === 1 ? "scene needs" : "scenes need"} a fix too.`
+              : ""}
+          </span>
+          {firstIssue.sceneId ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={elsewhere}
+              onClick={() => setEditing(firstIssue.sceneId)}
+            >
+              Edit scene {firstIssueScene + 1}
+            </Button>
+          ) : null}
+        </Notice>
+      ) : null}
       {unrecorded > 0 ? (
         <Notice>
           <span className="flex-1">
-            {unrecorded === 1 ? "One scene has" : `${unrecorded} scenes have`} no narration, so{" "}
-            {unrecorded === 1 ? "it plays" : "they play"} silently.
+            {unrecorded === 1 ? "One scene needs" : `${unrecorded} scenes need`} narration recorded,
+            so {unrecorded === 1 ? "it plays" : "they play"} silently for now.
           </span>
           <Button
             size="sm"
             loading={recording}
-            disabled={elsewhere || recording}
+            disabled={elsewhere || recording || issues.length > 0}
+            aria-describedby={issues.length > 0 ? "editor-issue" : undefined}
             onClick={() => void recordNarration()}
           >
-            Record narration
+            Update narration
+          </Button>
+        </Notice>
+      ) : null}
+      {recovered ? (
+        <Notice>
+          <span className="flex-1">
+            {recovered.why === "conflict"
+              ? "This video changed in another place. Your unsaved changes are kept here: use them over the latest version, or discard them."
+              : "There are unsaved changes to this video from earlier or another tab. Use them over this version, or discard them."}
+          </span>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={elsewhere}
+            onClick={() => {
+              setSpec(recovered.spec);
+              setRecovered(null);
+            }}
+          >
+            {recovered.why === "conflict" ? "Use my changes" : "Use them"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              autosave.discardKept();
+              setRecovered(null);
+            }}
+          >
+            Discard them
           </Button>
         </Notice>
       ) : null}
@@ -368,29 +595,105 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
     </>
   );
 
-  const sceneRows = (onPick?: () => void) =>
-    spec.scenes.map((scene, i) => (
-      <SceneRow
-        key={scene.id}
-        index={i + 1}
-        title={sceneHeadline(scene) || `Scene ${i + 1}`}
-        template={templateLabels[scene.template]}
-        duration={seconds(framesToMs(timeline.lengths[i]!))}
-        selected={i === current}
-        edited={scene.userEdited}
-        failed={scene.timing === null}
-        badgePlacement="below"
-        thumbnail={
-          <span className="block size-full">
-            <SceneThumbnail spec={spec} frame={stillOf(i)} />
-          </span>
-        }
+  const sceneRows = (onPick?: () => void) => (
+    <>
+      {spec.scenes.map((scene, i) => (
+        <div key={scene.id} className="flex items-center gap-0.5">
+          <SceneRow
+            className="min-w-0 flex-1"
+            index={i + 1}
+            title={sceneHeadline(scene) || `Scene ${i + 1}`}
+            template={templateLabels[scene.template]}
+            duration={seconds(framesToMs(timeline.lengths[i]!))}
+            selected={i === current}
+            edited={scene.userEdited}
+            failed={scene.timing === null}
+            needsFix={issuesBy.has(scene.id)}
+            badgePlacement="below"
+            thumbnail={
+              <span className="block size-full">
+                <SceneThumbnail spec={spec} frame={stillOf(i)} />
+              </span>
+            }
+            onClick={() => {
+              seek(timeline.starts[i]!);
+              onPick?.();
+            }}
+          />
+          <SceneActions
+            number={i + 1}
+            disabled={elsewhere}
+            can={{
+              edit: true,
+              duplicate: count < maxScenes,
+              up: i > 0,
+              down: i < count - 1,
+              remove: count > minScenes,
+            }}
+            onAction={(action) => {
+              if (action === "edit" || action === "remove") onPick?.();
+              act(scene.id, action);
+            }}
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        disabled={elsewhere || count >= maxScenes}
         onClick={() => {
-          seek(timeline.starts[i]!);
           onPick?.();
+          addScene();
         }}
-      />
-    ));
+        className="mt-2 min-h-11 cursor-pointer rounded-[12px] border border-dashed border-line-strong bg-transparent p-2.5 font-sans text-[14px] font-semibold text-brand-text hover:bg-surface-hover focus-visible:shadow-[0_0_0_2px_var(--bg),0_0_0_4px_var(--focus-ring)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45"
+      >
+        Add a scene
+      </button>
+    </>
+  );
+
+  const dialogs = (
+    <>
+      {editingScene ? (
+        <SceneEditor
+          key={editingScene.id}
+          scene={editingScene}
+          number={spec.scenes.indexOf(editingScene) + 1}
+          spec={spec}
+          issues={issuesBy.get(editingScene.id) ?? []}
+          readOnly={elsewhere}
+          onChange={changeScene}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
+      <Modal open={removing !== null} onClose={() => setRemoving(null)} labelledBy="remove-title">
+        <div className="flex flex-col gap-5 p-6">
+          <div className="flex flex-col gap-2">
+            <h2 id="remove-title" className="h3 m-0">
+              Remove scene {removingIndex + 1}?
+            </h2>
+            <p className="m-0 text-[15px] leading-[23px] text-ink-secondary">
+              The scene and its narration leave the video. Version {project.currentVersion ?? 1}{" "}
+              keeps them.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-end gap-3">
+            <Button variant="ghost" onClick={() => setRemoving(null)}>
+              Keep it
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (removing) apply([{ op: "removeScene", sceneId: removing }]);
+                setRemoving(null);
+              }}
+            >
+              Remove scene
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
 
   const playButton = (size: "md" | "lg") => (
     <button
@@ -560,6 +863,7 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
             </button>
           ))}
         </nav>
+        {dialogs}
         <Modal
           open={sheet !== null}
           onClose={() => setSheet(null)}
@@ -650,6 +954,7 @@ export function EditorScreen({ project: initial, videoType }: EditorScreenProps)
           {quickSettings("max-w-[560px]")}
         </section>
       </div>
+      {dialogs}
     </div>
   );
 }

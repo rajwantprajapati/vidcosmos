@@ -358,6 +358,19 @@ describe("draft autosave", () => {
     expect(sceneOf(draft, "sc_one").timing).toBeNull();
   });
 
+  it("gives a duplicated scene the stored recording of the same words", async () => {
+    const { owner, project, holder } = await editing();
+    const recorded = sceneOf(draftOf(), "sc_one").timing!;
+    const spec = draftOf();
+    const copy = { ...spec.scenes[0]!, id: "sc_copy", timing: null };
+    spec.scenes.splice(1, 0, copy);
+    const saved = await saveNow(owner, project._id, holder, { baseRev: 0, spec });
+    expect(saved.staleSceneIds).toEqual([]);
+    const draft = (await stored(owner, project)).draft.spec as VideoSpec;
+    expect(sceneOf(draft, "sc_copy").timing).toEqual(recorded);
+    expect(sceneOf(draft, "sc_copy").userEdited).toBe(true);
+  });
+
   it("takes the language, narrator, format, theme and music from the settings, not the client", async () => {
     const { owner, project, holder } = await editing();
     const forged = {

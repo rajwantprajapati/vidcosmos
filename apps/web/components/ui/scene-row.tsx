@@ -15,6 +15,8 @@ export type SceneRowProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   edited?: boolean;
   /** Narration failed and needs a retry. */
   failed?: boolean;
+  /** Something in the scene must be fixed before it can be recorded (it wins over the rest). */
+  needsFix?: boolean;
   /** A still of the scene, in place of the plain 34×60 tile. */
   thumbnail?: ReactNode;
   /**
@@ -32,13 +34,18 @@ export function SceneRow({
   selected = false,
   edited = false,
   failed = false,
+  needsFix = false,
   thumbnail,
   badgePlacement = "end",
   className,
   ...rest
 }: SceneRowProps) {
   const badge = (className?: string) =>
-    failed ? (
+    needsFix ? (
+      <Badge tone="warning" icon="alert" className={className}>
+        Needs a fix
+      </Badge>
+    ) : failed ? (
       <Badge tone="danger" icon="alert" className={className}>
         No narration
       </Badge>

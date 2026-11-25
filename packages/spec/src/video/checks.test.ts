@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   reconcileTiming,
+  reuseRecordings,
   type SpecIssue,
   specIssues as allIssues,
   totalDurationMs,
@@ -278,6 +279,30 @@ describe("hashes", () => {
     const { spec: after, cleared } = reconcileTiming(changed);
     expect(cleared).toEqual(["sc_flow0001"]);
     expect(after.scenes.map((s) => s.timing === null)).toEqual([false, true, false]);
+  });
+
+  it("reuseRecordings gives a scene without timing the recording of the same words", () => {
+    const spec = testSpec(undefined, { timed: true });
+    const [first, second] = spec.scenes;
+    const copy = { ...first!, id: "sc_copy0001", timing: null };
+    const other = {
+      ...second!,
+      id: "sc_other001",
+      narration: "Words nobody recorded.",
+      timing: null,
+    };
+    const after = reuseRecordings({ ...spec, scenes: [...spec.scenes, copy, other] });
+    expect(after.scenes[3]!.timing).toEqual(first!.timing);
+    expect(after.scenes[4]!.timing).toBeNull();
+    // Another voice: the recording doesn't fit.
+    const male = { ...spec.voice, gender: "male" as const, voiceId: "another-voice" };
+    const voiced = reuseRecordings({ ...spec, voice: male, scenes: [copy] }, [spec]);
+    expect(voiced.scenes[0]!.timing).toBeNull();
+    // From the stored draft (the server) too; nothing to reuse gives the same spec back.
+    const alone = { ...spec, scenes: [copy] };
+    expect(reuseRecordings(alone, [spec]).scenes[0]!.timing).toEqual(first!.timing);
+    const untimed = testSpec();
+    expect(reuseRecordings(untimed)).toBe(untimed);
   });
 });
 

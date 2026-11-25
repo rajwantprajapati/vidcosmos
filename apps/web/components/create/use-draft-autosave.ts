@@ -118,6 +118,15 @@ export function useDraftAutosave(options: DraftAutosaveOptions) {
     setRev(nextRev);
   }, []);
 
+  /**
+   * Takes this spec as saved without a save, keeping the rev: a change the draft save doesn't
+   * carry (theme, captions, format and narrator are the settings' to save, F23).
+   */
+  const adopt = useCallback((next: VideoSpec | null) => {
+    savedRef.current = next;
+    setSavedSpec(next);
+  }, []);
+
   /** The server has this draft and rev now (after a job, a takeover or a conflict). */
   const reset = useCallback(
     (fresh: VideoSpec | null, freshRev: number) => {
@@ -340,5 +349,5 @@ export function useDraftAutosave(options: DraftAutosaveOptions) {
   /** The person chose not to use a kept draft. */
   const discardKept = useCallback(() => void dropDraft(projectId), [projectId]);
 
-  return { status, error, rev, dirty, savedSpec, reset, flush, setStatus, discardKept };
+  return { status, error, rev, dirty, savedSpec, reset, adopt, flush, setStatus, discardKept };
 }

@@ -105,7 +105,8 @@ test.describe("step 3 on desktop", () => {
     // Rebuilding asks first, then replaces the scenes.
     await page.getByRole("button", { name: "Rebuild storyboard" }).first().click();
     const confirm = page.getByRole("dialog", { name: "Rebuild the storyboard?" });
-    await expect(confirm).toContainText("with the changes you made to them");
+    // It names the scenes changed by hand (F23).
+    await expect(confirm).toContainText(/Scenes? [\d, and]+ (was|were) changed by hand/);
     await confirm.getByRole("button", { name: "Keep these scenes" }).click();
     await expect(confirm).toBeHidden();
     await page.getByRole("button", { name: "Rebuild storyboard" }).first().click();
