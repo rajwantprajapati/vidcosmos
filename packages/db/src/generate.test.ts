@@ -8,7 +8,13 @@ import { exampleScenes, narrationHash, type VideoSpec } from "@vidcosmos/spec/vi
 import { testSpec } from "@vidcosmos/spec/video/testing";
 import { ObjectId } from "mongodb";
 import { beforeAll, describe, expect, it } from "vitest";
-import { readGenerateSnapshot, saveGeneratedVersion, startGenerate } from "./generate.ts";
+import {
+  changedSinceVersion,
+  readGenerateSnapshot,
+  saveGeneratedVersion,
+  startGenerate,
+  startNarration,
+} from "./generate.ts";
 import { finishJob, type JobError } from "./jobs.ts";
 import { migrate } from "./migrate.ts";
 import { createProject, getProject, type Owner, type ProjectError } from "./projects.ts";
@@ -324,5 +330,107 @@ describe("saving a generation", () => {
       _id: g.job._id,
     });
     expect(job?.usage).toEqual({ reserved: true, committed: false, released: true });
+  });
+});
+
+describe("recording some scenes again (F23)", () => {
+  async function generated(options: { failSecond?: boolean } = {}) {
+    const s = await setup();
+    const job = await startGenerate(db(), s.owner, s.workspace, s.projectId, {
+      holder,
+      baseRev: 0,
+      idempotencyKey: new ObjectId().toHexString(),
+    });
+    const ids = { workspaceId: s.owner.workspaceId, projectId: s.projectId, jobId: job._id };
+    const snapshot = (await readGenerateSnapshot(db(), ids))!;
+    const spec = recorded(snapshot.spec);
+    if (options.failSecond) spec.scenes[1]!.timing = null;
+    await saveGeneratedVersion(db(), ids, {
+      spec,
+      baseRev: 0,
+      userId: s.owner.userId,
+      kind: "generate",
+    });
+    await finishJob(
+      db(),
+      { workspaceId: s.owner.workspaceId, jobId: job._id },
+      {
+        status: options.failSecond ? "partial" : "succeeded",
+      },
+    );
+    return { ...s, spec };
+  }
+
+  const narrate = (s: Awaited<ReturnType<typeof generated>>, sceneIds?: string[]) =>
+    getProject(db(), s.owner.workspaceId, s.projectId).then((p) =>
+      startNarration(db(), s.owner, s.workspace, s.projectId, {
+        holder,
+        baseRev: p.draft.rev,
+        ...(sceneIds ? { sceneIds } : {}),
+        idempotencyKey: new ObjectId().toHexString(),
+      }),
+    );
+
+  it("uses a revision for an edited scene, and gives it back if the job fails", async () => {
+    const s = await generated();
+    const edited = structuredClone(s.spec);
+    edited.scenes[0]!.narration = `${edited.scenes[0]!.narration} Again.`;
+    edited.scenes[0]!.timing = null;
+    await projectsOf().updateOne(
+      { workspaceId: s.owner.workspaceId, _id: s.projectId },
+      { $set: { "draft.spec": edited }, $inc: { "draft.rev": 1 } },
+    );
+    const job = await narrate(s);
+    expect(job.input).toMatchObject({ sceneIds: [edited.scenes[0]!.id], countsRevision: true });
+    expect((await getProject(db(), s.owner.workspaceId, s.projectId)).revisionsUsed).toBe(1);
+
+    await finishJob(
+      db(),
+      { workspaceId: s.owner.workspaceId, jobId: job._id },
+      {
+        status: "failed",
+        error: { code: "TTS_FAILED", message: "Down", retryable: true },
+      },
+    );
+    expect((await getProject(db(), s.owner.workspaceId, s.projectId)).revisionsUsed).toBe(0);
+  });
+
+  it("retrying a scene that failed uses no revision", async () => {
+    const s = await generated({ failSecond: true });
+    const job = await narrate(s);
+    expect(job.input).toMatchObject({ sceneIds: [s.spec.scenes[1]!.id], countsRevision: false });
+    expect((await getProject(db(), s.owner.workspaceId, s.projectId)).revisionsUsed).toBe(0);
+  });
+
+  it("at the limit, an edited scene can't be recorded again", async () => {
+    const s = await generated();
+    const edited = structuredClone(s.spec);
+    edited.scenes[2]!.narration = `${edited.scenes[2]!.narration} More.`;
+    edited.scenes[2]!.timing = null;
+    await projectsOf().updateOne(
+      { workspaceId: s.owner.workspaceId, _id: s.projectId },
+      { $set: { "draft.spec": edited, revisionsUsed: 30 }, $inc: { "draft.rev": 1 } },
+    );
+    await expect(narrate(s)).rejects.toMatchObject({
+      code: "LIMIT_REACHED",
+      details: { limit: "revisionsPerVideo" },
+    });
+  });
+
+  it("counts new words and a new voice as changes, not a copy of recorded words", () => {
+    const version = testSpec(scenes);
+    const same = structuredClone(version);
+    expect(changedSinceVersion(version, same, [same.scenes[0]!.id])).toBe(false);
+    const narration = structuredClone(version);
+    narration.scenes[1]!.narration = "Something else entirely.";
+    expect(changedSinceVersion(version, narration, [narration.scenes[1]!.id])).toBe(true);
+    const voice = { ...structuredClone(version), voice: { ...version.voice, speed: 1.1 } };
+    expect(changedSinceVersion(version, voice, [voice.scenes[0]!.id])).toBe(true);
+    expect(changedSinceVersion(version, same, ["sc_new00001"])).toBe(true);
+    // A copy of a recorded scene, or narration that's another scene's words: nothing new.
+    const copied = structuredClone(version);
+    copied.scenes.push({ ...copied.scenes[0]!, id: "sc_copy0001", timing: null });
+    expect(changedSinceVersion(version, copied, ["sc_copy0001"])).toBe(false);
+    expect(changedSinceVersion(null, same, [same.scenes[0]!.id])).toBe(true);
   });
 });

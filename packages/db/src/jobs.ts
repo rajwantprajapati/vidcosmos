@@ -96,6 +96,8 @@ export type NewJob = {
    * when its version is saved, given back if it fails or is cancelled.
    */
   reservesVideo?: boolean;
+  /** One of the video's revisions is used for it (re-recording edited scenes, `generate.ts`). */
+  reservesRevision?: boolean;
 };
 
 /**
@@ -125,7 +127,7 @@ export async function createJob(
     ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
     inngest: { eventId: jobEventId(jobId.toHexString()) },
     usage: {
-      reserved: Boolean(input.reservesGeneration || input.reservesVideo),
+      reserved: Boolean(input.reservesGeneration || input.reservesVideo || input.reservesRevision),
       committed: false,
       released: false,
     },
@@ -595,9 +597,37 @@ async function settleVideo(db: Db, job: Job) {
   if (released.modifiedCount === 1) await releaseVideo(db, job.workspaceId);
 }
 
+/** A re-recording that failed or was cancelled gives its revision back, once. */
+async function settleRevision(db: Db, job: Job) {
+  if (!job.usage.reserved || !job.projectId) return;
+  if (job.status === "succeeded" || job.status === "partial") {
+    await jobs(db).updateOne(
+      { workspaceId: job.workspaceId, _id: job._id, "usage.released": false },
+      { $set: { "usage.committed": true } },
+    );
+    return;
+  }
+  const released = await jobs(db).updateOne(
+    {
+      workspaceId: job.workspaceId,
+      _id: job._id,
+      "usage.committed": false,
+      "usage.released": false,
+    },
+    { $set: { "usage.released": true } },
+  );
+  if (released.modifiedCount === 1) {
+    await projects(db).updateOne(
+      { workspaceId: job.workspaceId, _id: job.projectId, revisionsUsed: { $gt: 0 } },
+      { $inc: { revisionsUsed: -1 } },
+    );
+  }
+}
+
 /** Settles a finished job's AI request: kept when it succeeded, given back otherwise. */
 async function settleGeneration(db: Db, job: Job) {
   if (job.type === "generate") return settleVideo(db, job);
+  if (job.type === "scene_retry") return settleRevision(db, job);
   if (!job.usage.reserved) return;
   const ref = { workspaceId: job.workspaceId, jobId: job._id };
   if (job.status === "succeeded" || job.status === "partial") {

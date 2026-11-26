@@ -149,9 +149,11 @@ test.describe("the editor on desktop", () => {
       .getByRole("radio", { name: "Male", exact: true })
       .click();
     await expect(
-      page.getByText(`${scenes.length} scenes have no narration, so they play silently.`),
+      page.getByText(
+        `${scenes.length} scenes need narration recorded, so they play silently for now.`,
+      ),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Record narration" }).click();
+    await page.getByRole("button", { name: "Update narration" }).click();
     // Recorded with the new voice as version 2, then back in the editor.
     await expect
       .poll(async () => (await project(page, id)).currentVersion, { timeout: 90_000 })
@@ -159,7 +161,7 @@ test.describe("the editor on desktop", () => {
     const recorded = await project(page, id);
     expect(recorded.draft.spec.scenes.every((s) => s.timing !== null)).toBe(true);
     await expect(page).toHaveURL(new RegExp(`/projects/${id}$`), { timeout: 30_000 });
-    await expect(page.getByText(/no narration, so/)).toBeHidden();
+    await expect(page.getByText(/need narration recorded/)).toBeHidden();
   });
 });
 

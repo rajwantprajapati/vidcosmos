@@ -11,9 +11,11 @@ import {
   specHash,
   specIssues,
   type VideoSpec,
+  videoSpec,
 } from "@vidcosmos/spec/video";
 import { type Db, ObjectId } from "mongodb";
 import { touchAssets } from "./assets.ts";
+import { JobError } from "./job-error.ts";
 import { createJob, discardJob } from "./jobs.ts";
 import { type Owner, ProjectError, takeLease } from "./projects.ts";
 import { workspaceCollection } from "./scoped.ts";
@@ -143,17 +145,83 @@ export async function startNarration(
   if (sceneIds.length === 0) {
     throw new ProjectError("VALIDATION_FAILED", "Every scene already has its narration.");
   }
-  return createJob(
-    db,
-    owner,
-    workspace,
-    {
-      type: "scene_retry",
-      projectId,
-      input: { baseRev: request.baseRev, sceneIds },
-      idempotencyKey: request.idempotencyKey,
-    },
-    now,
+  // Recording again because something was changed uses a revision; retrying failed scenes
+  // doesn't (API §7).
+  const current = await workspaceCollection(db, "project_versions").findOne(
+    { workspaceId: owner.workspaceId, projectId, number: project.currentVersion },
+    { projection: { spec: 1 } },
+  );
+  const recorded = current ? videoSpec.safeParse(current.spec) : null;
+  const counts = changedSinceVersion(recorded?.success ? recorded.data : null, spec, sceneIds);
+  if (counts) await reserveRevision(db, owner, projectId, workspace.limits.revisionsPerVideo);
+  try {
+    return await createJob(
+      db,
+      owner,
+      workspace,
+      {
+        type: "scene_retry",
+        projectId,
+        input: { baseRev: request.baseRev, sceneIds, countsRevision: counts },
+        idempotencyKey: request.idempotencyKey,
+        reservesRevision: counts,
+      },
+      now,
+    );
+  } catch (error) {
+    if (counts) await returnRevision(db, owner, projectId);
+    throw error;
+  }
+}
+
+/**
+ * Whether any of these scenes needs new narration since the version: its words in the draft's
+ * voice and language are none of the version's recordings (a new scene, edited narration, or
+ * another voice). A failed scene retried, or a duplicate of a recorded one, isn't a change.
+ */
+export function changedSinceVersion(
+  version: {
+    language: VideoSpec["language"];
+    voice: VideoSpec["voice"];
+    scenes: { id: string; narration: string }[];
+  } | null,
+  draft: VideoSpec,
+  sceneIds: string[],
+): boolean {
+  if (!version) return true;
+  const recorded = new Set(
+    version.scenes.map((scene) => narrationHash(scene.narration, version.language, version.voice)),
+  );
+  return sceneIds.some((id) => {
+    const now = draft.scenes.find((scene) => scene.id === id);
+    return !now || !recorded.has(narrationHash(now.narration, draft.language, draft.voice));
+  });
+}
+
+/** Uses one of the video's revisions, or refuses with `403 LIMIT_REACHED`. */
+async function reserveRevision(db: Db, owner: Owner, projectId: ObjectId, max: number) {
+  const reserved = await projects(db).updateOne(
+    { workspaceId: owner.workspaceId, _id: projectId, revisionsUsed: { $lt: max } },
+    { $inc: { revisionsUsed: 1 } },
+  );
+  if (reserved.matchedCount === 1) return;
+  throw new JobError("LIMIT_REACHED", `This video has used all ${max} of its revisions.`, {
+    limit: "revisionsPerVideo",
+    used: max,
+    max,
+    resetsAt: null,
+  });
+}
+
+/** Gives a revision back (the job that would have used it didn't start, or failed). */
+export async function returnRevision(
+  db: Db,
+  owner: { workspaceId: ObjectId },
+  projectId: ObjectId,
+) {
+  await projects(db).updateOne(
+    { workspaceId: owner.workspaceId, _id: projectId, revisionsUsed: { $gt: 0 } },
+    { $inc: { revisionsUsed: -1 } },
   );
 }
 

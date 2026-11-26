@@ -17,8 +17,6 @@ import {
   convertScene,
   estimatedVideoMs,
   type Scene,
-  sceneElements,
-  type SpecIssue,
   specIssues,
   type TemplateName,
   type VideoSpec,
@@ -31,6 +29,7 @@ import { useJob } from "@/components/jobs/use-job";
 import { Button, cn, Icon, ProgressBar } from "@/components/ui";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { Modal } from "./modal";
+import { issuesByScene, issueText } from "./issue-text";
 import { Notice } from "./notice";
 import { SceneCard, SceneRow } from "./scene-card";
 import { SceneEditor } from "./scene-editor";
@@ -58,17 +57,6 @@ const leaseLostMessage = "Another tab took over editing, so your last change was
 
 const isActive = (job: JobDto | null) =>
   Boolean(job && (job.status === "queued" || job.status === "running"));
-
-/** What the banner says about an issue, naming the element and its words. */
-function issueText(issue: SpecIssue, scene: Scene | undefined): string {
-  if (issue.code === "TRIGGER_NOT_IN_NARRATION" && scene && issue.path) {
-    const element = sceneElements(scene).find((e) => e.path === issue.path);
-    if (element) {
-      return `“${element.label}” waits for the words “${element.trigger}”, but the narrator never says them. Change the words it appears on, or edit the narration.`;
-    }
-  }
-  return issue.message;
-}
 
 export function StoryboardStep({ project, job: initialJob, usage }: StoryboardStepProps) {
   const router = useRouter();
@@ -98,14 +86,7 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
   const canAsk = !readOnly && !working && !outOfRequests && busy === null;
 
   const issues = useMemo(() => (spec ? specIssues(spec) : []), [spec]);
-  const issuesBy = useMemo(() => {
-    const map = new Map<string, SpecIssue[]>();
-    for (const issue of issues) {
-      if (!issue.sceneId) continue;
-      map.set(issue.sceneId, [...(map.get(issue.sceneId) ?? []), issue]);
-    }
-    return map;
-  }, [issues]);
+  const issuesBy = useMemo(() => issuesByScene(issues), [issues]);
 
   // ---- Autosave (F22: kept locally offline, conflicts offered back) ----
 
@@ -619,7 +600,8 @@ export function StoryboardStep({ project, job: initialJob, usage }: StoryboardSt
       <RebuildDialog
         open={confirmRebuild}
         scenes={scenes.length}
-        edited={scenes.some((scene) => scene.userEdited) || dirty}
+        edited={scenes.flatMap((scene, i) => (scene.userEdited ? [i + 1] : []))}
+        unsaved={dirty}
         onClose={() => setConfirmRebuild(false)}
         onConfirm={() => void build(spec !== null)}
       />
@@ -680,15 +662,24 @@ function RebuildDialog({
   open,
   scenes,
   edited,
+  unsaved,
   onClose,
   onConfirm,
 }: {
   open: boolean;
   scenes: number;
-  edited: boolean;
+  /** The scenes changed by hand (F23: flagged before an AI rewrite). */
+  edited: number[];
+  unsaved: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const named =
+    edited.length === 0
+      ? ""
+      : edited.length === 1
+        ? `Scene ${edited[0]} was changed by hand, and rebuilding replaces it. `
+        : `Scenes ${edited.slice(0, -1).join(", ")} and ${edited.at(-1)} were changed by hand, and rebuilding replaces them. `;
   return (
     <Modal open={open} onClose={onClose} labelledBy="rebuild-title">
       <div className="flex flex-col gap-5 p-6">
@@ -697,9 +688,9 @@ function RebuildDialog({
             Rebuild the storyboard?
           </h2>
           <p className="m-0 text-[15px] leading-[23px] text-ink-secondary">
-            New scenes are made from the script and replace these {scenes}
-            {edited ? ", with the changes you made to them" : ""}. It uses 1 AI request for this
-            video.
+            {named}New scenes are made from the script and replace these {scenes}
+            {unsaved ? ", with the changes you haven’t saved yet" : ""}. It uses 1 AI request for
+            this video.
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-3">

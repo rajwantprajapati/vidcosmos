@@ -21,11 +21,14 @@ describe("SceneRow", () => {
     expect(screen.getByRole("button")).toHaveClass("bg-brand-soft");
   });
 
-  it("shows Edited, and No narration when narration failed", () => {
+  it("shows Edited, No narration when narration failed, and Needs a fix over both", () => {
     const { rerender } = render(<SceneRow index={1} title="A" edited />);
     expect(screen.getByText("Edited")).toBeInTheDocument();
     rerender(<SceneRow index={1} title="A" edited failed />);
     expect(screen.getByText("No narration")).toBeInTheDocument();
     expect(screen.queryByText("Edited")).toBeNull();
+    rerender(<SceneRow index={1} title="A" edited failed needsFix />);
+    expect(screen.getByText("Needs a fix")).toBeInTheDocument();
+    expect(screen.queryByText("No narration")).toBeNull();
   });
 });

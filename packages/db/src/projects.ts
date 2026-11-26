@@ -17,6 +17,7 @@ import type { Project, Workspace } from "@vidcosmos/spec/collections";
 import {
   canonicalJson,
   reconcileTiming,
+  reuseRecordings,
   type SpecIssue,
   specIssues,
   type VideoSpec,
@@ -492,7 +493,8 @@ export async function releaseLease(db: Db, owner: Owner, projectId: ObjectId, ho
  * The spec as saved: each scene keeps the timing stored for it (never the client's), and loses
  * it once its narration or the voice no longer match the recording (`narrationHash`), so a
  * client can't forge timing (API §5). A scene the person changed, or added, is marked
- * `userEdited`. Returns the scenes that lost their recording.
+ * `userEdited`. A scene without a recording takes one of the same words in the same voice
+ * (`reuseRecordings`). Returns the scenes that lost their recording.
  */
 function carryTiming(stored: VideoSpec | null, incoming: VideoSpec) {
   const before = new Map((stored?.scenes ?? []).map((scene) => [scene.id, scene]));
@@ -509,8 +511,12 @@ function carryTiming(stored: VideoSpec | null, incoming: VideoSpec) {
       userEdited: previous.userEdited || changed,
     } as VideoSpec["scenes"][number];
   });
-  const { spec, cleared } = reconcileTiming({ ...incoming, scenes });
-  return { spec, stale: cleared };
+  const { spec: kept, cleared } = reconcileTiming({ ...incoming, scenes });
+  // A scene without a recording takes one already made of its words (a duplicate), from the
+  // stored draft only, so the timing is still never the client's.
+  const spec = reuseRecordings(kept, stored ? [stored] : []);
+  const reused = new Set(spec.scenes.filter((scene) => scene.timing).map((scene) => scene.id));
+  return { spec, stale: cleared.filter((id) => !reused.has(id)) };
 }
 
 /** The script the scenes say: one paragraph a scene. */
